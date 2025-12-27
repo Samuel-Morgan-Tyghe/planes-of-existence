@@ -1,0 +1,426 @@
+import { useStore } from '@nanostores/react';
+import { useEffect, useRef, useState } from 'react';
+import { $inventory, $plane, $currentFloor, $currentRoomId, $floorData, $enemiesAlive, $roomCleared } from '../../stores/game';
+import { $pixels } from '../../stores/meta';
+import { $health, $maxHealth } from '../../stores/player';
+import { debugState } from '../../utils/debug';
+
+export function HUD() {
+  const health = useStore($health);
+  const maxHealth = useStore($maxHealth);
+  const plane = useStore($plane);
+  const inventory = useStore($inventory);
+  const pixels = useStore($pixels);
+  const currentFloor = useStore($currentFloor);
+  const currentRoomId = useStore($currentRoomId);
+  const floorData = useStore($floorData);
+  const enemiesAlive = useStore($enemiesAlive);
+  const roomCleared = useStore($roomCleared);
+  const [showDebug, setShowDebug] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showDeathMessage, setShowDeathMessage] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [damageFlash, setDamageFlash] = useState(0); // 0-1 intensity
+  const lastHealthRef = useRef(health);
+
+  const healthPercent = (health / maxHealth) * 100;
+
+  // Flash screen red when taking damage
+  useEffect(() => {
+    if (health < lastHealthRef.current) {
+      setDamageFlash(1.0);
+      const interval = setInterval(() => {
+        setDamageFlash((prev) => {
+          const newVal = Math.max(0, prev - 0.1);
+          if (newVal <= 0) clearInterval(interval);
+          return newVal;
+        });
+      }, 50);
+      lastHealthRef.current = health;
+      return () => clearInterval(interval);
+    }
+    lastHealthRef.current = health;
+  }, [health]);
+
+  // Track mouse position for crosshair
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Show death message when health reaches 0
+  useEffect(() => {
+    if (health <= 0) {
+      setShowDeathMessage(true);
+    } else {
+      // Hide message immediately when health is restored (restart happened)
+      setShowDeathMessage(false);
+    }
+  }, [health]);
+
+  // Toggle debug with Ctrl+D
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'd' || e.key === 'D') {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          setShowDebug((prev) => !prev);
+        }
+      }
+      // Toggle help with H
+      if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        setShowHelp((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        pointerEvents: 'none',
+        zIndex: 1000,
+        fontFamily: 'monospace',
+        color: '#00ff00',
+      }}
+    >
+      {/* Damage Flash Overlay - red vignette when hit */}
+      {damageFlash > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: `rgba(255, 0, 0, ${damageFlash * 0.5})`,
+            border: `${Math.floor(damageFlash * 30)}px solid rgba(255, 0, 0, ${damageFlash * 0.8})`,
+            zIndex: 999,
+            pointerEvents: 'none',
+            boxShadow: `inset 0 0 ${Math.floor(damageFlash * 200)}px rgba(255, 0, 0, ${damageFlash})`,
+          }}
+        />
+      )}
+      {/* Health Bar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          width: '200px',
+          backgroundColor: '#000000',
+          border: '2px solid #00ff00',
+          padding: '4px',
+        }}
+      >
+        <div
+          style={{
+            width: `${healthPercent}%`,
+            height: '20px',
+            backgroundColor: healthPercent > 50 ? '#00ff00' : healthPercent > 25 ? '#ffff00' : '#ff0000',
+            transition: 'width 0.3s',
+          }}
+        />
+        <div style={{ marginTop: '4px', fontSize: '12px' }}>
+          HP: {Math.ceil(health)}/{maxHealth}
+        </div>
+      </div>
+
+      {/* Plane Indicator */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          backgroundColor: '#000000',
+          border: '2px solid #00ff00',
+          padding: '8px 16px',
+          fontSize: '14px',
+        }}
+      >
+        Plane: {plane}
+      </div>
+
+      {/* Floor & Room Info */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '70px',
+          right: '20px',
+          backgroundColor: '#000000',
+          border: '2px solid #00ffff',
+          padding: '8px 16px',
+          fontSize: '14px',
+        }}
+      >
+        Floor {currentFloor + 1} • Room {currentRoomId + 1}/{floorData?.roomCount || 0}
+      </div>
+
+      {/* Enemy Counter */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '120px',
+          right: '20px',
+          backgroundColor: roomCleared ? '#002200' : '#220000',
+          border: roomCleared ? '2px solid #00ff00' : '2px solid #ff0000',
+          padding: '8px 16px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+        }}
+      >
+        {roomCleared ? (
+          <span style={{ color: '#00ff00' }}>✓ ROOM CLEARED</span>
+        ) : (
+          <span style={{ color: '#ff6600' }}>Enemies: {enemiesAlive}</span>
+        )}
+      </div>
+
+      {/* Pixels (Currency) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '80px',
+          left: '20px',
+          backgroundColor: '#000000',
+          border: '2px solid #ffff00',
+          padding: '8px',
+          fontSize: '14px',
+        }}
+      >
+        Pixels: {pixels}
+      </div>
+
+      {/* Inventory */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '20px',
+          backgroundColor: '#000000',
+          border: '2px solid #00ff00',
+          padding: '8px',
+          fontSize: '12px',
+          maxWidth: '300px',
+        }}
+      >
+        <div style={{ marginBottom: '4px' }}>Items:</div>
+        {Object.keys(inventory).length === 0 ? (
+          <div style={{ color: '#666' }}>No items</div>
+        ) : (
+          Object.entries(inventory).map(([itemId, count]) => (
+            <div key={itemId} style={{ marginLeft: '8px' }}>
+              {itemId}: x{count}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Controls Hint */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          right: '20px',
+          backgroundColor: '#000000',
+          border: '2px solid #00ff00',
+          padding: '8px',
+          fontSize: '10px',
+          opacity: 0.7,
+        }}
+      >
+        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>CONTROLS</div>
+        <div>WASD: Move</div>
+        <div>Arrow Keys: Shoot</div>
+        <div>Tab/1/2/3: Switch Plane</div>
+        <div>R: Restart</div>
+        <div>Ctrl+D: Debug</div>
+        <div style={{ marginTop: '4px', fontSize: '9px', opacity: 0.8 }}>
+          Press H for help
+        </div>
+      </div>
+
+      {/* Crosshair */}
+      <div
+        style={{
+          position: 'fixed',
+          top: `${mousePosition.y}px`,
+          left: `${mousePosition.x}px`,
+          transform: 'translate(-50%, -50%)',
+          width: '20px',
+          height: '20px',
+          pointerEvents: 'none',
+          zIndex: 1500,
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '0',
+            width: '8px',
+            height: '2px',
+            backgroundColor: '#00ff00',
+            transform: 'translateY(-50%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            right: '0',
+            width: '8px',
+            height: '2px',
+            backgroundColor: '#00ff00',
+            transform: 'translateY(-50%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '0',
+            width: '2px',
+            height: '8px',
+            backgroundColor: '#00ff00',
+            transform: 'translateX(-50%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: '0',
+            width: '2px',
+            height: '8px',
+            backgroundColor: '#00ff00',
+            transform: 'translateX(-50%)',
+          }}
+        />
+      </div>
+
+      {/* Debug Panel */}
+      {showDebug && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '120px',
+            left: '20px',
+            backgroundColor: '#000000',
+            border: '2px solid #ff00ff',
+            padding: '8px',
+            fontSize: '10px',
+            maxWidth: '300px',
+            zIndex: 2000,
+          }}
+        >
+          <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>DEBUG INFO</div>
+          <div>Enemies: {debugState.enemyCount}</div>
+          <div>Projectiles: {debugState.projectileCount}</div>
+          <div>Player Pos: [{debugState.playerPosition.map(v => v.toFixed(1)).join(', ')}]</div>
+          <div style={{ marginTop: '4px', color: '#ffff00' }}>
+            Open browser console (F12) to see:
+          </div>
+          <div style={{ marginLeft: '8px', fontSize: '9px', color: '#ffff00' }}>
+            - Distance to each enemy (updated every second)
+          </div>
+          <div style={{ marginLeft: '8px', fontSize: '9px', color: '#ffff00' }}>
+            - Damage logs with enemy ID when attacked
+          </div>
+          <div style={{ marginTop: '4px', color: '#ff6600' }}>
+            Enemy attack range: 2 units (melee)
+          </div>
+          {debugState.lastError && (
+            <div style={{ color: '#ff0000', marginTop: '4px' }}>
+              Last Error: {debugState.lastError.message}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Death Message */}
+      {showDeathMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: '#000000',
+            border: '4px solid #ff0000',
+            padding: '30px 60px',
+            fontSize: '32px',
+            fontWeight: 'bold',
+            zIndex: 3000,
+            textAlign: 'center',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <div style={{ color: '#ff0000', marginBottom: '10px' }}>YOU DIED</div>
+          <div style={{ fontSize: '14px', color: '#ffffff', opacity: 0.8 }}>
+            Restarting...
+          </div>
+        </div>
+      )}
+
+      {/* Help Panel */}
+      {showHelp && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: '#000000',
+            border: '3px solid #00ff00',
+            padding: '20px',
+            fontSize: '12px',
+            maxWidth: '400px',
+            zIndex: 2000,
+          }}
+        >
+          <div style={{ marginBottom: '12px', fontWeight: 'bold', fontSize: '16px' }}>
+            QUICK HELP
+          </div>
+          <div style={{ marginBottom: '8px' }}><strong>Movement:</strong> WASD</div>
+          <div style={{ marginBottom: '8px' }}><strong>Shoot:</strong> Arrow Keys (hold direction)</div>
+          <div style={{ marginBottom: '8px' }}><strong>Switch Plane:</strong> Tab (cycle) or 1/2/3</div>
+          <div style={{ marginBottom: '8px' }}><strong>Restart:</strong> R</div>
+          <div style={{ marginBottom: '8px' }}><strong>Debug:</strong> Ctrl+D</div>
+          <div style={{ marginTop: '12px', fontSize: '10px', opacity: '0.8' }}>
+            <strong>Tip:</strong> Look for floating "ENEMY" labels above colored cubes. Enemies do MELEE attacks (close range, not projectiles) - they hurt you when they get within 2 units. Watch for red "⚠ ATTACKING ⚠" warnings and pulsing red spheres! When you take damage, your screen will flash red and you'll see a red beam from the enemy to you.
+          </div>
+          <button
+            onClick={() => setShowHelp(false)}
+            style={{
+              marginTop: '12px',
+              padding: '6px 12px',
+              backgroundColor: '#00ff00',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+            }}
+          >
+            Close (H)
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+

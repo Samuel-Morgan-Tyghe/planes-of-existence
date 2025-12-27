@@ -8,7 +8,6 @@ export function Canvas() {
   return (
     <R3FCanvas
       gl={{ antialias: true }}
-      camera={{ position: [0, 0, 50], fov: 75 }}
       style={{ width: '100vw', height: '100vh' }}
     >
       <Suspense fallback={null}>

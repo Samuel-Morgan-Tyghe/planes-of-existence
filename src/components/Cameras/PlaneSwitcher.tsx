@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { $plane, switchPlane } from '../../stores/game';
+import { restartRun } from '../../stores/restart';
 import type { PlaneType } from '../../types/game';
 
 const PLANES: PlaneType[] = ['2D', 'ISO', 'FPS'];
@@ -28,6 +29,12 @@ export function PlaneSwitcher() {
       if (e.key === '3') {
         e.preventDefault();
         switchPlane('FPS');
+      }
+
+      // R to restart run
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        restartRun();
       }
     };
 

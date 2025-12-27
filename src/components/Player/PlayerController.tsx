@@ -8,7 +8,7 @@ interface PlayerControllerProps {
   rigidBodyRef: React.RefObject<RapierRigidBody>;
 }
 
-const MOVEMENT_SPEED = 5;
+const MOVEMENT_SPEED = 8;
 const JUMP_FORCE = 5;
 
 export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
@@ -44,12 +44,12 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     let y = velocity.y; // Preserve Y velocity for gravity/jumping
     let z = 0;
 
-    // Movement based on plane
+    // Movement based on plane - WASD ONLY (arrow keys are for shooting)
     switch (plane) {
       case '2D':
-        // Side-scrolling: A/D or Left/Right for horizontal movement
-        if (keys.has('a') || keys.has('arrowleft')) x = -MOVEMENT_SPEED;
-        if (keys.has('d') || keys.has('arrowright')) x = MOVEMENT_SPEED;
+        // Side-scrolling: A/D for horizontal movement
+        if (keys.has('a')) x = -MOVEMENT_SPEED;
+        if (keys.has('d')) x = MOVEMENT_SPEED;
         // Space to jump
         if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
           y = JUMP_FORCE;
@@ -59,19 +59,19 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
 
       case 'ISO':
         // Top-down: WASD for X/Z movement
-        if (keys.has('w') || keys.has('arrowup')) z = -MOVEMENT_SPEED;
-        if (keys.has('s') || keys.has('arrowdown')) z = MOVEMENT_SPEED;
-        if (keys.has('a') || keys.has('arrowleft')) x = -MOVEMENT_SPEED;
-        if (keys.has('d') || keys.has('arrowright')) x = MOVEMENT_SPEED;
+        if (keys.has('w')) z = -MOVEMENT_SPEED;
+        if (keys.has('s')) z = MOVEMENT_SPEED;
+        if (keys.has('a')) x = -MOVEMENT_SPEED;
+        if (keys.has('d')) x = MOVEMENT_SPEED;
         y = 0; // Locked in ISO
         break;
 
       case 'FPS':
         // First-person: WASD for movement
-        if (keys.has('w') || keys.has('arrowup')) z = -MOVEMENT_SPEED;
-        if (keys.has('s') || keys.has('arrowdown')) z = MOVEMENT_SPEED;
-        if (keys.has('a') || keys.has('arrowleft')) x = -MOVEMENT_SPEED;
-        if (keys.has('d') || keys.has('arrowright')) x = MOVEMENT_SPEED;
+        if (keys.has('w')) z = -MOVEMENT_SPEED;
+        if (keys.has('s')) z = MOVEMENT_SPEED;
+        if (keys.has('a')) x = -MOVEMENT_SPEED;
+        if (keys.has('d')) x = MOVEMENT_SPEED;
         // Space to jump
         if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
           y = JUMP_FORCE;

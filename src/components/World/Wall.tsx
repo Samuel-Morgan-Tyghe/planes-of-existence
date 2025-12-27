@@ -1,5 +1,4 @@
 import { RigidBody } from '@react-three/rapier';
-import { COLLISION_GROUPS } from '../../utils/constants';
 
 interface WallProps {
   position: [number, number, number];
@@ -10,7 +9,8 @@ export function Wall({ position }: WallProps) {
     <RigidBody
       type="fixed"
       colliders="cuboid"
-      collisionGroups={COLLISION_GROUPS.WALL}
+      collisionGroups={0x00010001}
+      userData={{ isWall: true }}
     >
       <mesh position={position} castShadow receiveShadow>
         <boxGeometry args={[1.8, 3, 1.8]} />

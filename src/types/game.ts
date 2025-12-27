@@ -4,6 +4,7 @@ export interface PlayerStats {
   sharpness: number;
   saturation: number;
   contrast: number;
+  brightness: number;
   resolution: number;
 }
 
@@ -13,5 +14,6 @@ export interface ProjectileData {
   behavior: 'linear' | 'homing' | 'bouncing';
   count: number;
   direction?: [number, number, number];
+  color?: string; // Color override for RGB split etc
 }
 
