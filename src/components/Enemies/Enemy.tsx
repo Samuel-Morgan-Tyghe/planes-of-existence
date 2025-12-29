@@ -5,13 +5,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
 import type { EnemyState } from '../../types/enemies';
+import { HitEffect } from '../Effects/HitEffect';
 import { EnemyProjectile } from './EnemyProjectile';
 
 interface EnemyProps {
   enemy: EnemyState;
   playerPosition: [number, number, number];
   onDeath: (enemyId: number) => void;
-  onDamage?: (enemyId: number, damage: number) => void;
+
   onPositionUpdate?: (enemyId: number, position: [number, number, number]) => void;
 }
 
@@ -20,7 +21,7 @@ const ENEMY_ATTACK_RANGE = 2;
 const ENEMY_ATTACK_COOLDOWN = 1000; // ms
 const ENEMY_SPAWN_DELAY = 6000; // 6 seconds before enemy can attack (increased for player safety)
 
-export function Enemy({ enemy, playerPosition, onDeath, onDamage, onPositionUpdate }: EnemyProps) {
+export function Enemy({ enemy, playerPosition, onDeath, onPositionUpdate }: EnemyProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const [currentPosition, setCurrentPosition] = useState<[number, number, number]>(enemy.position);
@@ -37,20 +38,14 @@ export function Enemy({ enemy, playerPosition, onDeath, onDamage, onPositionUpda
   // Projectile management for ranged enemies
   const [projectiles, setProjectiles] = useState<Array<{ id: number; origin: [number, number, number]; direction: [number, number, number] }>>([]);
   const projectileIdCounter = useRef(0);
+  const [hitEffects, setHitEffects] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
+  const hitEffectIdCounter = useRef(0);
 
   const isRanged = enemy.definition.attackType === 'ranged';
   const attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
 
   // Handle damage from projectiles
-  useEffect(() => {
-    if (rigidBodyRef.current) {
-      (rigidBodyRef.current as any).handleDamage = (damage: number) => {
-        if (!isDeadRef.current) {
-          onDamage?.(enemy.id, damage);
-        }
-      };
-    }
-  }, [enemy.id, onDamage]);
+  // Legacy hack removed - using event system now
 
   useEffect(() => {
     if (enemy.isDead && !isDeadRef.current) {
@@ -59,28 +54,44 @@ export function Enemy({ enemy, playerPosition, onDeath, onDamage, onPositionUpda
     }
   }, [enemy.isDead, enemy.id, onDeath]);
 
-  // Flash white when taking damage
+  // Register enemy position immediately on mount
+  useEffect(() => {
+    console.log(`👹 Enemy ${enemy.id}: Registering initial position`, enemy.position);
+    onPositionUpdate?.(enemy.id, enemy.position);
+  }, [enemy.id, enemy.position, onPositionUpdate]);
+
+  // Flash white and show hit effect when taking damage
   useEffect(() => {
     if (enemy.health < lastHealthRef.current) {
       console.log(`💢 Enemy ${enemy.id} health changed: ${lastHealthRef.current} -> ${enemy.health}`);
       setDamageFlash(true);
       setTimeout(() => setDamageFlash(false), 200);
+
+      // Add hit effect
+      const id = hitEffectIdCounter.current++;
+      // Use current position for effect
+      const effectPos: [number, number, number] = [currentPosition[0], currentPosition[1] + enemy.definition.size/2, currentPosition[2]];
+      setHitEffects(prev => [...prev, { id, position: effectPos }]);
     }
     lastHealthRef.current = enemy.health;
-  }, [enemy.health, enemy.id]);
+  }, [enemy.health, enemy.id, currentPosition, enemy.definition.size]);
 
-  // Update position from rigid body (more reliable for physics objects)
+  // Update position from mesh (synced with physics, safe to read)
   useFrame(() => {
-    if (rigidBodyRef.current && !enemy.isDead) {
-      const pos = rigidBodyRef.current.translation();
+    if (meshRef.current && !enemy.isDead) {
+      // Get world position from mesh which is updated by Rapier
+      const worldPos = new Vector3();
+      meshRef.current.getWorldPosition(worldPos);
+      
+      const pos = { x: worldPos.x, y: worldPos.y, z: worldPos.z };
 
       // Clamp position to world bounds (60x60 world size = -30 to 30)
       const WORLD_BOUND = 28; // Slightly inside world edge
       const clampedX = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, pos.x));
       const clampedZ = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, pos.z));
 
-      // If enemy went out of bounds, teleport back
-      if (clampedX !== pos.x || clampedZ !== pos.z) {
+      // If enemy went out of bounds, teleport back (only if significantly out)
+      if ((clampedX !== pos.x || clampedZ !== pos.z) && rigidBodyRef.current) {
         rigidBodyRef.current.setTranslation({ x: clampedX, y: pos.y, z: clampedZ }, true);
         rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
       }
@@ -88,7 +99,11 @@ export function Enemy({ enemy, playerPosition, onDeath, onDamage, onPositionUpda
       const newPos: [number, number, number] = [pos.x, pos.y, pos.z];
       setCurrentPosition(newPos);
       // Update parent spawner with current position for projectile collision
+      // Ensure this is called every frame to keep global state fresh
       onPositionUpdate?.(enemy.id, newPos);
+    } else if (enemy.isDead) {
+      // If dead, ensure we don't leave ghost positions
+      // onPositionUpdate?.(enemy.id, [9999, 9999, 9999]);
     }
 
     // Animate attack pulse
@@ -119,7 +134,16 @@ export function Enemy({ enemy, playerPosition, onDeath, onDamage, onPositionUpda
     // Removed excessive logging for performance
 
     // Move toward player if in range (but ranged enemies keep distance)
-    if (distance < ENEMY_DETECTION_RANGE && distance > attackRange) {
+    // Rotate mesh to face player
+    if (meshRef.current) {
+      meshRef.current.lookAt(playerPos.x, currentPosition[1], playerPos.z);
+    }
+
+    // Move toward player if in range (but ranged enemies keep distance)
+    if (enemy.definition.id === 'turret') {
+       // Turrets don't move
+       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    } else if (distance < ENEMY_DETECTION_RANGE && distance > attackRange) {
       const direction = new Vector3()
         .subVectors(playerPos, enemyVec)
         .normalize()
@@ -210,8 +234,21 @@ export function Enemy({ enemy, playerPosition, onDeath, onDamage, onPositionUpda
 
   const healthPercent = (enemy.health / enemy.definition.health) * 100;
 
+  const handleHitEffectComplete = (id: number) => {
+    setHitEffects(prev => prev.filter(e => e.id !== id));
+  };
+
   return (
     <>
+      {/* Hit Effects */}
+      {hitEffects.map(effect => (
+        <HitEffect
+          key={effect.id}
+          position={effect.position}
+          color={enemy.definition.color}
+          onComplete={() => handleHitEffectComplete(effect.id)}
+        />
+      ))}
       {/* Render enemy projectiles */}
       {projectiles.map((proj) => (
         <EnemyProjectile
@@ -232,8 +269,9 @@ export function Enemy({ enemy, playerPosition, onDeath, onDamage, onPositionUpda
       colliders="cuboid"
       mass={1}
       position={enemy.position}
-      collisionGroups={0x00010001}
       userData={{ isEnemy: true, enemyId: enemy.id, health: enemy.health }}
+      enabledTranslations={[true, true, true]}
+      lockRotations={true}
     >
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[enemy.definition.size, enemy.definition.size, enemy.definition.size]} />
@@ -243,6 +281,7 @@ export function Enemy({ enemy, playerPosition, onDeath, onDamage, onPositionUpda
           emissiveIntensity={damageFlash ? 5.0 : isAttacking ? 3.0 : 2.0}
         />
       </mesh>
+      
       {/* Enemy indicator - always visible, brighter */}
       <mesh position={[0, enemy.definition.size / 2 + 0.5, 0]}>
         <sphereGeometry args={[0.3, 8, 8]} />

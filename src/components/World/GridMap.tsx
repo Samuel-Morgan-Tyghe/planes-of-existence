@@ -1,16 +1,14 @@
-import { useMemo, useEffect } from 'react';
 import { useStore } from '@nanostores/react';
-import { generateFloor, generateRoomLayout, gridToWorld, getRoomWorldSize } from '../../utils/floorGen';
-import { Wall } from './Wall';
-import { Portal } from './Portal';
-import { Door } from './Door';
 import { RigidBody } from '@react-three/rapier';
+import { useEffect, useMemo } from 'react';
+import { $clearedRooms, $currentFloor, $currentRoomId, $floorData, $roomCleared, $visitedRooms } from '../../stores/game';
+import { $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
-import { $currentFloor, $currentRoomId, $floorData, $roomCleared, $visitedRooms, $clearedRooms } from '../../stores/game';
-import { $position } from '../../stores/player';
 import type { Room } from '../../types/room';
-
-const ROOM_SIZE = 20; // Must match floorGen.ts
+import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
+import { Door } from './Door';
+import { Portal } from './Portal';
+import { Wall } from './Wall';
 
 export function GridMap() {
   const restartTrigger = useStore($restartTrigger);
@@ -73,8 +71,8 @@ export function GridMap() {
   const handleDoorEnter = (direction: 'north' | 'south' | 'east' | 'west') => {
     if (!currentRoom) return;
 
-    console.log(`🚪 handleDoorEnter called from room ${currentRoomId} (grid: ${currentRoom.gridX}, ${currentRoom.gridY}), direction: ${direction}`);
-    console.log(`  Current room has doors:`, currentRoom.doors);
+    // console.log(`\n🚪 ========== DOOR TRANSITION START ==========`);
+    // console.log(`🚪 GridMap: handleDoorEnter from room ${currentRoomId} (grid: ${currentRoom.gridX}, ${currentRoom.gridY}), direction: ${direction}`);
 
     // Find the room in that direction
     const offsets = {
@@ -88,14 +86,9 @@ export function GridMap() {
     const targetX = currentRoom.gridX + offset.dx;
     const targetY = currentRoom.gridY + offset.dy;
 
-    console.log(`  Looking for room at grid position (${targetX}, ${targetY})`);
-    console.log(`  All rooms:`, floorData.rooms.map(r => `Room ${r.id}: (${r.gridX}, ${r.gridY})`));
-
     const targetRoom = floorData.rooms.find(r => r.gridX === targetX && r.gridY === targetY);
 
     if (targetRoom) {
-      console.log(`🚪 Moving from room ${currentRoomId} to room ${targetRoom.id}`);
-
       // Reveal the target room when entering
       revealRoom(targetRoom.id);
 
@@ -103,15 +96,47 @@ export function GridMap() {
       $roomCleared.set(false); // Reset room cleared for new room
 
       // Teleport player to new room entrance
+      // Calculate position relative to the door they entered from
+      // If moving North (dy=-1), we enter from South of new room
+      // If moving South (dy=1), we enter from North of new room
+      // If moving East (dx=1), we enter from West of new room
+      // If moving West (dx=-1), we enter from East of new room
+      
+      const roomSize = roomWorldSize;
+      const halfRoom = roomSize / 2;
+      // Offset from center to put player near the door (but inside room)
+      const doorOffset = halfRoom - 2.5; 
+
+      let offsetX = 0;
+      let offsetZ = 0;
+
+      switch (direction) {
+        case 'north':
+          // Entering from South side of new room
+          offsetZ = doorOffset;
+          break;
+        case 'south':
+          // Entering from North side of new room
+          offsetZ = -doorOffset;
+          break;
+        case 'east':
+          // Entering from West side of new room
+          offsetX = -doorOffset;
+          break;
+        case 'west':
+          // Entering from East side of new room
+          offsetX = doorOffset;
+          break;
+      }
+
       const newWorldOffset: [number, number, number] = [
-        targetRoom.gridX * roomWorldSize,
-        playerPosition[1],
-        targetRoom.gridY * roomWorldSize,
+        targetRoom.gridX * roomWorldSize + offsetX,
+        playerPosition[1] + 0.5, // Keep height
+        targetRoom.gridY * roomWorldSize + offsetZ,
       ];
-      $position.set(newWorldOffset);
+      $teleportTo.set(newWorldOffset);
     } else {
       console.error(`❌ No room found at grid position (${targetX}, ${targetY})`);
-      console.error(`   Current room doors should only be: ${currentRoom.doors.map(d => d.direction).join(', ')}`);
     }
   };
 
@@ -137,15 +162,15 @@ export function GridMap() {
         const isCurrentRoom = room.id === currentRoomId;
         const isVisited = visitedRooms.has(room.id);
 
-        // Only render current room and adjacent visited rooms
-        const shouldRender = isCurrentRoom || (isVisited && isAdjacentToCurrentRoom(room));
+        // Render current room AND all adjacent rooms (visited or not) to ensure physics are loaded
+        const shouldRender = isCurrentRoom || isAdjacentToCurrentRoom(room);
 
         if (!shouldRender) return null;
 
         return (
           <group key={room.id}>
             {/* Floor for this room */}
-            <RigidBody type="fixed" colliders="cuboid" collisionGroups={0x00010001}>
+            <RigidBody type="fixed" colliders="cuboid">
               <mesh
                 rotation={[-Math.PI / 2, 0, 0]}
                 position={[layout.worldOffset[0], -0.5, layout.worldOffset[2]]}
@@ -175,36 +200,36 @@ export function GridMap() {
               <>
                 {/* North wall */}
                 {!room.doors.some(d => d.direction === 'north') && (
-                  <RigidBody type="fixed" colliders="cuboid" collisionGroups={0x00010001} userData={{ isWall: true, indestructible: true }}>
-                    <mesh position={[layout.worldOffset[0], 2, layout.worldOffset[2] - roomWorldSize / 2]} castShadow receiveShadow>
-                      <boxGeometry args={[roomWorldSize, 4, 1]} />
+                  <RigidBody type="fixed" colliders="cuboid" userData={{ isWall: true, indestructible: true }}>
+                    <mesh position={[layout.worldOffset[0], 4, layout.worldOffset[2] - roomWorldSize / 2]} castShadow receiveShadow>
+                      <boxGeometry args={[roomWorldSize, 8, 1]} />
                       <meshStandardMaterial color="#444444" />
                     </mesh>
                   </RigidBody>
                 )}
                 {/* South wall */}
                 {!room.doors.some(d => d.direction === 'south') && (
-                  <RigidBody type="fixed" colliders="cuboid" collisionGroups={0x00010001} userData={{ isWall: true, indestructible: true }}>
-                    <mesh position={[layout.worldOffset[0], 2, layout.worldOffset[2] + roomWorldSize / 2]} castShadow receiveShadow>
-                      <boxGeometry args={[roomWorldSize, 4, 1]} />
+                  <RigidBody type="fixed" colliders="cuboid" userData={{ isWall: true, indestructible: true }}>
+                    <mesh position={[layout.worldOffset[0], 4, layout.worldOffset[2] + roomWorldSize / 2]} castShadow receiveShadow>
+                      <boxGeometry args={[roomWorldSize, 8, 1]} />
                       <meshStandardMaterial color="#444444" />
                     </mesh>
                   </RigidBody>
                 )}
                 {/* East wall */}
                 {!room.doors.some(d => d.direction === 'east') && (
-                  <RigidBody type="fixed" colliders="cuboid" collisionGroups={0x00010001} userData={{ isWall: true, indestructible: true }}>
-                    <mesh position={[layout.worldOffset[0] + roomWorldSize / 2, 2, layout.worldOffset[2]]} castShadow receiveShadow>
-                      <boxGeometry args={[1, 4, roomWorldSize]} />
+                  <RigidBody type="fixed" colliders="cuboid" userData={{ isWall: true, indestructible: true }}>
+                    <mesh position={[layout.worldOffset[0] + roomWorldSize / 2, 4, layout.worldOffset[2]]} castShadow receiveShadow>
+                      <boxGeometry args={[1, 8, roomWorldSize]} />
                       <meshStandardMaterial color="#444444" />
                     </mesh>
                   </RigidBody>
                 )}
                 {/* West wall */}
                 {!room.doors.some(d => d.direction === 'west') && (
-                  <RigidBody type="fixed" colliders="cuboid" collisionGroups={0x00010001} userData={{ isWall: true, indestructible: true }}>
-                    <mesh position={[layout.worldOffset[0] - roomWorldSize / 2, 2, layout.worldOffset[2]]} castShadow receiveShadow>
-                      <boxGeometry args={[1, 4, roomWorldSize]} />
+                  <RigidBody type="fixed" colliders="cuboid" userData={{ isWall: true, indestructible: true }}>
+                    <mesh position={[layout.worldOffset[0] - roomWorldSize / 2, 4, layout.worldOffset[2]]} castShadow receiveShadow>
+                      <boxGeometry args={[1, 8, roomWorldSize]} />
                       <meshStandardMaterial color="#444444" />
                     </mesh>
                   </RigidBody>
@@ -229,6 +254,7 @@ export function GridMap() {
                   // Don't render if near a door
                   if (hasDoorNearby) return null;
 
+                  // console.log(`🧱 Rendering internal wall at ${x},${y} (${worldPos})`);
                   return <Wall key={`wall-${room.id}-${x}-${y}`} position={worldPos} />;
                 } else if (tile === 4 && roomCleared && isCurrentRoom) {
                   // Exit portal (only in exit room, only when cleared, only when in current room)
@@ -280,11 +306,11 @@ export function GridMap() {
 
                     if (shouldRenderFromThisRoom) {
                       // Check if both connecting rooms are cleared - if so, don't render door
-                      const bothRoomsCleared = areRoomsCleared(room.id, adjacentRoom.id);
+                      // const bothRoomsCleared = areRoomsCleared(room.id, adjacentRoom.id);
 
-                      if (bothRoomsCleared) {
-                        return null; // Door disappears between cleared rooms
-                      }
+                      // if (bothRoomsCleared) {
+                      //   return null; // Door disappears between cleared rooms
+                      // }
 
                       // Lock door if current room has enemies alive (only if this door is in the current room)
                       const isDoorLocked = isCurrentRoom && !roomCleared;

@@ -10,6 +10,9 @@ export const $position = atom<[number, number, number]>([0, 1.5, 0]);
 // Player invulnerability flag (for spawn protection)
 export const $isInvulnerable = atom<boolean>(false);
 
+// Teleport signal (position to teleport to)
+export const $teleportTo = atom<[number, number, number] | null>(null);
+
 // Actions
 export const setHealth = (value: number) => {
   $health.set(Math.max(0, Math.min(value, $maxHealth.get())));

@@ -1,4 +1,4 @@
-import type { Room, FloorData, RoomLayoutData, GridMap } from '../types/room';
+import type { FloorData, GridMap, Room, RoomLayoutData } from '../types/room';
 
 const ROOM_SIZE = 20; // Each room is 20x20 tiles
 const ROOM_WORLD_SIZE = 40; // Each room is 40 units in world space
@@ -55,6 +55,8 @@ export function generateFloor(floorNumber: number): FloorData {
     type: 'start',
     doors: [],
     distanceFromStart: 0,
+    enemySpawnPoints: [], // Will be calculated later
+    enemyCount: 0, // Will be calculated later
   };
 
   rooms.push(startRoom);
@@ -96,6 +98,8 @@ export function generateFloor(floorNumber: number): FloorData {
           type: 'normal',
           doors: [],
           distanceFromStart: 0, // Will calculate later
+          enemySpawnPoints: [], // Will be calculated later
+          enemyCount: 0, // Will be calculated later
         };
 
         rooms.push(newRoom);
@@ -157,11 +161,30 @@ export function generateFloor(floorNumber: number): FloorData {
     }
   }
 
-  furthestRoom.type = 'exit';
+  furthestRoom.type = 'boss';
+
+  // Initialize enemy spawn data (will be calculated when room layout is generated)
+  for (const room of rooms) {
+    room.enemySpawnPoints = [];
+    room.enemyCount = room.type === 'start' ? 0 : Math.min(12, 4 + Math.floor(floorNumber * 1.2));
+    
+    // Pre-calculate layout and spawn points immediately
+    // We pass isPlayerInRoom=false because we just want to generate the data
+    generateRoomLayout(room, floorNumber, false);
+  }
 
   console.log(`🗺️ Floor ${floorNumber}: Generated ${rooms.length} rooms`);
   console.log(`  Start room at (${rooms[0].gridX}, ${rooms[0].gridY})`);
   console.log(`  Exit room at (${furthestRoom.gridX}, ${furthestRoom.gridY}), distance: ${furthestRoom.distanceFromStart}`);
+
+  // Log total enemy count
+  const totalEnemies = rooms.reduce((sum, room) => sum + room.enemyCount, 0);
+  console.log(`  Total enemies on floor: ${totalEnemies}`);
+  rooms.forEach(room => {
+    if (room.enemyCount > 0) {
+      console.log(`    Room ${room.id} (${room.type}): ${room.enemyCount} enemies`);
+    }
+  });
 
   return {
     rooms,
@@ -276,28 +299,45 @@ export function generateRoomLayout(
   const playerGridX = Math.floor(ROOM_SIZE / 2);
   const playerGridY = Math.floor(ROOM_SIZE / 2);
 
-  // Enemy count scales with floor number
-  const baseEnemyCount = Math.min(12, 4 + Math.floor(floorNumber * 1.2));
-  const enemyCount = isPlayerInRoom ? baseEnemyCount : 0; // Only spawn if player is in room
-
-  // Place enemy spawn markers
-  if (enemyCount > 0) {
+  // Calculate enemy spawn points (only once if not already calculated)
+  // This is now primarily handled by the pre-calculation in generateFloor
+  if (room.enemySpawnPoints.length === 0 && room.enemyCount > 0) {
     const MIN_DISTANCE_FROM_PLAYER = 5;
-    let spawnedEnemies = 0;
-    for (let i = 0; i < enemyCount * 3 && spawnedEnemies < enemyCount; i++) {
-      const x = rng.nextInt(0, ROOM_SIZE - 1);
-      const y = rng.nextInt(0, ROOM_SIZE - 1);
+    const spawnPoints: [number, number][] = [];
+
+    let attempts = 0;
+    const MAX_ATTEMPTS = 100;
+    for (let i = 0; i < room.enemyCount && attempts < MAX_ATTEMPTS; attempts++) {
+      const x = rng.nextInt(1, ROOM_SIZE - 2); // Avoid edges
+      const y = rng.nextInt(1, ROOM_SIZE - 2);
 
       const distX = Math.abs(x - playerGridX);
       const distY = Math.abs(y - playerGridY);
       const distance = Math.max(distX, distY);
 
+      // Check if tile is walkable (0) and far enough from player
+      // IMPORTANT: Ensure we are checking the grid we just generated/modified
       if (grid[y][x] === 0 && distance >= MIN_DISTANCE_FROM_PLAYER) {
-        grid[y][x] = 2; // Enemy spawn
-        spawnedEnemies++;
+        spawnPoints.push([x, y]);
+        i++;
+      } else {
+        // console.log(`⚠️ Rejected spawn at ${x},${y} (Tile: ${grid[y][x]}, Dist: ${distance})`);
       }
     }
+
+    // Store calculated spawn points in room data
+    room.enemySpawnPoints = spawnPoints;
+    room.enemyCount = spawnPoints.length;
   }
+
+  // Place enemy spawn markers on grid (for visualization/debug)
+  for (const [x, y] of room.enemySpawnPoints) {
+    if (grid[y][x] === 0) {
+      grid[y][x] = 2; // Enemy spawn marker
+    }
+  }
+
+  const enemyCount = isPlayerInRoom ? room.enemyCount : 0;
 
   // Place loot spawns
   const lootSpawns = 2 + Math.floor(floorNumber / 3);
@@ -317,7 +357,7 @@ export function generateRoomLayout(
 
   // Place exit portal only in exit room
   let exitPosition: [number, number] | undefined;
-  if (room.type === 'exit') {
+  if (room.type === 'boss') {
     let exitX = playerGridX;
     let exitY = playerGridY;
     let maxDistance = 0;

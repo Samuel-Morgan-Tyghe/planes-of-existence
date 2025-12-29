@@ -1,4 +1,5 @@
 import { atom, map } from 'nanostores';
+import type { EnemyState } from '../types/enemies';
 import type { PlaneType, PlayerStats } from '../types/game';
 import type { FloorData } from '../types/room';
 
@@ -27,11 +28,17 @@ export const $clearedRooms = atom<Set<number>>(new Set()); // Track which rooms 
 // Enemies alive in current room
 export const $enemiesAlive = atom<number>(0);
 
+// Enemy state for current room
+export const $enemies = atom<EnemyState[]>([]); // Store enemy state globally
+
 // Room cleared status (all enemies defeated)
 export const $roomCleared = atom<boolean>(false);
 
 // Pause state
 export const $isPaused = atom<boolean>(false);
+
+// Camera shake trigger (intensity)
+export const $cameraShake = atom<number>(0);
 
 // Actions
 export const switchPlane = (plane: PlaneType) => {

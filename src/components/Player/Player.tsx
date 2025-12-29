@@ -4,8 +4,9 @@ import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { Vector3 } from 'three';
 import { $plane } from '../../stores/game';
-import { $health, $isInvulnerable, $position } from '../../stores/player';
+import { $health, $isInvulnerable, $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
 import { PlayerController } from './PlayerController';
 
@@ -18,6 +19,7 @@ export function Player() {
   const plane = useStore($plane);
   const health = useStore($health);
   const restartTrigger = useStore($restartTrigger);
+  const teleportTo = useStore($teleportTo);
   const [damageFlash, setDamageFlash] = useState(false);
   const [damageIntensity, setDamageIntensity] = useState(0); // 0-1 for pulsing damage indicator
   const [isInvulnerable, setIsInvulnerable] = useState(true); // Start invulnerable
@@ -26,8 +28,8 @@ export function Player() {
   const spawnTimeRef = useRef(Date.now());
   const isInvulnerableRef = useRef(true); // Start invulnerable
   const isDeadRef = useRef(false);
-  const invulnerabilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const deathTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const invulnerabilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deathTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Set invulnerability on initial mount
   useEffect(() => {
@@ -91,6 +93,20 @@ export function Player() {
       $isInvulnerable.set(false);
     }, PLAYER_SPAWN_INVULNERABILITY);
   }, [restartTrigger]);
+
+  // Handle teleportation signal
+  useEffect(() => {
+    if (teleportTo && rigidBodyRef.current) {
+      console.log('✨ Teleporting player to:', teleportTo);
+      const rb = rigidBodyRef.current;
+      rb.setTranslation({ x: teleportTo[0], y: teleportTo[1], z: teleportTo[2] }, true);
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      
+      // Reset signal
+      $teleportTo.set(null);
+    }
+  }, [teleportTo]);
 
   // Flash red when taking damage (but not during invulnerability)
   useEffect(() => {
@@ -156,8 +172,8 @@ export function Player() {
         rb.lockRotations(true, true);
         break;
       case 'ISO':
-        // Lock Y-axis (vertical) and all rotations
-        rb.setEnabledTranslations(true, false, true, true);
+        // Allow Y-axis (vertical) for jumping, but lock rotations
+        rb.setEnabledTranslations(true, true, true, true);
         rb.lockRotations(true, true);
         break;
       case 'FPS':
@@ -174,7 +190,6 @@ export function Player() {
       colliders="cuboid"
       mass={1}
       position={[0, 1.5, 0]}
-      collisionGroups={0x00010001}
     >
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[1, 1, 1]} />
@@ -235,9 +250,20 @@ function PlayerPositionTracker({
   useFrame(() => {
     if (!meshRef.current) return;
     // Get world position (not local position relative to parent)
-    const worldPos = new THREE.Vector3();
+    const worldPos = new Vector3();
     meshRef.current.getWorldPosition(worldPos);
     $position.set([worldPos.x, worldPos.y, worldPos.z]);
+
+    // Void Safety Net: If player falls through floor, respawn them
+    if (worldPos.y < -10) {
+        console.warn('⚠️ Player fell out of world! Respawning...');
+        const rb = meshRef.current.parent as any; // Access RigidBody
+        if (rb && rb.setTranslation) {
+            // Respawn at current X/Z but high up
+            rb.setTranslation({ x: worldPos.x, y: 5, z: worldPos.z }, true);
+            rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        }
+    }
   });
   return null;
 }

@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+
 import { useStore } from '@nanostores/react';
-import { Enemy } from './Enemy';
-import { generateRoomLayout, gridToWorld } from '../../utils/floorGen';
-import { ENEMY_DEFINITIONS } from '../../types/enemies';
-import type { EnemyState } from '../../types/enemies';
+import { useCallback, useEffect, useRef } from 'react';
+import { $clearedRooms, $currentFloor, $currentRoomId, $enemies, $enemiesAlive, $floorData, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
-import { $currentFloor, $currentRoomId, $floorData, $enemiesAlive, $roomCleared, $clearedRooms } from '../../stores/game';
+import { $damageEvents, emitDrop } from '../../systems/events';
+import type { EnemyState } from '../../types/enemies';
+import { ENEMY_DEFINITIONS } from '../../types/enemies';
+import { generateRoomLayout, gridToWorld } from '../../utils/floorGen';
+import { Enemy } from './Enemy';
 
 export function EnemySpawner({
   onEnemyKilled,
@@ -15,7 +17,7 @@ export function EnemySpawner({
   onEnemyKilled: (enemyId: number) => void;
   onSpawnRequest?: (position: [number, number, number], count: number) => void;
 }) {
-  const [enemies, setEnemies] = useState<EnemyState[]>([]);
+  const enemies = useStore($enemies);
   const playerPosition = useStore($position);
   const restartTrigger = useStore($restartTrigger);
   const currentFloor = useStore($currentFloor);
@@ -45,17 +47,17 @@ export function EnemySpawner({
     }
 
     console.log(`👹 Spawning ${count} enemies from drop at position`, position);
-    setEnemies((prev) => {
-      const combined = [...prev, ...newEnemies];
-      $enemiesAlive.set(combined.length);
-      $roomCleared.set(false); // Room no longer cleared
-      return combined;
-    });
+    const prev = $enemies.get();
+    const combined = [...prev, ...newEnemies];
+    $enemies.set(combined);
+    $enemiesAlive.set(combined.length);
+    $roomCleared.set(false); // Room no longer cleared
   }, []); // No dependencies needed since we use functional setState and ref
 
   // Reset cleared rooms when restart or floor changes
   useEffect(() => {
     clearedRoomsRef.current = new Set();
+    enemyIdCounterRef.current = 0; // Reset ID counter for new floor
     console.log('🔄 Cleared rooms reset');
   }, [restartTrigger, currentFloor]);
 
@@ -64,7 +66,7 @@ export function EnemySpawner({
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'k' || e.key === 'K') {
         console.log('💀 DEBUG: Killing all enemies in room');
-        setEnemies([]);
+        $enemies.set([]);
         $enemiesAlive.set(0);
 
         // Mark room as cleared
@@ -85,8 +87,12 @@ export function EnemySpawner({
   }, [currentFloor, currentRoomId]);
 
   useEffect(() => {
-    // Spawn enemies based on current room
-    // Regenerate when room changes or restart
+    console.log(`\n👹 Room changed to ${currentRoomId} on floor ${currentFloor}`);
+
+    // Clear enemy positions map when room changes
+    enemyPositionsRef.current.clear();
+    (window as any).__enemyPositions = [];
+
     if (!floorData) return;
 
     const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
@@ -96,144 +102,167 @@ export function EnemySpawner({
     const roomKey = `${currentFloor}-${currentRoomId}`;
     const isCleared = clearedRoomsRef.current.has(roomKey);
 
-    console.log(`🚪 Entering room ${currentRoomId} on floor ${currentFloor}, cleared: ${isCleared}`);
-
     // If room is cleared, don't spawn enemies
     if (isCleared) {
-      console.log(`✅ Room ${currentRoomId} already cleared, no enemies`);
-      setEnemies([]);
+      $enemies.set([]);
       $enemiesAlive.set(0);
       $roomCleared.set(true);
       return;
     }
 
+    // Generate room layout (this will calculate enemy spawn points if not already calculated)
     const roomLayout = generateRoomLayout(currentRoom, currentFloor, true);
     const newEnemies: EnemyState[] = [];
-    enemyIdCounterRef.current = 0;
+    // Don't reset ID counter to ensure unique keys and force component remounts
+    // enemyIdCounterRef.current = 0;
 
-    // Player spawn position (center of room)
-    const PLAYER_SPAWN = [0, 1.5, 0];
-    const MIN_SPAWN_DISTANCE = 10; // Minimum units from player spawn
+    // Spawn enemies
+    if (currentRoom.type === 'boss') {
+      // Spawn Boss
+      console.log('👹 Spawning BOSS!');
+      newEnemies.push({
+        id: enemyIdCounterRef.current++,
+        definition: ENEMY_DEFINITIONS.boss,
+        health: ENEMY_DEFINITIONS.boss.health,
+        position: [roomLayout.worldOffset[0], 0.5, roomLayout.worldOffset[2]], // Center of room
+        isDead: false,
+      });
+    } else {
+      // Spawn normal enemies at pre-calculated positions
+      const enemyTypes = Object.values(ENEMY_DEFINITIONS).filter(e => e.id !== 'boss');
+      
+      currentRoom.enemySpawnPoints.forEach((point, index) => {
+        const [gridX, gridY] = point;
+        
+        // Double check this is not a wall (1) or door (5, 6)
+        const tile = roomLayout.grid[gridY]?.[gridX];
+        if (tile === 1 || tile === 5 || tile === 6) {
+            console.warn(`⚠️ Skipping enemy spawn at ${gridX},${gridY} (Tile: ${tile})`);
+            return;
+        }
 
-    roomLayout.grid.forEach((row, y) => {
-      row.forEach((tile, x) => {
-        if (tile === 2) {
-          // Enemy spawn point
-          const worldPos = gridToWorld(x, y, roomLayout.worldOffset);
-          const [worldX, worldY, worldZ] = worldPos;
+        const worldPos = gridToWorld(gridX, gridY, roomLayout.worldOffset);
+        const [worldX, worldY, worldZ] = worldPos;
 
-          // Calculate distance from player spawn
-          const dx = worldX - PLAYER_SPAWN[0];
-          const dz = worldZ - PLAYER_SPAWN[2];
-          const distance = Math.sqrt(dx * dx + dz * dz);
-
-          // Only spawn if far enough from player
-          if (distance >= MIN_SPAWN_DISTANCE) {
-            const enemyTypes = Object.values(ENEMY_DEFINITIONS);
-            const randomEnemy = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-
-            console.log(`✅ Spawning Enemy ${enemyIdCounterRef.current} in room ${currentRoomId} at distance ${distance.toFixed(2)} from player`);
-
-            newEnemies.push({
+        const randomEnemy = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+        
+        // Delay each spawn by 200ms * index
+        setTimeout(() => {
+            // Check if room is still current (user didn't leave)
+            if ($currentRoomId.get() !== currentRoomId) return;
+            
+            const enemy: EnemyState = {
               id: enemyIdCounterRef.current++,
               definition: randomEnemy,
               health: randomEnemy.health,
-              position: [worldX, worldY + 1, worldZ],
+              position: [worldX, worldY + 0.5, worldZ],
               isDead: false,
-            });
-          } else {
-            console.warn(`❌ Skipping enemy spawn at (${worldX.toFixed(1)}, ${worldZ.toFixed(1)}) - too close to player (${distance.toFixed(2)} units)`);
-          }
-        }
+            };
+            
+            console.log(`👹 Spawning enemy ${enemy.id} at`, enemy.position);
+            
+            // Add to store
+            const currentEnemies = $enemies.get();
+            $enemies.set([...currentEnemies, enemy]);
+            $enemiesAlive.set(currentEnemies.length + 1);
+            
+        }, index * 300); // 300ms delay between spawns
       });
-    });
-
-    console.log(`🎮 Room ${currentRoomId} on Floor ${currentFloor}: Spawned ${newEnemies.length} enemies`);
-    console.log(`  Enemy details:`, newEnemies.map(e => `Enemy ${e.id} at [${e.position[0].toFixed(1)}, ${e.position[1].toFixed(1)}, ${e.position[2].toFixed(1)}]`));
-
-    setEnemies(newEnemies);
-    $enemiesAlive.set(newEnemies.length);
-
-    // If room has 0 enemies, mark it as cleared immediately
-    if (newEnemies.length === 0) {
-      console.log(`✅ Room ${currentRoomId} has no enemies, marking as cleared`);
-      const roomKey = `${currentFloor}-${currentRoomId}`;
-      clearedRoomsRef.current.add(roomKey);
-
-      // Update global cleared rooms store
-      const newClearedRooms = new Set($clearedRooms.get());
-      newClearedRooms.add(currentRoomId);
-      $clearedRooms.set(newClearedRooms);
-
-      $roomCleared.set(true);
-    } else {
-      console.log(`❌ Room ${currentRoomId} has ${newEnemies.length} enemies, doors should be locked`);
-      $roomCleared.set(false); // Reset room cleared status for new room with enemies
     }
+
+    // Initial count is 0, will increase as they spawn
+    // But we need to prevent room clear trigger until they are all spawned?
+    // Actually, if we set roomCleared to false initially, it should be fine.
+    // But if we have 0 enemies initially, the check in this effect might mark it cleared.
+    
+    // Let's set roomCleared to false explicitly
+    $roomCleared.set(false);
+    
+    // We can't use the immediate check for 0 enemies anymore since they spawn async.
+    // But we know how many WILL spawn.
+    
+    // If there are NO spawn points, then we can clear immediately.
+    if (currentRoom.type !== 'boss' && currentRoom.enemySpawnPoints.length === 0) {
+       clearedRoomsRef.current.add(roomKey);
+       const newClearedRooms = new Set($clearedRooms.get());
+       newClearedRooms.add(currentRoomId);
+       $clearedRooms.set(newClearedRooms);
+       $roomCleared.set(true);
+    }
+
+    // console.log(`👹 Spawned ${newEnemies.length} enemies in room ${currentRoomId}`);
+    // newEnemies.forEach(e => console.log(`  - Enemy ${e.id} (${e.definition.id}) at`, e.position));
+    
+    // For boss, we still spawn immediately
+    if (newEnemies.length > 0) {
+        $enemies.set(newEnemies);
+        $enemiesAlive.set(newEnemies.length);
+    }
+    
   }, [restartTrigger, currentFloor, currentRoomId, floorData]);
 
   const handleEnemyDeath = (enemyId: number) => {
     // Get enemy position before removing it
-    const dyingEnemy = enemies.find((e) => e.id === enemyId);
+    const currentEnemies = $enemies.get();
+    const dyingEnemy = currentEnemies.find((e) => e.id === enemyId);
     const enemyPosition = dyingEnemy?.position || [0, 0, 0];
 
-    setEnemies((prev) => {
-      const newEnemies = prev.filter((e) => e.id !== enemyId);
-      const aliveCount = newEnemies.length;
+    const newEnemies = currentEnemies.filter((e) => e.id !== enemyId);
+    const aliveCount = newEnemies.length;
 
-      // Update global enemy count
-      $enemiesAlive.set(aliveCount);
+    $enemies.set(newEnemies);
 
-      // Mark room as cleared if all enemies are dead
-      if (aliveCount === 0) {
-        const roomKey = `${currentFloor}-${currentRoomId}`;
-        clearedRoomsRef.current.add(roomKey);
+    // Update global enemy count
+    $enemiesAlive.set(aliveCount);
 
-        // Also update global cleared rooms store
-        const newClearedRooms = new Set($clearedRooms.get());
-        newClearedRooms.add(currentRoomId);
-        $clearedRooms.set(newClearedRooms);
+    // Mark room as cleared if all enemies are dead
+    if (aliveCount === 0) {
+      const roomKey = `${currentFloor}-${currentRoomId}`;
+      clearedRoomsRef.current.add(roomKey);
 
-        console.log(`🎉 Room ${currentRoomId} cleared! Marked as permanent.`);
-        $roomCleared.set(true);
-      }
+      // Also update global cleared rooms store
+      const newClearedRooms = new Set($clearedRooms.get());
+      newClearedRooms.add(currentRoomId);
+      $clearedRooms.set(newClearedRooms);
 
-      return newEnemies;
-    });
+      console.log(`🎉 Room ${currentRoomId} cleared! Marked as permanent.`);
+      $roomCleared.set(true);
+    }
 
     // Trigger drop roll
-    if ((window as any).__handleEnemyDrop) {
-      (window as any).__handleEnemyDrop(enemyPosition);
-    }
+    emitDrop(enemyPosition);
 
     onEnemyKilled(enemyId);
   };
 
   const handleEnemyDamage = useCallback((enemyId: number, damage: number) => {
     console.log(`💥 Enemy ${enemyId} taking ${damage} damage`);
-    setEnemies((prev) =>
-      prev.map((e) => {
-        if (e.id === enemyId) {
-          const newHealth = Math.max(0, e.health - damage);
-          console.log(`  Enemy ${enemyId} health: ${e.health} -> ${newHealth}`);
-          return {
-            ...e,
-            health: newHealth,
-            isDead: newHealth <= 0,
-          };
-        }
-        return e;
-      })
-    );
-  }, []); // No dependencies needed since we use functional setState
+    const currentEnemies = $enemies.get();
+    const updatedEnemies = currentEnemies.map((e) => {
+      if (e.id === enemyId) {
+        const newHealth = Math.max(0, e.health - damage);
+        console.log(`  Enemy ${enemyId} health: ${e.health} -> ${newHealth}`);
+        return {
+          ...e,
+          health: newHealth,
+          isDead: newHealth <= 0,
+        };
+      }
+      return e;
+    });
+    $enemies.set(updatedEnemies);
+  }, []);
 
-  // Export damage handler globally for projectiles
+  // Listen for damage events
   useEffect(() => {
-    (window as any).__handleEnemyDamage = handleEnemyDamage;
-    return () => {
-      delete (window as any).__handleEnemyDamage;
-    };
-  }, [handleEnemyDamage]);
+    const unsubscribe = $damageEvents.subscribe((event) => {
+      if (event) {
+
+        handleEnemyDamage(event.enemyId, event.damage);
+      }
+    });
+    return () => unsubscribe();
+  }, [handleEnemyDamage, currentRoomId]);
 
   // Expose spawn function via callback
   useEffect(() => {
@@ -252,11 +281,14 @@ export function EnemySpawner({
 
   const updateEnemyPosition = useCallback((enemyId: number, position: [number, number, number]) => {
     enemyPositionsRef.current.set(enemyId, position);
+
     // Update global for projectiles
-    (window as any).__enemyPositions = Array.from(enemyPositionsRef.current.entries()).map(([id, pos]) => ({
+    const positions = Array.from(enemyPositionsRef.current.entries()).map(([id, pos]) => ({
       id,
       position: pos,
     }));
+    (window as any).__enemyPositions = positions;
+    // console.log(`📍 Updated enemy positions: ${positions.length} enemies tracked`);
   }, []);
 
   return (
@@ -267,7 +299,6 @@ export function EnemySpawner({
           enemy={enemy}
           playerPosition={playerPosition}
           onDeath={handleEnemyDeath}
-          onDamage={handleEnemyDamage}
           onPositionUpdate={updateEnemyPosition}
         />
       ))}

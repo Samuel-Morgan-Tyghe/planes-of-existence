@@ -75,27 +75,30 @@
 
 ## 🔧 Systems That Need Integration
 
-### 1. Collision Detection
-**Status**: Partially implemented
-- Projectiles have collision setup but need proper Rapier event handling
-- Enemy damage on hit needs to be connected
-- Boss damage needs to be connected
+### 1. Projectile System
+**Status**: ✅ Fixed
+- Projectiles spawn correctly
+- Projectiles travel between rooms
+- **Collision detection fixed** (using Rapier raycasting)
+- **Enemy hit registration fixed** (using mesh position tracking)
+- **Wall collision implemented**
 
-**To Fix**:
-- Implement Rapier collision events
-- Connect projectile hits to enemy health reduction
-- Add visual feedback for hits
+### 2. Visual Rendering
+**Status**: ✅ Fixed
+- Black center pixel fixed (removed PlaneSwitcher overlay)
+- Enemy damage flash implemented
+- Hit particles implementedan damage handling
+
+
 
 ### 2. Boss Spawning
-**Status**: Defined but not integrated
-- Boss component exists but not spawned in level
-- Need to add boss room to level generation
-- Need to spawn boss when all enemies are defeated
+**Status**: ✅ Integrated
+- Boss room added to level generation (furthest room)
+- Boss enemy definition added
+- EnemySpawner spawns Boss in boss room
+- Boss logic integrated into Enemy component
 
-**To Fix**:
-- Modify level generation to include boss room
-- Add boss spawn trigger when enemies cleared
-- Add boss room visual indicator
+
 
 ### 3. Floor Progression
 **Status**: Store exists but not used
@@ -109,9 +112,9 @@
 - Add floor transition UI
 
 ### 4. Player Position Tracking
-**Status**: Partially working
-- Weapon system needs accurate player position
-- Enemy AI needs player position
+**Status**: Fixed
+- Weapon system now uses accurate player position
+- Enemy AI uses player position from mesh (stable)
 - Loot collection needs player position
 
 **To Fix**:
@@ -164,7 +167,8 @@
 4. **Polish & Balance**
    - Tune damage values
    - Balance item effects
-   - Add visual feedback
+   - Tune damage values
+   - Balance item effects
    - Add sound effects
 
 5. **Meta-Progression**
@@ -186,8 +190,8 @@ The game is **playable** but needs the integration fixes above to be fully funct
 - ✅ UI display
 
 **What Needs Work**:
-- ⚠️ Projectile-enemy collision
-- ⚠️ Boss spawning
+- ✅ Projectile-enemy collision
+- ✅ Boss spawning
 - ⚠️ Floor progression
 - ⚠️ Player position tracking
 

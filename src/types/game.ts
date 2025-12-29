@@ -15,5 +15,6 @@ export interface ProjectileData {
   count: number;
   direction?: [number, number, number];
   color?: string; // Color override for RGB split etc
+  phaseThroughWalls?: boolean;
 }
 

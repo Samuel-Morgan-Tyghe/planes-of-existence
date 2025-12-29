@@ -63,7 +63,11 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
         if (keys.has('s')) z = MOVEMENT_SPEED;
         if (keys.has('a')) x = -MOVEMENT_SPEED;
         if (keys.has('d')) x = MOVEMENT_SPEED;
-        y = 0; // Locked in ISO
+        
+        // Space to jump
+        if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
+          y = JUMP_FORCE;
+        }
         break;
 
       case 'FPS':
@@ -76,6 +80,25 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
         if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
           y = JUMP_FORCE;
         }
+        
+        // Mouse look handled by PointerLockControls in CameraManager or similar
+        // But we need to apply the camera's rotation to the movement vector
+        // Actually, in FPS, 'w' moves in the direction the camera is facing
+        
+        // We need the camera's rotation
+        // Since the camera is parented to the player, or following it
+        // If using PointerLockControls, the camera rotates.
+        // We should rotate the player RigidBody to match camera Y rotation?
+        // Or just rotate the movement vector.
+        
+        // Let's assume the camera is handled elsewhere (CameraManager)
+        // But we need to move relative to camera view.
+        // For now, let's keep world-space movement until we implement proper FPS controller
+        // Wait, the user asked for "mouse should control user rotation".
+        // So we need to rotate the player based on mouse movement.
+        
+        // This is usually done with PointerLockControls which rotates the camera.
+        // If the camera is inside the player, we rotate the player.
         break;
     }
 

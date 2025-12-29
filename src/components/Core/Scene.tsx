@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useStore } from '@nanostores/react';
 import { addPixels } from '../../stores/meta';
 import { $restartTrigger } from '../../stores/restart';
@@ -16,11 +16,13 @@ export function Scene() {
   const [enemiesKilled, setEnemiesKilled] = useState(0);
   const restartTrigger = useStore($restartTrigger);
 
-  const handleEnemyKilled = (enemyId: number) => {
+  const handleEnemyKilled = useCallback((enemyId: number) => {
     setEnemiesKilled((prev) => prev + 1);
     // Reward pixels for killing enemies
     addPixels(5);
-  };
+  }, []);
+
+  const handleSpawnRequest = useCallback(() => {}, []);
 
   return (
     <>
@@ -29,7 +31,7 @@ export function Scene() {
       <GridMap key={`gridmap-${restartTrigger}`} />
       <Player key={`player-${restartTrigger}`} />
       <WeaponSystem key={`weapon-${restartTrigger}`} />
-      <EnemySpawner key={`enemies-${restartTrigger}`} onEnemyKilled={handleEnemyKilled} onSpawnRequest={() => {}} />
+      <EnemySpawner key={`enemies-${restartTrigger}`} onEnemyKilled={handleEnemyKilled} onSpawnRequest={handleSpawnRequest} />
       <LootSpawner key={`loot-${restartTrigger}`} />
       <DropManager key={`drops-${restartTrigger}`} />
       <EffectsManager />

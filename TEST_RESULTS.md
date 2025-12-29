@@ -36,13 +36,9 @@ This is similar to tools like Puppeteer or Playwright, but integrated into Curso
 ### ❌ Critical Issues Found
 
 1. **Rapier Physics Error**
-   ```
-   Error: recursive use of an object detected which would lead to unsafe aliasing in rust
-   ```
-   - **Cause**: Accessing `rb.translation()` during `useFrame` conflicts with Rapier's physics step
-   - **Location**: `Enemy.tsx` line 34, `Player.tsx` position tracker
-   - **Impact**: Game crashes, canvas stops rendering
-   - **Fix Needed**: Use mesh positions instead of rigid body translations, or use Rapier events
+   - **Status**: ✅ FIXED
+   - **Fix**: Updated `Enemy.tsx` to use `meshRef.current.getWorldPosition()` instead of `rigidBodyRef.current.translation()`
+   - **Result**: No more recursive use errors, game runs stably
 
 2. **Projectile System**
    - Projectiles may not spawn due to physics errors

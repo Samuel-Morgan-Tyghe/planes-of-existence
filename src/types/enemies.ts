@@ -63,6 +63,57 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     projectileSpeed: 12, // Fast projectiles
     fireRate: 2000, // Fire every 2 seconds
   },
+  rusher: {
+    id: 'rusher',
+    name: 'Rusher',
+    health: 15,
+    damage: 4,
+    speed: 4.0, // Very fast
+    size: 0.6,
+    color: '#ff4500', // Orange-Red
+    dropChance: 0.2,
+    experience: 15,
+    attackType: 'melee',
+  },
+  tank: {
+    id: 'tank',
+    name: 'Tank',
+    health: 80,
+    damage: 15,
+    speed: 0.8, // Slow
+    size: 1.8,
+    color: '#006400', // Dark Green
+    dropChance: 0.6,
+    experience: 40,
+    attackType: 'melee',
+  },
+  turret: {
+    id: 'turret',
+    name: 'Turret',
+    health: 40,
+    damage: 10,
+    speed: 0, // Stationary
+    size: 1.0,
+    color: '#4b0082', // Indigo
+    dropChance: 0.4,
+    experience: 30,
+    attackType: 'ranged',
+    attackRange: 12,
+    projectileSpeed: 8,
+    fireRate: 1500,
+  },
+  boss: {
+    id: 'boss',
+    name: 'The Glitch Lord',
+    health: 500,
+    damage: 20,
+    speed: 1.5,
+    size: 3,
+    color: '#ff00ff',
+    dropChance: 1.0,
+    experience: 500,
+    attackType: 'melee',
+  },
 };
 
 export interface EnemyState {

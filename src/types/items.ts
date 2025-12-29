@@ -1,5 +1,4 @@
-import type { PlaneType } from './game';
-import type { ProjectileData } from './game';
+import type { PlaneType, ProjectileData } from './game';
 
 export interface ItemDefinition {
   id: string;
@@ -22,6 +21,7 @@ export interface ItemDefinition {
     sharpness?: number;
     saturation?: number;
     contrast?: number;
+    brightness?: number;
     resolution?: number;
   };
 }
@@ -42,9 +42,9 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
     description: 'Projectiles pass through obstacles',
     rarity: 'common',
     planeEffects: {
-      '2D': (p) => ({ ...p, behavior: 'linear' }), // Phase through platforms
-      'ISO': (p) => ({ ...p, behavior: 'linear' }), // Ignore walls
-      'FPS': (p) => ({ ...p, behavior: 'linear' }), // Phase through enemies
+      '2D': (p) => ({ ...p, behavior: 'linear', phaseThroughWalls: true }), // Phase through platforms
+      'ISO': (p) => ({ ...p, behavior: 'linear', phaseThroughWalls: true }), // Ignore walls
+      'FPS': (p) => ({ ...p, behavior: 'linear', phaseThroughWalls: true }), // Phase through enemies
     },
   },
   
