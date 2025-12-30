@@ -1,7 +1,7 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody } from '@react-three/rapier';
-import { useRef, useState } from 'react';
+import { CuboidCollider, RigidBody } from '@react-three/rapier';
+import { useState } from 'react';
 
 interface DoorProps {
   position: [number, number, number];
@@ -19,7 +19,6 @@ const REVEAL_DISTANCE = 5; // Distance to reveal the adjacent room
 export function Door({ position, direction, locked, playerPosition, onEnter, onNear, visible = true }: DoorProps) {
   const [isNear, setIsNear] = useState(false);
   const [pulse, setPulse] = useState(0);
-  const hasRevealedRef = useRef(false); // Use ref instead of state to persist within render cycle
 
   useFrame((_, delta) => {
     setPulse((prev) => (prev + delta * 2) % (Math.PI * 2));
@@ -48,19 +47,18 @@ export function Door({ position, direction, locked, playerPosition, onEnter, onN
   return (
     <group position={position} visible={visible}>
       {/* Door frame - sensor collider if unlocked (trigger), solid if locked */}
-      <RigidBody type="fixed" colliders="cuboid" sensor={!locked}>
-        {locked && (
-          <mesh rotation={rotation}>
-            <boxGeometry args={[3, 4, 0.3]} />
-            <meshStandardMaterial
-              color={color}
-              emissive={color}
-              emissiveIntensity={isNear ? 2.0 * pulseIntensity : 1.0}
-              transparent
-              opacity={0.7}
-            />
-          </mesh>
-        )}
+      <RigidBody key={`door-rb-${locked}`} type="fixed" sensor={!locked}>
+        <CuboidCollider args={[1.5, 2, 0.15]} rotation={rotation} />
+        <mesh rotation={rotation}>
+          <boxGeometry args={[3, 4, 0.3]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={isNear ? 2.0 * pulseIntensity : 1.0}
+            transparent
+            opacity={locked ? 0.7 : 0.2} // Make unlocked doors more transparent
+          />
+        </mesh>
       </RigidBody>
 
       {/* Glow effect */}
