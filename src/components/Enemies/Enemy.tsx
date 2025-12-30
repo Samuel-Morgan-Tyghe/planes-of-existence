@@ -25,10 +25,10 @@ const ENEMY_SPAWN_DELAY = 6000; // 6 seconds before enemy can attack (increased 
 export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate }: EnemyProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  const [currentPosition, setCurrentPosition] = useState<[number, number, number]>(enemy.position);
   const [isAttacking, setIsAttacking] = useState(false);
   const [attackPulse, setAttackPulse] = useState(0);
   const [distanceToPlayer, setDistanceToPlayer] = useState(999);
+  const currentPositionRef = useRef<[number, number, number]>(enemy.position);
   const [damageFlash, setDamageFlash] = useState(false);
   const lastHealthRef = useRef(enemy.health);
   const lastAttackTime = useRef(0);
@@ -71,11 +71,12 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       // Add hit effect
       const id = hitEffectIdCounter.current++;
       // Use current position for effect
-      const effectPos: [number, number, number] = [currentPosition[0], currentPosition[1] + enemy.definition.size/2, currentPosition[2]];
+      const currentPos = currentPositionRef.current;
+      const effectPos: [number, number, number] = [currentPos[0], currentPos[1] + enemy.definition.size/2, currentPos[2]];
       setHitEffects(prev => [...prev, { id, position: effectPos }]);
     }
     lastHealthRef.current = enemy.health;
-  }, [enemy.health, enemy.id, currentPosition, enemy.definition.size]);
+  }, [enemy.health, enemy.id, currentPositionRef, enemy.definition.size]);
 
   // Update position from mesh (synced with physics, safe to read)
   useFrame(() => {
@@ -86,27 +87,12 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       const worldPos = new Vector3();
       meshRef.current.getWorldPosition(worldPos);
       
-      const pos = { x: worldPos.x, y: worldPos.y, z: worldPos.z };
-
-      // Clamp position to world bounds (60x60 world size = -30 to 30)
-      const WORLD_BOUND = 28; // Slightly inside world edge
-      const clampedX = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, pos.x));
-      const clampedZ = Math.max(-WORLD_BOUND, Math.min(WORLD_BOUND, pos.z));
-
-      // If enemy went out of bounds, teleport back (only if significantly out)
-      if ((clampedX !== pos.x || clampedZ !== pos.z) && rigidBodyRef.current) {
-        rigidBodyRef.current.setTranslation({ x: clampedX, y: pos.y, z: clampedZ }, true);
-        rigidBodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      }
-
-      const newPos: [number, number, number] = [pos.x, pos.y, pos.z];
-      setCurrentPosition(newPos);
+      const newPos: [number, number, number] = [worldPos.x, worldPos.y, worldPos.z];
+      currentPositionRef.current = newPos;
+      
       // Update parent spawner with current position for projectile collision
       // Ensure this is called every frame to keep global state fresh
       onPositionUpdate?.(enemy.id, newPos);
-    } else if (enemy.isDead) {
-      // If dead, ensure we don't leave ghost positions
-      // onPositionUpdate?.(enemy.id, [9999, 9999, 9999]);
     }
 
     // Animate attack pulse
@@ -129,7 +115,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     }
 
     const playerPos = new Vector3(...playerPosition);
-    const enemyVec = new Vector3(...currentPosition);
+    const enemyVec = new Vector3(...currentPositionRef.current);
 
     const distance = enemyVec.distanceTo(playerPos);
     setDistanceToPlayer(distance);
@@ -139,7 +125,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     // Move toward player if in range (but ranged enemies keep distance)
     // Rotate mesh to face player
     if (meshRef.current) {
-      meshRef.current.lookAt(playerPos.x, currentPosition[1], playerPos.z);
+      meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
     }
 
     // Move toward player if in range (but ranged enemies keep distance)
@@ -173,10 +159,11 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         if (isRanged) {
           // Fire projectile at player
           const direction = new Vector3().subVectors(playerPos, enemyVec).normalize();
+          const currentPos = currentPositionRef.current;
           const projectileOrigin: [number, number, number] = [
-            currentPosition[0] + direction.x * 1,
-            currentPosition[1],
-            currentPosition[2] + direction.z * 1,
+            currentPos[0] + direction.x * 1,
+            currentPos[1],
+            currentPos[2] + direction.z * 1,
           ];
 
           const id = projectileIdCounter.current++;
@@ -358,9 +345,9 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
               count={2}
               array={new Float32Array([
                 0, enemy.definition.size / 2, 0,
-                playerPosition[0] - currentPosition[0],
-                playerPosition[1] - currentPosition[1],
-                playerPosition[2] - currentPosition[2]
+                playerPosition[0] - currentPositionRef.current[0],
+                playerPosition[1] - currentPositionRef.current[1],
+                playerPosition[2] - currentPositionRef.current[2]
               ])}
               itemSize={3}
             />

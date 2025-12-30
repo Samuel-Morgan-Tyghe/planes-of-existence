@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useRapier } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
+import { $enemyPositions } from '../../stores/game';
 import type { ProjectileData } from '../../types/game';
 
 interface ProjectileProps {
@@ -9,23 +10,18 @@ interface ProjectileProps {
   origin: [number, number, number];
   onDestroy: () => void;
   onHit?: (damage: number, enemyId: number) => void;
-  enemyPositions: Array<{ id: number; position: [number, number, number] }>;
 }
 
 const PROJECTILE_LIFETIME = 3; // seconds
 const HIT_DISTANCE = 0.8; // Reduced to prevent false positives
 
-export function Projectile({ data, origin, onDestroy, onHit, enemyPositions }: ProjectileProps) {
+export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) {
   const { world, rapier } = useRapier();
   const meshRef = useRef<THREE.Mesh>(null);
   const lifetimeRef = useRef(0);
   const hitRef = useRef(false);
   const positionRef = useRef(new Vector3(...origin));
   const directionRef = useRef(new Vector3(...(data.direction || [0, 0, -1])).normalize());
-  const enemyPositionsRef = useRef(enemyPositions);
-
-  // Update enemy positions ref on every render
-  enemyPositionsRef.current = enemyPositions;
 
   useEffect(() => {
     console.log(`🚀 Projectile created at`, origin);
@@ -90,8 +86,12 @@ export function Projectile({ data, origin, onDestroy, onHit, enemyPositions }: P
       return;
     }
 
-    // Check for enemy hits - use window global for real-time positions
-    const realTimeEnemies = (window as any).__enemyPositions || enemyPositionsRef.current;
+    // Check for enemy hits - use Nanostore for real-time positions
+    const enemyPositionsMap = $enemyPositions.get();
+    const realTimeEnemies = Object.entries(enemyPositionsMap).map(([id, pos]) => ({
+      id: parseInt(id),
+      position: pos
+    }));
     
     for (const enemy of realTimeEnemies) {
       const dx = positionRef.current.x - enemy.position[0];

@@ -1,7 +1,7 @@
 
 import { useStore } from '@nanostores/react';
 import { useCallback, useEffect, useRef } from 'react';
-import { $clearedRooms, $currentFloor, $currentRoomId, $enemies, $enemiesAlive, $floorData, $roomCleared } from '../../stores/game';
+import { $clearedRooms, $currentFloor, $currentRoomId, $enemies, $enemiesAlive, $enemyPositions, $floorData, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
 import { $damageEvents, emitDrop } from '../../systems/events';
@@ -137,9 +137,12 @@ export function EnemySpawner({
     $enemiesAlive.set(allNewEnemies.length);
     
     // Initialize position tracking for projectiles
-    const initialPositions = allNewEnemies.map(e => ({ id: e.id, position: e.position }));
-    (window as any).__enemyPositions = initialPositions;
-    allNewEnemies.forEach(e => enemyPositionsRef.current.set(e.id, e.position));
+    const initialPositions: Record<number, [number, number, number]> = {};
+    allNewEnemies.forEach(e => {
+      initialPositions[e.id] = e.position;
+      enemyPositionsRef.current.set(e.id, e.position);
+    });
+    $enemyPositions.set(initialPositions);
 
     // Initial room clear check
     const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
@@ -253,16 +256,16 @@ export function EnemySpawner({
 
     // Update global for projectiles - ONLY include enemies in current room
     const currentEnemies = $enemies.get();
-    const positions = Array.from(enemyPositionsRef.current.entries())
-      .filter(([id]) => {
-        const enemy = currentEnemies.find(e => e.id === id);
-        return enemy && enemy.roomId === currentRoomId && !enemy.isDead;
-      })
-      .map(([id, pos]) => ({
-        id,
-        position: pos,
-      }));
-    (window as any).__enemyPositions = positions;
+    const positions: Record<number, [number, number, number]> = {};
+    
+    enemyPositionsRef.current.forEach((pos, id) => {
+      const enemy = currentEnemies.find(e => e.id === id);
+      if (enemy && enemy.roomId === currentRoomId && !enemy.isDead) {
+        positions[id] = pos;
+      }
+    });
+    
+    $enemyPositions.set(positions);
   }, [currentRoomId]);
 
   return (

@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
-import { $enemies, $plane } from '../../stores/game';
+import { $plane } from '../../stores/game';
 import { $position, $projectiles, addProjectiles, removeProjectile } from '../../stores/player';
 import { fireWeapon } from '../../systems/combat';
 import { emitDamage } from '../../systems/events';
@@ -121,16 +121,7 @@ export function WeaponSystem() {
     }
   }, []);
 
-  // Get fresh enemy positions
-  const enemiesFromStore = useStore($enemies);
-  const windowEnemyPositions = typeof window !== 'undefined'
-    ? ((window as any).__enemyPositions || [])
-    : [];
-
-  const freshEnemyPositions = windowEnemyPositions.length > 0
-    ? windowEnemyPositions
-    : enemiesFromStore.map(e => ({ id: e.id, position: e.position }));
-
+  // Weapon system logic
   return (
     <>
       {projectiles.map((proj) => (
@@ -138,7 +129,6 @@ export function WeaponSystem() {
           key={proj.id}
           data={proj.data}
           origin={proj.origin}
-          enemyPositions={freshEnemyPositions}
           onDestroy={() => removeProjectile(proj.id)}
           onHit={handleHit}
         />
