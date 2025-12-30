@@ -1,7 +1,7 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 
 interface DoorProps {
   position: [number, number, number];
@@ -10,12 +10,13 @@ interface DoorProps {
   playerPosition: [number, number, number];
   onEnter: () => void;
   onNear?: () => void; // Callback when player gets near (for revealing room)
+  visible?: boolean;
 }
 
 const ACTIVATION_DISTANCE = 2.5;
 const REVEAL_DISTANCE = 5; // Distance to reveal the adjacent room
 
-export function Door({ position, direction, locked, playerPosition, onEnter, onNear }: DoorProps) {
+export function Door({ position, direction, locked, playerPosition, onEnter, onNear, visible = true }: DoorProps) {
   const [isNear, setIsNear] = useState(false);
   const [pulse, setPulse] = useState(0);
   const hasRevealedRef = useRef(false); // Use ref instead of state to persist within render cycle
@@ -45,23 +46,25 @@ export function Door({ position, direction, locked, playerPosition, onEnter, onN
   const pulseIntensity = 1 + Math.sin(pulse) * 0.3;
 
   return (
-    <group position={position}>
-      {/* Door frame - sensor collider that doesn't block but detects entry */}
-      <RigidBody type="fixed" colliders="cuboid" sensor>
-        <mesh rotation={rotation}>
-          <boxGeometry args={[3, 4, 0.3]} />
-          <meshStandardMaterial
-            color={color}
-            emissive={color}
-            emissiveIntensity={isNear ? 2.0 * pulseIntensity : 1.0}
-            transparent
-            opacity={0.7}
-          />
-        </mesh>
+    <group position={position} visible={visible}>
+      {/* Door frame - sensor collider if unlocked (trigger), solid if locked */}
+      <RigidBody type="fixed" colliders="cuboid" sensor={!locked}>
+        {locked && (
+          <mesh rotation={rotation}>
+            <boxGeometry args={[3, 4, 0.3]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={isNear ? 2.0 * pulseIntensity : 1.0}
+              transparent
+              opacity={0.7}
+            />
+          </mesh>
+        )}
       </RigidBody>
 
       {/* Glow effect */}
-      {isNear && (
+      {isNear && locked && (
         <mesh position={[0, 0, 0]} rotation={rotation}>
           <boxGeometry args={[4, 5, 0.5]} />
           <meshStandardMaterial
@@ -75,24 +78,27 @@ export function Door({ position, direction, locked, playerPosition, onEnter, onN
       )}
 
       {/* Label */}
-      <Html position={[0, 3, 0]} center>
-        <div
-          style={{
-            backgroundColor: `rgba(${locked ? '200, 0, 0' : '0, 200, 200'}, 0.7)`,
-            color: locked ? '#ffffff' : '#000000',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            whiteSpace: 'nowrap',
-            border: `1px solid ${color}`,
-            transition: 'all 0.2s',
-          }}
-        >
-          {locked ? '🔒 LOCKED' : '🚪 DOOR'}
-        </div>
-      </Html>
+      {locked && (
+        <Html position={[0, 3, 0]} center>
+          <div
+            style={{
+              backgroundColor: `rgba(${locked ? '200, 0, 0' : '0, 200, 200'}, 0.7)`,
+              color: locked ? '#ffffff' : '#000000',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              border: `1px solid ${color}`,
+              transition: 'all 0.2s',
+              display: visible ? 'block' : 'none', // Hide HTML label when invisible
+            }}
+          >
+            {locked ? '🔒 LOCKED' : '🚪 DOOR'}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }

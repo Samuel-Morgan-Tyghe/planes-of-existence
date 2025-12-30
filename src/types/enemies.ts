@@ -118,6 +118,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
 
 export interface EnemyState {
   id: number;
+  roomId: number;
   definition: EnemyDefinition;
   health: number;
   position: [number, number, number];

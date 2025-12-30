@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { $plane, switchPlane } from '../../stores/game';
+import { $plane, switchPlane, togglePause } from '../../stores/game';
 import { restartRun } from '../../stores/restart';
 import type { PlaneType } from '../../types/game';
 
@@ -35,6 +35,12 @@ export function PlaneSwitcher() {
       if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         restartRun();
+      }
+
+      // Escape to pause
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        togglePause();
       }
     };
 

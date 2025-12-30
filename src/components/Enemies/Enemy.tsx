@@ -10,6 +10,7 @@ import { EnemyProjectile } from './EnemyProjectile';
 
 interface EnemyProps {
   enemy: EnemyState;
+  active: boolean;
   playerPosition: [number, number, number];
   onDeath: (enemyId: number) => void;
 
@@ -21,7 +22,7 @@ const ENEMY_ATTACK_RANGE = 2;
 const ENEMY_ATTACK_COOLDOWN = 1000; // ms
 const ENEMY_SPAWN_DELAY = 6000; // 6 seconds before enemy can attack (increased for player safety)
 
-export function Enemy({ enemy, playerPosition, onDeath, onPositionUpdate }: EnemyProps) {
+export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate }: EnemyProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const [currentPosition, setCurrentPosition] = useState<[number, number, number]>(enemy.position);
@@ -78,7 +79,9 @@ export function Enemy({ enemy, playerPosition, onDeath, onPositionUpdate }: Enem
 
   // Update position from mesh (synced with physics, safe to read)
   useFrame(() => {
-    if (meshRef.current && !enemy.isDead) {
+    if (!active || enemy.isDead) return;
+    
+    if (meshRef.current) {
       // Get world position from mesh which is updated by Rapier
       const worldPos = new Vector3();
       meshRef.current.getWorldPosition(worldPos);
@@ -113,7 +116,7 @@ export function Enemy({ enemy, playerPosition, onDeath, onPositionUpdate }: Enem
   });
 
   useFrame(() => {
-    if (!rigidBodyRef.current || enemy.isDead) return;
+    if (!rigidBodyRef.current || enemy.isDead || !active) return;
 
     const rb = rigidBodyRef.current;
     const now = Date.now();
@@ -230,7 +233,7 @@ export function Enemy({ enemy, playerPosition, onDeath, onPositionUpdate }: Enem
     setProjectiles(prev => prev.filter(p => p.id !== id));
   }, []);
 
-  if (enemy.isDead) return null;
+  if (enemy.isDead || !active) return null;
 
   const healthPercent = (enemy.health / enemy.definition.health) * 100;
 

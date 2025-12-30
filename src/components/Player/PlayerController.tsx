@@ -8,7 +8,6 @@ interface PlayerControllerProps {
   rigidBodyRef: React.RefObject<RapierRigidBody>;
 }
 
-const MOVEMENT_SPEED = 8;
 const JUMP_FORCE = 5;
 
 export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
@@ -17,21 +16,25 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // console.log('⌨️ Key Down:', e.key);
       keysRef.current.add(e.key.toLowerCase());
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // console.log('⌨️ Key Up:', e.key);
       keysRef.current.delete(e.key.toLowerCase());
     };
 
+    console.log('🎮 PlayerController mounted. Current plane:', plane);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
     return () => {
+      console.log('🎮 PlayerController unmounted');
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [plane]); // Re-bind if plane changes just in case
 
   useFrame(() => {
     if (!rigidBodyRef.current) return;
@@ -41,70 +44,46 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     const velocity = rb.linvel();
 
     let x = 0;
-    let y = velocity.y; // Preserve Y velocity for gravity/jumping
     let z = 0;
+    const speed = 8;
 
-    // Movement based on plane - WASD ONLY (arrow keys are for shooting)
+    // Movement based on plane - WASD ONLY
+    if (keys.size > 0) {
+      // console.log('⌨️ Keys pressed:', Array.from(keys));
+    }
+
     switch (plane) {
       case '2D':
-        // Side-scrolling: A/D for horizontal movement
-        if (keys.has('a')) x = -MOVEMENT_SPEED;
-        if (keys.has('d')) x = MOVEMENT_SPEED;
-        // Space to jump
-        if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
-          y = JUMP_FORCE;
-        }
-        z = 0; // Locked in 2D
+        if (keys.has('a')) x = -speed;
+        if (keys.has('d')) x = speed;
         break;
-
       case 'ISO':
-        // Top-down: WASD for X/Z movement
-        if (keys.has('w')) z = -MOVEMENT_SPEED;
-        if (keys.has('s')) z = MOVEMENT_SPEED;
-        if (keys.has('a')) x = -MOVEMENT_SPEED;
-        if (keys.has('d')) x = MOVEMENT_SPEED;
-        
-        // Space to jump
-        if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
-          y = JUMP_FORCE;
-        }
-        break;
-
       case 'FPS':
-        // First-person: WASD for movement
-        if (keys.has('w')) z = -MOVEMENT_SPEED;
-        if (keys.has('s')) z = MOVEMENT_SPEED;
-        if (keys.has('a')) x = -MOVEMENT_SPEED;
-        if (keys.has('d')) x = MOVEMENT_SPEED;
-        // Space to jump
-        if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
-          y = JUMP_FORCE;
-        }
-        
-        // Mouse look handled by PointerLockControls in CameraManager or similar
-        // But we need to apply the camera's rotation to the movement vector
-        // Actually, in FPS, 'w' moves in the direction the camera is facing
-        
-        // We need the camera's rotation
-        // Since the camera is parented to the player, or following it
-        // If using PointerLockControls, the camera rotates.
-        // We should rotate the player RigidBody to match camera Y rotation?
-        // Or just rotate the movement vector.
-        
-        // Let's assume the camera is handled elsewhere (CameraManager)
-        // But we need to move relative to camera view.
-        // For now, let's keep world-space movement until we implement proper FPS controller
-        // Wait, the user asked for "mouse should control user rotation".
-        // So we need to rotate the player based on mouse movement.
-        
-        // This is usually done with PointerLockControls which rotates the camera.
-        // If the camera is inside the player, we rotate the player.
+        if (keys.has('w')) z = -speed;
+        if (keys.has('s')) z = speed;
+        if (keys.has('a')) x = -speed;
+        if (keys.has('d')) x = speed;
         break;
     }
 
-    rb.setLinvel({ x, y, z }, true);
+    if (x !== 0 || z !== 0) {
+      // console.log('🚀 Setting velocity:', { x, y: velocity.y, z });
+    }
+
+    // Apply jump impulse if space is pressed and grounded
+    if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
+      rb.applyImpulse({ x: 0, y: JUMP_FORCE, z: 0 }, true);
+    }
+
+    // Snappy horizontal movement using impulses to avoid overwriting gravity's Y velocity
+    const mass = rb.mass();
+    const impulseX = (x - velocity.x) * mass;
+    const impulseZ = (z - velocity.z) * mass;
+    
+    if (Math.abs(impulseX) > 0.01 || Math.abs(impulseZ) > 0.01) {
+      rb.applyImpulse({ x: impulseX, y: 0, z: impulseZ }, true);
+    }
   });
 
   return null;
 }
-

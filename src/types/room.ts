@@ -25,6 +25,7 @@ export interface FloorData {
   startRoomId: number;
   exitRoomId: number;
   roomCount: number;
+  seed: number;
 }
 
 export interface RoomLayoutData {

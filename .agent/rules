@@ -1,0 +1,5 @@
+# Project Rules
+
+- **Nanostore Usage**: Use Nanostores for any state that is updated frequently (e.g., in `useFrame`) or needs to be shared across multiple components/systems. This avoids React's state scheduling issues in high-performance loops.
+- **Terminal Management**: Do not open new ports. Rely on HMR.
+- **Physics**: Ensure colliders are correctly positioned on RigidBodies, not meshes.

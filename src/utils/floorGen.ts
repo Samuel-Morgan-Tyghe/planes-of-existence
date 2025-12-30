@@ -4,15 +4,19 @@ const ROOM_SIZE = 20; // Each room is 20x20 tiles
 const ROOM_WORLD_SIZE = 40; // Each room is 40 units in world space
 
 /**
- * Seeded random number generator (using mulberry32)
+ * Seeded random number generator (Mulberry32)
+ * Provides deterministic random numbers based on a seed.
  */
-class SeededRandom {
+export class SeededRandom {
   private seed: number;
 
   constructor(seed: number) {
     this.seed = seed;
   }
 
+  /**
+   * Returns a random number between 0 (inclusive) and 1 (exclusive).
+   */
   next(): number {
     let t = (this.seed += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -20,10 +24,16 @@ class SeededRandom {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
+  /**
+   * Returns a random integer between min (inclusive) and max (inclusive).
+   */
   nextInt(min: number, max: number): number {
     return Math.floor(this.next() * (max - min + 1)) + min;
   }
 
+  /**
+   * Shuffles an array in place using Fisher-Yates algorithm.
+   */
   shuffle<T>(array: T[]): T[] {
     const result = [...array];
     for (let i = result.length - 1; i > 0; i--) {
@@ -35,11 +45,13 @@ class SeededRandom {
 }
 
 /**
- * Generate a floor with multiple connected rooms
+ * Generate a floor with multiple connected rooms.
+ * Strictly deterministic based on the provided seed.
  */
-export function generateFloor(floorNumber: number): FloorData {
-  // Create seeded RNG for this floor
-  const rng = new SeededRandom(floorNumber * 12345);
+export function generateFloor(floorNumber: number, seed: number = 12345): FloorData {
+  // Combine floor number and master seed for unique floor seeds
+  const floorSeed = seed + (floorNumber * 99999);
+  const rng = new SeededRandom(floorSeed);
 
   // Random number of rooms (4-10)
   const roomCount = rng.nextInt(4, 10);
@@ -55,8 +67,8 @@ export function generateFloor(floorNumber: number): FloorData {
     type: 'start',
     doors: [],
     distanceFromStart: 0,
-    enemySpawnPoints: [], // Will be calculated later
-    enemyCount: 0, // Will be calculated later
+    enemySpawnPoints: [], // Will be calculated deterministically
+    enemyCount: 0,
   };
 
   rooms.push(startRoom);
@@ -98,8 +110,8 @@ export function generateFloor(floorNumber: number): FloorData {
           type: 'normal',
           doors: [],
           distanceFromStart: 0, // Will calculate later
-          enemySpawnPoints: [], // Will be calculated later
-          enemyCount: 0, // Will be calculated later
+          enemySpawnPoints: [],
+          enemyCount: 0,
         };
 
         rooms.push(newRoom);
@@ -163,53 +175,51 @@ export function generateFloor(floorNumber: number): FloorData {
 
   furthestRoom.type = 'boss';
 
-  // Initialize enemy spawn data (will be calculated when room layout is generated)
+  // Initialize enemy spawn data
+  // We do this by generating the layout for each room to ensure valid spawn points
   for (const room of rooms) {
-    room.enemySpawnPoints = [];
+    // Determine enemy count based on floor and room type
     room.enemyCount = room.type === 'start' ? 0 : Math.min(12, 4 + Math.floor(floorNumber * 1.2));
-    
-    // Pre-calculate layout and spawn points immediately
-    // We pass isPlayerInRoom=false because we just want to generate the data
-    generateRoomLayout(room, floorNumber, false);
+    if (room.type === 'boss') room.enemyCount += 2; // More enemies in boss room
+
+    // Generate layout to calculate spawn points
+    // We pass the floorSeed to ensure consistency
+    generateRoomLayout(room, floorNumber, false, floorSeed);
   }
 
-  console.log(`🗺️ Floor ${floorNumber}: Generated ${rooms.length} rooms`);
-  console.log(`  Start room at (${rooms[0].gridX}, ${rooms[0].gridY})`);
-  console.log(`  Exit room at (${furthestRoom.gridX}, ${furthestRoom.gridY}), distance: ${furthestRoom.distanceFromStart}`);
-
-  // Log total enemy count
-  const totalEnemies = rooms.reduce((sum, room) => sum + room.enemyCount, 0);
-  console.log(`  Total enemies on floor: ${totalEnemies}`);
-  rooms.forEach(room => {
-    if (room.enemyCount > 0) {
-      console.log(`    Room ${room.id} (${room.type}): ${room.enemyCount} enemies`);
-    }
-  });
+  console.log(`🗺️ Floor ${floorNumber} (Seed: ${floorSeed}): Generated ${rooms.length} rooms`);
 
   return {
     rooms,
     startRoomId: 0,
     exitRoomId: furthestRoom.id,
     roomCount: rooms.length,
+    seed: floorSeed, // Store the seed used for this floor
   };
 }
 
 /**
- * Generate the actual tile layout for a specific room
+ * Generate the actual tile layout for a specific room.
+ * Strictly deterministic based on the provided seed.
  */
 export function generateRoomLayout(
   room: Room,
   floorNumber: number,
-  isPlayerInRoom: boolean
+  isPlayerInRoom: boolean,
+  floorSeed?: number
 ): RoomLayoutData {
-  // Create seeded RNG for this specific room
-  const rng = new SeededRandom(floorNumber * 12345 + room.id * 67890);
+  // Use the floor seed if provided, otherwise fallback (should always be provided for consistency)
+  const baseSeed = floorSeed !== undefined ? floorSeed : (floorNumber * 12345);
+  // Unique seed for this room: combine floor seed with room ID
+  const roomSeed = baseSeed + (room.id * 777);
+  const rng = new SeededRandom(roomSeed);
 
   const grid: GridMap = Array(ROOM_SIZE)
     .fill(null)
     .map(() => Array(ROOM_SIZE).fill(1)); // Start with all walls
 
   // Create room interior (leave walls on edges for doors)
+  // Room shape is deterministic based on room ID
   const roomType = room.id % 4;
 
   if (roomType === 0) {
@@ -299,35 +309,48 @@ export function generateRoomLayout(
   const playerGridX = Math.floor(ROOM_SIZE / 2);
   const playerGridY = Math.floor(ROOM_SIZE / 2);
 
-  // Calculate enemy spawn points (only once if not already calculated)
-  // This is now primarily handled by the pre-calculation in generateFloor
+  // Calculate enemy spawn points (only if not already calculated)
+  // We do this here to ensure they are on valid floor tiles
   if (room.enemySpawnPoints.length === 0 && room.enemyCount > 0) {
     const MIN_DISTANCE_FROM_PLAYER = 5;
     const spawnPoints: [number, number][] = [];
 
     let attempts = 0;
-    const MAX_ATTEMPTS = 100;
-    for (let i = 0; i < room.enemyCount && attempts < MAX_ATTEMPTS; attempts++) {
-      const x = rng.nextInt(1, ROOM_SIZE - 2); // Avoid edges
+    const MAX_ATTEMPTS = 200;
+    
+    // Try to place all enemies
+    while (spawnPoints.length < room.enemyCount && attempts < MAX_ATTEMPTS) {
+      attempts++;
+      const x = rng.nextInt(1, ROOM_SIZE - 2);
       const y = rng.nextInt(1, ROOM_SIZE - 2);
 
+      // Check if tile is walkable (0)
+      if (grid[y][x] !== 0) continue;
+
+      // Check distance from player (start position)
       const distX = Math.abs(x - playerGridX);
       const distY = Math.abs(y - playerGridY);
       const distance = Math.max(distX, distY);
 
-      // Check if tile is walkable (0) and far enough from player
-      // IMPORTANT: Ensure we are checking the grid we just generated/modified
-      if (grid[y][x] === 0 && distance >= MIN_DISTANCE_FROM_PLAYER) {
-        spawnPoints.push([x, y]);
-        i++;
-      } else {
-        // console.log(`⚠️ Rejected spawn at ${x},${y} (Tile: ${grid[y][x]}, Dist: ${distance})`);
+      if (distance < MIN_DISTANCE_FROM_PLAYER) continue;
+
+      // Check distance from other enemies to avoid stacking
+      let tooClose = false;
+      for (const [ex, ey] of spawnPoints) {
+        if (Math.abs(x - ex) < 2 && Math.abs(y - ey) < 2) {
+          tooClose = true;
+          break;
+        }
       }
+      if (tooClose) continue;
+
+      // Valid spawn
+      spawnPoints.push([x, y]);
     }
 
-    // Store calculated spawn points in room data
+    // Update room data with valid points
     room.enemySpawnPoints = spawnPoints;
-    room.enemyCount = spawnPoints.length;
+    room.enemyCount = spawnPoints.length; // Update count if we couldn't place all
   }
 
   // Place enemy spawn markers on grid (for visualization/debug)
@@ -345,10 +368,10 @@ export function generateRoomLayout(
     let x, y;
     let attempts = 0;
     do {
-      x = rng.nextInt(0, ROOM_SIZE - 1);
-      y = rng.nextInt(0, ROOM_SIZE - 1);
+      x = rng.nextInt(1, ROOM_SIZE - 2);
+      y = rng.nextInt(1, ROOM_SIZE - 2);
       attempts++;
-    } while (grid[y][x] !== 0 && attempts < 50);
+    } while ((grid[y][x] !== 0 || (x === playerGridX && y === playerGridY)) && attempts < 50);
 
     if (grid[y][x] === 0) {
       grid[y][x] = 3; // Loot spawn
@@ -381,7 +404,6 @@ export function generateRoomLayout(
     if (grid[exitY][exitX] === 0) {
       grid[exitY][exitX] = 4; // Exit portal
       exitPosition = [exitX, exitY];
-      console.log(`🌀 Exit portal placed in room ${room.id}`);
     }
   }
 

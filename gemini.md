@@ -12,4 +12,17 @@
 
 3. **Physics & Collisions**:
    - Ensure robust collision detection between Player, Enemies, and Walls.
-   - Prevent entities from clipping through walls or falling through floors.
+   - Prevent entities from clipping through walls or floors.
+
+4. **State Management (Nanostores)**:
+   - **High-Frequency State**: Use Nanostores for state that updates many times per second (e.g., projectiles, enemy positions, visual effects). React `useState` can drop updates in high-speed loops like `useFrame`.
+   - **Global Game State**: Use Nanostores for state that needs to be accessed by multiple systems (e.g., inventory, drops, game progress).
+   - **Migration Candidates**:
+     - **Enemy Projectiles**: Move from `Enemy.tsx` local state to a global or scoped Nanostore.
+     - **Drops/Pickups**: Move from `DropManager.tsx` to a global store (e.g., `src/stores/drops.ts`).
+     - **Visual Effects**: Move from `EffectsManager.tsx` custom callback system to a Nanostore.
+     - **Player Inventory**: Move keys and bombs from `DropManager.tsx` to `src/stores/player.ts`.
+     - **Enemy Positions**: Replace `window.__enemyPositions` with a reactive Nanostore Map.
+     - **Camera State**: Move `zoomScale` and `shakeIntensity` from `CameraManager.tsx` to `src/stores/game.ts`.
+     - **Loot State**: Move `lootItems` from `LootSpawner.tsx` to a global store.
+     - **Enemy Visual State**: Move `isAttacking` and `damageFlash` to a reactive map if other systems need to sync with them.

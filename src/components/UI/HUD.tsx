@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
-import { $inventory, $plane, $currentFloor, $currentRoomId, $floorData, $enemiesAlive, $roomCleared } from '../../stores/game';
+import { $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, togglePause } from '../../stores/game';
 import { $pixels } from '../../stores/meta';
 import { $health, $maxHealth } from '../../stores/player';
 import { debugState } from '../../utils/debug';
@@ -16,6 +16,7 @@ export function HUD() {
   const floorData = useStore($floorData);
   const enemiesAlive = useStore($enemiesAlive);
   const roomCleared = useStore($roomCleared);
+  const isPaused = useStore($isPaused);
   const [showDebug, setShowDebug] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showDeathMessage, setShowDeathMessage] = useState(false);
@@ -372,6 +373,63 @@ export function HUD() {
           <div style={{ fontSize: '14px', color: '#ffffff', opacity: 0.8 }}>
             Restarting...
           </div>
+        </div>
+      )}
+
+      {/* Pause Overlay */}
+      {isPaused && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 4000,
+            pointerEvents: 'auto',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '64px',
+              fontWeight: 'bold',
+              color: '#00ff00',
+              textShadow: '0 0 20px #00ff00',
+              marginBottom: '20px',
+            }}
+          >
+            PAUSED
+          </div>
+          <div
+            style={{
+              fontSize: '18px',
+              color: '#ffffff',
+              marginBottom: '40px',
+            }}
+          >
+            Press ESC to Resume
+          </div>
+          <button
+            onClick={() => togglePause()}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#00ff00',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              fontSize: '18px',
+            }}
+          >
+            RESUME
+          </button>
         </div>
       )}
 

@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { PerspectiveCamera } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Vector3 } from 'three';
@@ -10,7 +10,7 @@ import { $health, $isInvulnerable, $position, $teleportTo } from '../../stores/p
 import { $restartTrigger, restartRun } from '../../stores/restart';
 import { PlayerController } from './PlayerController';
 
-const SPAWN_POSITION: [number, number, number] = [0, 1.5, 0];
+const SPAWN_POSITION: [number, number, number] = [0, 0.5, 0];
 const PLAYER_SPAWN_INVULNERABILITY = 5000; // 5 seconds - increased for safety
 
 export function Player() {
@@ -187,10 +187,14 @@ export function Player() {
   return (
     <RigidBody
       ref={rigidBodyRef}
-      colliders="cuboid"
+      type="dynamic"
       mass={1}
-      position={[0, 1.5, 0]}
+      position={SPAWN_POSITION}
+      gravityScale={1.5}
+      canSleep={false}
+      userData={{ isPlayer: true }}
     >
+      <CuboidCollider args={[0.5, 0.5, 0.5]} />
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial
@@ -236,16 +240,18 @@ export function Player() {
         />
       )}
       <PlayerController rigidBodyRef={rigidBodyRef} />
-      <PlayerPositionTracker meshRef={meshRef} />
+      <PlayerPositionTracker meshRef={meshRef} rigidBodyRef={rigidBodyRef} />
     </RigidBody>
   );
 }
 
 // Track player position and store it globally
 function PlayerPositionTracker({
-  meshRef
+  meshRef,
+  rigidBodyRef
 }: {
   meshRef: React.RefObject<THREE.Mesh>;
+  rigidBodyRef: React.RefObject<RapierRigidBody>;
 }) {
   useFrame(() => {
     if (!meshRef.current) return;
@@ -256,15 +262,23 @@ function PlayerPositionTracker({
 
     // Void Safety Net: If player falls through floor, respawn them
     if (worldPos.y < -10) {
-        console.warn('⚠️ Player fell out of world! Respawning...');
-        const rb = meshRef.current.parent as any; // Access RigidBody
-        if (rb && rb.setTranslation) {
+        const rb = rigidBodyRef.current;
+        if (rb) {
             // Respawn at current X/Z but high up
             rb.setTranslation({ x: worldPos.x, y: 5, z: worldPos.z }, true);
             rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
         }
     }
+
+    // Debug log for position and velocity
+    const rb = rigidBodyRef.current;
+    if (rb) {
+        const v = rb.linvel();
+        if (Math.abs(v.y) > 0.01 || Math.abs(v.x) > 0.01 || Math.abs(v.z) > 0.01) {
+            // const t = rb.translation();
+            // console.log('📍 RB Pos:', t, '💨 RB Vel:', v);
+        }
+    }
   });
   return null;
 }
-
