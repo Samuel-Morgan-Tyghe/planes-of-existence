@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
-import { useEffect, useMemo } from 'react';
-import { $clearedRooms, $currentFloor, $currentRoomId, $floorData, $roomCleared, $visitedRooms } from '../../stores/game';
+import { useEffect, useMemo, useRef } from 'react';
+import { $currentFloor, $currentRoomId, $floorData, $roomCleared, $visitedRooms } from '../../stores/game';
 import { $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
@@ -17,7 +17,7 @@ export function GridMap() {
   const roomCleared = useStore($roomCleared);
   const playerPosition = useStore($position);
   const visitedRooms = useStore($visitedRooms);
-  const clearedRooms = useStore($clearedRooms);
+  const lastTransitionTime = useRef(0);
 
   // Generate floor layout when floor changes or restart
   useEffect(() => {
@@ -51,7 +51,7 @@ export function GridMap() {
   };
 
   // Get current room from floor data
-  const currentRoom = floorData?.rooms.find(r => r.id === currentRoomId);
+  // const currentRoom = floorData?.rooms.find(r => r.id === currentRoomId);
 
   // Generate all room layouts
   // Generate all room layouts
@@ -68,25 +68,15 @@ export function GridMap() {
 
   const roomWorldSize = getRoomWorldSize();
 
-  const handleDoorEnter = (direction: 'north' | 'south' | 'east' | 'west') => {
-    if (!currentRoom || !floorData) return;
+  const handleDoorEnter = (targetRoomId: number, direction: 'north' | 'south' | 'east' | 'west') => {
+    if (!floorData) return;
 
-    // console.log(`\n🚪 ========== DOOR TRANSITION START ==========`);
-    // console.log(`🚪 GridMap: handleDoorEnter from room ${currentRoomId} (grid: ${currentRoom.gridX}, ${currentRoom.gridY}), direction: ${direction}`);
+    // Cooldown to prevent double-triggering (500ms)
+    const now = Date.now();
+    if (now - lastTransitionTime.current < 500) return;
+    lastTransitionTime.current = now;
 
-    // Find the room in that direction
-    const offsets = {
-      north: { dx: 0, dy: -1 },
-      south: { dx: 0, dy: 1 },
-      east: { dx: 1, dy: 0 },
-      west: { dx: -1, dy: 0 },
-    };
-
-    const offset = offsets[direction];
-    const targetX = currentRoom.gridX + offset.dx;
-    const targetY = currentRoom.gridY + offset.dy;
-
-    const targetRoom = floorData.rooms.find(r => r.gridX === targetX && r.gridY === targetY);
+    const targetRoom = floorData.rooms.find(r => r.id === targetRoomId);
 
     if (targetRoom) {
       // Reveal the target room when entering
@@ -149,7 +139,7 @@ export function GridMap() {
 
       $teleportTo.set(newWorldOffset);
     } else {
-      console.error(`❌ No room found at grid position (${targetX}, ${targetY})`);
+      console.error(`❌ No room found with ID ${targetRoomId}`);
     }
   };
 
@@ -341,21 +331,20 @@ export function GridMap() {
         const isVisited = visitedRooms.has(roomA.id) || visitedRooms.has(roomB.id);
         
         // Door is locked if we are in one of the rooms and it's not cleared
-        // We use the global clearedRooms set for the room we are NOT in
         const isLocked = (isA && !roomCleared) || (isB && !roomCleared);
         
-        // Door disappears if BOTH rooms are cleared
-        const bothCleared = clearedRooms.has(roomA.id) && clearedRooms.has(roomB.id);
-        if (bothCleared) return null;
+        // Determine target room based on where the player is
+        const targetRoomId = isA ? roomB.id : roomA.id;
+        const transitionDirection = isA ? directionA : directionB;
 
         return (
           <Door
             key={`door-conn-${id}`}
             position={position}
-            direction={isA ? directionA : directionB}
+            direction={transitionDirection}
             locked={isLocked}
             playerPosition={playerPosition}
-            onEnter={() => handleDoorEnter(isA ? directionA : directionB)}
+            onEnter={() => handleDoorEnter(targetRoomId, transitionDirection)}
             visible={isVisited}
           />
         );
