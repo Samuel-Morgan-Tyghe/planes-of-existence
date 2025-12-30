@@ -19,6 +19,7 @@ export const $isInvulnerable = atom<boolean>(false);
 
 // Teleport signal (position to teleport to)
 export const $teleportTo = atom<[number, number, number] | null>(null);
+export const $isTeleporting = atom<boolean>(false);
 
 // Projectiles state
 export const $projectiles = atom<ProjectileState[]>([]);

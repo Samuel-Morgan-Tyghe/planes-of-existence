@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Vector3 } from 'three';
 import { $plane } from '../../stores/game';
-import { $health, $isInvulnerable, $position, $teleportTo } from '../../stores/player';
+import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
 import { PlayerController } from './PlayerController';
 
@@ -19,7 +19,9 @@ export function Player() {
   const plane = useStore($plane);
   const health = useStore($health);
   const restartTrigger = useStore($restartTrigger);
-  const teleportTo = useStore($teleportTo);
+  // Use a ref for teleport signal to avoid re-renders during the physics loop
+  const teleportTargetRef = useRef<[number, number, number] | null>(null);
+  const teleportFrameLockRef = useRef(0);
   const [damageFlash, setDamageFlash] = useState(false);
   const [damageIntensity, setDamageIntensity] = useState(0); // 0-1 for pulsing damage indicator
   const [isInvulnerable, setIsInvulnerable] = useState(true); // Start invulnerable
@@ -94,19 +96,25 @@ export function Player() {
     }, PLAYER_SPAWN_INVULNERABILITY);
   }, [restartTrigger]);
 
-  // Handle teleportation signal
+  // Sync teleport signal to ref
   useEffect(() => {
-    if (teleportTo && rigidBodyRef.current) {
-      console.log('✨ Teleporting player to:', teleportTo);
-      const rb = rigidBodyRef.current;
-      rb.setTranslation({ x: teleportTo[0], y: teleportTo[1], z: teleportTo[2] }, true);
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
-      
-      // Reset signal
-      $teleportTo.set(null);
+    return $teleportTo.subscribe((val) => {
+      if (val) {
+        console.log('📡 Teleport signal received:', val);
+        teleportTargetRef.current = val as [number, number, number];
+        $isTeleporting.set(true);
+        teleportFrameLockRef.current = 3; // Lock for 3 frames
+      }
+    });
+  }, []);
+
+  // Initial spawn position
+  useEffect(() => {
+    if (rigidBodyRef.current) {
+      console.log('🚀 Initial spawn at:', SPAWN_POSITION);
+      rigidBodyRef.current.setTranslation({ x: SPAWN_POSITION[0], y: SPAWN_POSITION[1], z: SPAWN_POSITION[2] }, true);
     }
-  }, [teleportTo]);
+  }, []);
 
   // Flash red when taking damage (but not during invulnerability)
   useEffect(() => {
@@ -120,6 +128,38 @@ export function Player() {
 
   // Fade damage indicator over time
   useFrame((_state, delta) => {
+    const rb = rigidBodyRef.current;
+    if (!rb) return;
+
+    // Handle teleportation signal in the physics loop
+    if (teleportTargetRef.current) {
+      const target = teleportTargetRef.current;
+      console.log('✨ Executing Teleport (useFrame) to:', target);
+      
+      // 1. Snap position
+      rb.setTranslation({ x: target[0], y: target[1], z: target[2] }, true);
+      
+      // 2. Kill all momentum
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      
+      // 3. Clear signal and mark as done
+      teleportTargetRef.current = null;
+      $teleportTo.set(null);
+    }
+
+    // Handle teleport lock countdown
+    if (teleportFrameLockRef.current > 0) {
+      teleportFrameLockRef.current--;
+      if (teleportFrameLockRef.current === 0) {
+        $isTeleporting.set(false);
+        console.log('🔓 Teleport lock released');
+      }
+      
+      // Keep velocity at zero during lock to prevent "fighting"
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    }
+
     if (damageIntensity > 0) {
       setDamageIntensity((prev) => Math.max(0, prev - delta * 2)); // Fade over 0.5 seconds
     }
@@ -189,7 +229,6 @@ export function Player() {
       ref={rigidBodyRef}
       type="dynamic"
       mass={1}
-      position={SPAWN_POSITION}
       gravityScale={1.5}
       canSleep={false}
       userData={{ isPlayer: true }}

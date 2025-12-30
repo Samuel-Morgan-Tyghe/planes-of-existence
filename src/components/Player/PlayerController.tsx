@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import { $plane } from '../../stores/game';
+import { $isTeleporting } from '../../stores/player';
 
 interface PlayerControllerProps {
   rigidBodyRef: React.RefObject<RapierRigidBody>;
@@ -12,6 +13,7 @@ const JUMP_FORCE = 5;
 
 export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
   const plane = useStore($plane);
+  const isTeleporting = useStore($isTeleporting);
   const keysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
   }, [plane]); // Re-bind if plane changes just in case
 
   useFrame(() => {
-    if (!rigidBodyRef.current) return;
+    if (!rigidBodyRef.current || isTeleporting) return;
 
     const rb = rigidBodyRef.current;
     const keys = keysRef.current;

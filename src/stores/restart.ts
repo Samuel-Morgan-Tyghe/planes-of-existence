@@ -1,5 +1,5 @@
 import { atom } from 'nanostores';
-import { $currentFloor, $currentRoomId, $inventory, $isPaused, $stats, $visitedRooms, $clearedRooms, switchPlane } from './game';
+import { $clearedRooms, $currentFloor, $currentRoomId, $inventory, $isPaused, $stats, $visitedRooms, switchPlane } from './game';
 import { $bossDefeated, $enemiesRemaining } from './gameState';
 import { $maxHealth, $position, setHealth } from './player';
 
@@ -15,7 +15,8 @@ export function restartRun() {
   setHealth($maxHealth.get());
   
   // Reset player position to spawn point
-  $position.set([0, 1.5, 0]);
+  $position.set([0, 0.5, 0]);
+  
   
   // Reset plane to default
   switchPlane('ISO');
@@ -25,6 +26,7 @@ export function restartRun() {
     sharpness: 0.5,
     saturation: 1.0,
     contrast: 0.5,
+    brightness: 0.5,
     resolution: 1.0,
   });
   

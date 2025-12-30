@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
 import { $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, togglePause } from '../../stores/game';
 import { $pixels } from '../../stores/meta';
-import { $health, $maxHealth } from '../../stores/player';
+import { $health, $maxHealth, $position } from '../../stores/player';
 import { debugState } from '../../utils/debug';
 
 export function HUD() {
@@ -17,6 +17,7 @@ export function HUD() {
   const enemiesAlive = useStore($enemiesAlive);
   const roomCleared = useStore($roomCleared);
   const isPaused = useStore($isPaused);
+  const playerPosition = useStore($position);
   const [showDebug, setShowDebug] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showDeathMessage, setShowDeathMessage] = useState(false);
@@ -329,7 +330,7 @@ export function HUD() {
           <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>DEBUG INFO</div>
           <div>Enemies: {debugState.enemyCount}</div>
           <div>Projectiles: {debugState.projectileCount}</div>
-          <div>Player Pos: [{debugState.playerPosition.map(v => v.toFixed(1)).join(', ')}]</div>
+          <div>Player Pos: [{playerPosition.map(v => v.toFixed(2)).join(', ')}]</div>
           <div style={{ marginTop: '4px', color: '#ffff00' }}>
             Open browser console (F12) to see:
           </div>

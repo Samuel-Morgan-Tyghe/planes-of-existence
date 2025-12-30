@@ -14,7 +14,7 @@ export function Canvas() {
       style={{ width: '100vw', height: '100vh' }}
     >
       <Suspense fallback={null}>
-        <Physics gravity={[0, -9.81, 0]} paused={paused}>
+        <Physics gravity={[0, -9.81, 0]} paused={paused} debug>
           <Lighting />
           <Scene />
         </Physics>
