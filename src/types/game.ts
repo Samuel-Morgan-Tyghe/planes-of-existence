@@ -6,6 +6,21 @@ export interface PlayerStats {
   contrast: number;
   brightness: number;
   resolution: number;
+  // Combat Stats
+  range: number;           // Projectile lifetime in seconds
+  fireRate: number;        // Shots per second
+  projectileSize: number;  // Scale multiplier
+  damage: number;          // Damage multiplier
+  projectileSpeed: number; // Velocity multiplier
+  // Artistic Gameplay Modifiers
+  critChance: number;
+  armorPen: number;
+  pierce: number;
+  trueDamage: boolean;
+  dodgeChance: number;
+  stealthMultiplier: number;
+  lootRarityBonus: number;
+  incomingDamageMultiplier: number;
 }
 
 export interface ProjectileData {
@@ -16,5 +31,8 @@ export interface ProjectileData {
   direction?: [number, number, number];
   color?: string; // Color override for RGB split etc
   phaseThroughWalls?: boolean;
+  range?: number; // Lifetime in seconds
+  size?: number; // Scale multiplier
+  pierce?: number;
+  trueDamage?: boolean;
 }
-

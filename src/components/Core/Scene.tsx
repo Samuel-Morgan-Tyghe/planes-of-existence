@@ -1,6 +1,5 @@
 import { useStore } from '@nanostores/react';
-import React, { useCallback, useEffect, useState } from 'react';
-import { addPixels } from '../../stores/meta';
+import React, { useCallback, useEffect } from 'react';
 import { $restartTrigger } from '../../stores/restart';
 import { CameraManager } from '../Cameras/CameraManager';
 import { PlaneSwitcher } from '../Cameras/PlaneSwitcher';
@@ -10,7 +9,6 @@ import { Player } from '../Player/Player';
 import { WeaponSystem } from '../Player/WeaponSystem';
 import { DropManager } from '../World/DropManager';
 import { GridMap } from '../World/GridMap';
-import { LootSpawner } from '../World/LootSpawner';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
@@ -18,7 +16,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: any) {
+  static getDerivedStateFromError(_error: any) {
     return { hasError: true };
   }
 
@@ -35,14 +33,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 export function Scene() {
-  const [enemiesKilled, setEnemiesKilled] = useState(0);
   const restartTrigger = useStore($restartTrigger);
-
-  const handleEnemyKilled = useCallback((enemyId: number) => {
-    setEnemiesKilled((prev) => prev + 1);
-    // Reward pixels for killing enemies
-    addPixels(5);
-  }, []);
 
   const handleSpawnRequest = useCallback(() => {}, []);
 
@@ -60,8 +51,7 @@ export function Scene() {
       <ErrorBoundary>
         <WeaponSystem key={`weapon-${restartTrigger}`} />
       </ErrorBoundary>
-      <EnemySpawner key={`enemies-${restartTrigger}`} onEnemyKilled={handleEnemyKilled} onSpawnRequest={handleSpawnRequest} />
-      <LootSpawner key={`loot-${restartTrigger}`} />
+      <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
       <DropManager key={`drops-${restartTrigger}`} />
       <EffectsManager />
     </>

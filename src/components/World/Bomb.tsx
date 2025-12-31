@@ -1,18 +1,18 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useState } from 'react';
+import { $position } from '../../stores/player';
 
 interface BombProps {
   position: [number, number, number];
   onCollect: () => void;
-  playerPosition: [number, number, number];
 }
 
 const COLLECT_DISTANCE = 2;
 const MAGNET_DISTANCE = 8; // Distance at which magnetism starts
 const MAGNET_SPEED = 4; // Speed of attraction
 
-export function Bomb({ position, onCollect, playerPosition }: BombProps) {
+export function Bomb({ position, onCollect }: BombProps) {
   const [pulse, setPulse] = useState(0);
   const [collected, setCollected] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<[number, number, number]>(position);
@@ -23,9 +23,10 @@ export function Bomb({ position, onCollect, playerPosition }: BombProps) {
     // Pulse effect
     setPulse((prev) => (prev + delta * 3) % (Math.PI * 2));
 
-    // Calculate distance to player
-    const dx = playerPosition[0] - currentPosition[0];
-    const dz = playerPosition[2] - currentPosition[2];
+    // Calculate distance to player - read directly from store for real-time accuracy
+    const playerPos = $position.get();
+    const dx = playerPos[0] - currentPosition[0];
+    const dz = playerPos[2] - currentPosition[2];
     const distance = Math.sqrt(dx * dx + dz * dz);
 
     // Magnetism - pull toward player if within range

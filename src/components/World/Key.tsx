@@ -1,18 +1,18 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useState } from 'react';
+import { $position } from '../../stores/player';
 
 interface KeyProps {
   position: [number, number, number];
   onCollect: () => void;
-  playerPosition: [number, number, number];
 }
 
 const COLLECT_DISTANCE = 2;
 const MAGNET_DISTANCE = 8; // Distance at which magnetism starts
 const MAGNET_SPEED = 4; // Speed of attraction
 
-export function Key({ position, onCollect, playerPosition }: KeyProps) {
+export function Key({ position, onCollect }: KeyProps) {
   const [rotation, setRotation] = useState(0);
   const [collected, setCollected] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<[number, number, number]>(position);
@@ -23,9 +23,10 @@ export function Key({ position, onCollect, playerPosition }: KeyProps) {
     // Rotate key
     setRotation((prev) => prev + delta * 2);
 
-    // Calculate distance to player
-    const dx = playerPosition[0] - currentPosition[0];
-    const dz = playerPosition[2] - currentPosition[2];
+    // Calculate distance to player - read directly from store for real-time accuracy
+    const playerPos = $position.get();
+    const dx = playerPos[0] - currentPosition[0];
+    const dz = playerPos[2] - currentPosition[2];
     const distance = Math.sqrt(dx * dx + dz * dz);
 
     // Magnetism - pull toward player if within range

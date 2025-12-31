@@ -4,6 +4,7 @@ import { Physics } from '@react-three/rapier';
 import { Suspense } from 'react';
 import { $isPaused } from '../../stores/game';
 import { Lighting } from './Lighting';
+import { PostProcessing } from './PostProcessing';
 import { Scene } from './Scene';
 
 export function Canvas() {
@@ -17,6 +18,7 @@ export function Canvas() {
         <Physics gravity={[0, -9.81, 0]} paused={paused} debug>
           <Lighting />
           <Scene />
+          <PostProcessing />
         </Physics>
       </Suspense>
     </R3FCanvas>

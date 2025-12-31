@@ -8,6 +8,7 @@ type DamageEvent = {
 
 type DropEvent = {
   position: [number, number, number];
+  roomId: number;
   timestamp: number;
 };
 
@@ -20,6 +21,19 @@ export const emitDamage = (enemyId: number, damage: number) => {
   $damageEvents.set({ enemyId, damage, timestamp: Date.now() });
 };
 
-export const emitDrop = (position: [number, number, number]) => {
-  $dropEvents.set({ position, timestamp: Date.now() });
+export const emitDrop = (position: [number, number, number], roomId: number) => {
+  $dropEvents.set({ position, roomId, timestamp: Date.now() });
+};
+
+type RoomClearEvent = {
+  position: [number, number, number];
+  roomId: number;
+  roomType: string;
+  timestamp: number;
+};
+
+export const $roomClearEvents = atom<RoomClearEvent | null>(null);
+
+export const emitRoomClearLoot = (position: [number, number, number], roomId: number, roomType: string) => {
+  $roomClearEvents.set({ position, roomId, roomType, timestamp: Date.now() });
 };

@@ -1,9 +1,10 @@
 import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
-import { $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, togglePause } from '../../stores/game';
+import { $coins, $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, $showCombatStats, $stats, toggleCombatStats, togglePause } from '../../stores/game';
 import { $pixels } from '../../stores/meta';
 import { $health, $maxHealth, $position } from '../../stores/player';
 import { debugState } from '../../utils/debug';
+import { MiniMap } from './MiniMap';
 
 export function HUD() {
   const health = useStore($health);
@@ -18,6 +19,10 @@ export function HUD() {
   const roomCleared = useStore($roomCleared);
   const isPaused = useStore($isPaused);
   const playerPosition = useStore($position);
+  const coins = useStore($coins);
+  const stats = useStore($stats);
+  const showCombatStats = useStore($showCombatStats);
+
   const [showDebug, setShowDebug] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showDeathMessage, setShowDeathMessage] = useState(false);
@@ -77,6 +82,13 @@ export function HUD() {
       if (e.key === 'h' || e.key === 'H') {
         e.preventDefault();
         setShowHelp((prev) => !prev);
+      }
+      // Toggle combat stats with Ctrl+S
+      if (e.key === 's' || e.key === 'S') {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          toggleCombatStats();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyPress);
@@ -189,6 +201,9 @@ export function HUD() {
         )}
       </div>
 
+      {/* Mini-map */}
+      <MiniMap />
+
       {/* Pixels (Currency) */}
       <div
         style={{
@@ -203,6 +218,88 @@ export function HUD() {
       >
         Pixels: {pixels}
       </div>
+
+      {/* Coins */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '130px',
+          left: '20px',
+          backgroundColor: '#000000',
+          border: '2px solid #ffd700',
+          padding: '8px',
+          fontSize: '14px',
+          color: '#ffd700',
+        }}
+      >
+        Coins: {coins}
+      </div>      {/* Combat Stats */}
+      {showCombatStats && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '180px',
+            left: '20px',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            border: '2px solid #00ffff',
+            padding: '10px',
+            fontSize: '12px',
+            color: '#00ffff',
+            minWidth: '150px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #00ffff', paddingBottom: '4px' }}>
+            COMBAT MODIFIERS
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Damage:</span>
+            <span style={{ color: '#ff0000', fontWeight: 'bold' }}>
+              x{stats.damage.toFixed(2)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Fire Rate:</span>
+            <span style={{ color: '#ffff00', fontWeight: 'bold' }}>{stats.fireRate.toFixed(1)}/s</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Range:</span>
+            <span style={{ color: '#0088ff', fontWeight: 'bold' }}>{stats.range.toFixed(1)}s</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Proj. Size:</span>
+            <span style={{ color: '#00ff00', fontWeight: 'bold' }}>{stats.projectileSize.toFixed(2)}x</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Proj. Speed:</span>
+            <span style={{ color: '#00ffff', fontWeight: 'bold' }}>{stats.projectileSpeed.toFixed(1)}</span>
+          </div>
+
+          <div style={{ fontWeight: 'bold', marginTop: '12px', marginBottom: '8px', borderBottom: '1px solid #ff00ff', paddingBottom: '4px', color: '#ff00ff' }}>
+            ARTISTIC ATTRIBUTES
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Sharpness:</span>
+            <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{(stats.sharpness * 100).toFixed(0)}%</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Saturation:</span>
+            <span style={{ color: '#ff00ff', fontWeight: 'bold' }}>{(stats.saturation * 100).toFixed(0)}%</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Contrast:</span>
+            <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{(stats.contrast * 100).toFixed(0)}%</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>Brightness:</span>
+            <span style={{ color: '#ffff00', fontWeight: 'bold' }}>{(stats.brightness * 100).toFixed(0)}%</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Resolution:</span>
+            <span style={{ color: '#00ff00', fontWeight: 'bold' }}>{(stats.resolution * 100).toFixed(0)}%</span>
+          </div>
+        </div>
+      )}
 
       {/* Inventory */}
       <div
@@ -247,6 +344,7 @@ export function HUD() {
         <div>Arrow Keys: Shoot</div>
         <div>Tab/1/2/3: Switch Plane</div>
         <div>R: Restart</div>
+        <div>Ctrl+S: Toggle Stats</div>
         <div>Ctrl+D: Debug</div>
         <div style={{ marginTop: '4px', fontSize: '9px', opacity: 0.8 }}>
           Press H for help

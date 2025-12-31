@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { $clearedRooms, $currentFloor, $currentRoomId, $enemies, $enemiesAlive, $enemyPositions, $floorData, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
-import { $damageEvents, emitDrop } from '../../systems/events';
+import { $damageEvents, emitDrop, emitRoomClearLoot } from '../../systems/events';
 import type { EnemyState } from '../../types/enemies';
 import { ENEMY_DEFINITIONS } from '../../types/enemies';
 import { generateRoomLayout, gridToWorld } from '../../utils/floorGen';
@@ -14,7 +14,7 @@ export function EnemySpawner({
   onEnemyKilled,
   onSpawnRequest,
 }: {
-  onEnemyKilled: (enemyId: number) => void;
+  onEnemyKilled?: (enemyId: number) => void;
   onSpawnRequest?: (position: [number, number, number], count: number) => void;
 }) {
   const enemies = useStore($enemies);
@@ -66,20 +66,15 @@ export function EnemySpawner({
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === 'k' || e.key === 'K') {
-        console.log('💀 DEBUG: Killing all enemies in room');
-        $enemies.set([]);
-        $enemiesAlive.set(0);
+        console.log('💀 DEBUG: Killing all enemies in current room');
+        const currentEnemies = $enemies.get();
+        
+        const otherRoomEnemies = currentEnemies.filter(e => e.roomId !== currentRoomId);
+        $enemies.set(otherRoomEnemies);
+        $enemiesAlive.set(otherRoomEnemies.length);
 
-        // Mark room as cleared
-        const roomKey = `${currentFloor}-${currentRoomId}`;
-        clearedRoomsRef.current.add(roomKey);
-
-        const newClearedRooms = new Set($clearedRooms.get());
-        newClearedRooms.add(currentRoomId);
-        $clearedRooms.set(newClearedRooms);
-
-        $roomCleared.set(true);
-        console.log('✅ DEBUG: Room marked as cleared');
+        // Mark room as cleared - the useEffect will handle loot emission
+        console.log('💀 DEBUG: Room enemies cleared via K key');
       }
     };
 
@@ -164,10 +159,20 @@ export function EnemySpawner({
     $roomCleared.set(isCleared);
     
     if (isCleared && !clearedRoomsRef.current.has(roomKey)) {
+      console.log(`✨ Room ${currentRoomId} cleared for the first time!`);
       clearedRoomsRef.current.add(roomKey);
       const newClearedRooms = new Set($clearedRooms.get());
       newClearedRooms.add(currentRoomId);
       $clearedRooms.set(newClearedRooms);
+
+      // Trigger room clear loot for any room except start
+      const room = floorData.rooms.find(r => r.id === currentRoomId);
+      if (room && room.type !== 'start') {
+        const layout = generateRoomLayout(room, currentFloor, false, floorData.seed);
+        const centerPos = gridToWorld(10, 10, layout.worldOffset);
+        console.log(`🎁 Emitting room clear loot for room ${currentRoomId} (type: ${room.type}) at ${centerPos}`);
+        emitRoomClearLoot(centerPos, currentRoomId, room.type);
+      }
     }
   }, [currentRoomId, enemies, currentFloor, floorData]);
 
@@ -188,23 +193,14 @@ export function EnemySpawner({
     // Check if the room this enemy belonged to is now clear
     const remainingInRoom = newEnemies.filter(e => e.roomId === roomId);
     if (remainingInRoom.length === 0) {
-      const roomKey = `${currentFloor}-${roomId}`;
-      clearedRoomsRef.current.add(roomKey);
-
-      const newClearedRooms = new Set($clearedRooms.get());
-      newClearedRooms.add(roomId);
-      $clearedRooms.set(newClearedRooms);
-
-      if (roomId === currentRoomId) {
-        console.log(`🎉 Current room ${roomId} cleared!`);
-        $roomCleared.set(true);
-      }
+      // The useEffect will handle marking room as cleared and emitting loot
+      console.log(`� Room ${roomId} enemies defeated!`);
     }
 
     // Trigger drop roll
-    emitDrop(enemyPosition);
+    emitDrop(enemyPosition, roomId);
 
-    onEnemyKilled(enemyId);
+    onEnemyKilled?.(enemyId);
   };
 
   const handleEnemyDamage = useCallback((enemyId: number, damage: number) => {

@@ -13,7 +13,7 @@ export interface Room {
   id: number;
   gridX: number; // Position in room grid
   gridY: number;
-  type: 'start' | 'normal' | 'exit' | 'boss';
+  type: 'start' | 'normal' | 'exit' | 'boss' | 'treasure';
   doors: { direction: 'north' | 'south' | 'east' | 'west'; locked: boolean }[];
   distanceFromStart: number; // For pathfinding
   enemySpawnPoints: [number, number][]; // Grid positions for enemy spawns (calculated at floor generation)

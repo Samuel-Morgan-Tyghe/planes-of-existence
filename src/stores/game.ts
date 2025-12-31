@@ -1,7 +1,11 @@
 import { atom, map } from 'nanostores';
+import { Drop } from '../types/drops';
 import type { EnemyState } from '../types/enemies';
 import type { PlaneType, PlayerStats } from '../types/game';
+import { ITEM_DEFINITIONS } from '../types/items';
 import type { FloorData } from '../types/room';
+
+export const $drops = atom<Drop[]>([]);
 
 // Current active plane/view
 export const $plane = atom<PlaneType>('ISO');
@@ -13,10 +17,26 @@ export const $stats = map<PlayerStats>({
   contrast: 0.5,
   brightness: 1.0,
   resolution: 1.0,
+  // Base Combat Stats
+  range: 2.0,           // 2 seconds lifetime
+  fireRate: 5.0,        // 5 shots per second
+  projectileSize: 1.0,  // 1x scale
+  damage: 1.0,          // 1x damage multiplier
+  projectileSpeed: 10.0, // 10 units per second
+  // Artistic Gameplay Modifiers
+  critChance: 0.05,      // 5% base crit
+  armorPen: 0,
+  pierce: 0,
+  trueDamage: false,
+  dodgeChance: 0,
+  stealthMultiplier: 1.0,
+  lootRarityBonus: 0,
+  incomingDamageMultiplier: 1.0,
 });
 
 // Inventory (itemId -> count/level)
 export const $inventory = map<Record<string, number>>({});
+export const $coins = atom<number>(0);
 
 // Floor system
 export const $currentFloor = atom<number>(0); // Which floor (level)
@@ -38,6 +58,9 @@ export const $roomCleared = atom<boolean>(false);
 // Pause state
 export const $isPaused = atom<boolean>(false);
 
+// HUD Visibility
+export const $showCombatStats = atom<boolean>(false);
+
 // Camera shake trigger (intensity)
 export const $cameraShake = atom<number>(0);
 
@@ -56,9 +79,33 @@ export const updateStat = <K extends keyof PlayerStats>(
 export const addItem = (itemId: string) => {
   const current = $inventory.get()[itemId] || 0;
   $inventory.setKey(itemId, current + 1);
+
+  // Apply stat modifiers if it's a defined item
+  const itemDef = ITEM_DEFINITIONS[itemId];
+  if (itemDef?.statModifiers) {
+    const currentStats = $stats.get();
+    const newStats = { ...currentStats };
+
+    Object.entries(itemDef.statModifiers).forEach(([stat, mod]) => {
+      const key = stat as keyof PlayerStats;
+      if (typeof currentStats[key] === 'number') {
+        // Most combat stats are multipliers or additive boosts
+        // For combat stats, we'll treat them as additive to the base multiplier
+        (newStats[key] as any) += mod;
+      } else if (typeof currentStats[key] === 'boolean') {
+        (newStats[key] as any) = mod;
+      }
+    });
+
+    $stats.set(newStats);
+    console.log(`📈 Stats updated after picking up ${itemDef.name}:`, newStats);
+  }
 };
 
 export const togglePause = () => {
   $isPaused.set(!$isPaused.get());
 };
 
+export const toggleCombatStats = () => {
+  $showCombatStats.set(!$showCombatStats.get());
+};

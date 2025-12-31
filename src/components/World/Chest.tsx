@@ -1,17 +1,17 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useState } from 'react';
+import { $position } from '../../stores/player';
 
 interface ChestProps {
   position: [number, number, number];
   variety: number; // How many items in the chest
   onCollect: () => void;
-  playerPosition: [number, number, number];
 }
 
 const COLLECT_DISTANCE = 2;
 
-export function Chest({ position, variety, onCollect, playerPosition }: ChestProps) {
+export function Chest({ position, variety, onCollect }: ChestProps) {
   const [bob, setBob] = useState(0);
   const [rotation, setRotation] = useState(0);
   const [collected, setCollected] = useState(false);
@@ -25,9 +25,10 @@ export function Chest({ position, variety, onCollect, playerPosition }: ChestPro
     // Slow rotation
     setRotation((prev) => prev + delta * 0.5);
 
-    // Check distance to player
-    const dx = playerPosition[0] - position[0];
-    const dz = playerPosition[2] - position[2];
+    // Check distance to player - read directly from store for real-time accuracy
+    const playerPos = $position.get();
+    const dx = playerPos[0] - position[0];
+    const dz = playerPos[2] - position[2];
     const distance = Math.sqrt(dx * dx + dz * dz);
 
     if (distance < COLLECT_DISTANCE) {

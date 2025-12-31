@@ -7,17 +7,25 @@ const BASE_DAMAGE = 10;
 /**
  * Calculate damage based on player stats
  */
-export function calculateDamage(): number {
+export function calculateDamage(): { damage: number; isCrit: boolean; isTrueDamage: boolean } {
   const stats = $stats.get();
-  const base = BASE_DAMAGE;
-  const critChance = stats.sharpness;
-  const elementalBonus = stats.saturation * 3;
+  const base = BASE_DAMAGE * stats.damage;
   
-  // Random crit based on sharpness
+  // Sharpness -> Crit Chance
+  const critChance = stats.critChance + (stats.sharpness > 0.5 ? (stats.sharpness - 0.5) * 0.5 : 0);
   const isCrit = Math.random() < critChance;
   const critMultiplier = isCrit ? 2 : 1;
   
-  return (base + elementalBonus) * critMultiplier;
+  // Saturation -> Elemental/Vibrance Bonus
+  const saturationBonus = Math.max(0, stats.saturation - 1.0) * 5;
+  
+  const totalDamage = (base + saturationBonus) * critMultiplier;
+  
+  return {
+    damage: totalDamage,
+    isCrit,
+    isTrueDamage: stats.trueDamage
+  };
 }
 
 /**
@@ -66,20 +74,25 @@ export function createBaseProjectile(
   direction: [number, number, number]
 ): ProjectileData {
   const stats = $stats.get();
+  const damageInfo = calculateDamage();
 
   return {
-    speed: 8 + stats.sharpness * 3, // Visible speed - can see them travel across screen
-    damage: calculateDamage(),
+    speed: stats.projectileSpeed,
+    damage: damageInfo.damage,
     behavior: 'linear',
     count: 1,
     direction,
+    range: stats.range,
+    size: stats.projectileSize,
+    pierce: stats.pierce,
+    trueDamage: damageInfo.isTrueDamage,
   };
 }
 
 /**
  * Fire weapon - returns projectile data ready to spawn
  */
-export function fireWeapon(origin: [number, number, number], direction: [number, number, number]): ProjectileData[] {
+export function fireWeapon(_origin: [number, number, number], direction: [number, number, number]): ProjectileData[] {
   const plane = $plane.get();
   const inventory = $inventory.get();
   const baseProjectile = createBaseProjectile(direction);
@@ -126,4 +139,3 @@ export function fireWeapon(origin: [number, number, number], direction: [number,
 
   return projectiles;
 }
-

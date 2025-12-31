@@ -175,12 +175,23 @@ export function generateFloor(floorNumber: number, seed: number = 12345): FloorD
 
   furthestRoom.type = 'boss';
 
+  // Designate one room as a treasure room (not start or boss)
+  const potentialTreasureRooms = rooms.filter(r => r.type === 'normal' && r.id !== 0);
+  if (potentialTreasureRooms.length > 0) {
+    const treasureRoom = potentialTreasureRooms[rng.nextInt(0, potentialTreasureRooms.length - 1)];
+    treasureRoom.type = 'treasure';
+  }
+
   // Initialize enemy spawn data
   // We do this by generating the layout for each room to ensure valid spawn points
   for (const room of rooms) {
     // Determine enemy count based on floor and room type
-    room.enemyCount = room.type === 'start' ? 0 : Math.min(12, 4 + Math.floor(floorNumber * 1.2));
-    if (room.type === 'boss') room.enemyCount += 2; // More enemies in boss room
+    if (room.type === 'start' || room.type === 'treasure') {
+      room.enemyCount = 0;
+    } else {
+      room.enemyCount = Math.min(12, 4 + Math.floor(floorNumber * 1.2));
+      if (room.type === 'boss') room.enemyCount += 2; // More enemies in boss room
+    }
 
     // Generate layout to calculate spawn points
     // We pass the floorSeed to ensure consistency

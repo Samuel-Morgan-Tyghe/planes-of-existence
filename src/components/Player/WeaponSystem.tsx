@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
-import { $plane } from '../../stores/game';
+import { $plane, $stats } from '../../stores/game';
 import { $position, $projectiles, addProjectiles, removeProjectile } from '../../stores/player';
 import { fireWeapon } from '../../systems/combat';
 import { emitDamage } from '../../systems/events';
@@ -10,9 +10,12 @@ import { Projectile } from './Projectile';
 
 export function WeaponSystem() {
   const projectiles = useStore($projectiles);
+  const stats = useStore($stats); // Read stats for fireRate
   const projectileIdCounter = useRef(0);
   const lastFireTime = useRef(0);
-  const fireCooldown = 200; // ms - faster like Isaac
+  
+  // fireRate is shots per second, so cooldown is 1000 / fireRate
+  const fireCooldown = 1000 / stats.fireRate; 
   const arrowKeysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {

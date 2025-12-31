@@ -1,103 +1,123 @@
-import { useState, useEffect } from 'react';
 import { useStore } from '@nanostores/react';
-import { $position } from '../../stores/player';
-import { $currentFloor, $currentRoomId } from '../../stores/game';
+import { useEffect } from 'react';
+import { $coins, $currentFloor, $currentRoomId, $drops, addItem } from '../../stores/game';
 import { $restartTrigger } from '../../stores/restart';
-import type { Drop } from '../../types/drops';
-import { rollDrop } from '../../types/drops';
-import { Key } from './Key';
+import { $dropEvents, $roomClearEvents } from '../../systems/events';
+import { Drop, rollDrop, rollRoomClearLoot } from '../../types/drops';
 import { Bomb } from './Bomb';
 import { Chest } from './Chest';
+import { Coin } from './Coin';
+import { Item } from './Item';
+import { Key } from './Key';
 
 interface DropManagerProps {
-  onEnemySpawn?: (position: [number, number, number], count: number) => void;
+  // onEnemySpawn removed as it was unused
 }
 
-export function DropManager({ onEnemySpawn }: DropManagerProps) {
-  const [drops, setDrops] = useState<Drop[]>([]);
-  const [keysCollected, setKeysCollected] = useState(0);
-  const [bombsCollected, setBombsCollected] = useState(0);
-  const playerPosition = useStore($position);
+export function DropManager({ }: DropManagerProps) {
   const currentFloor = useStore($currentFloor);
   const currentRoomId = useStore($currentRoomId);
   const restartTrigger = useStore($restartTrigger);
+  const drops = useStore($drops);
 
-  // Clear drops when room changes or restart
+  // Clear drops when floor changes or restart
   useEffect(() => {
-    setDrops([]);
-  }, [currentFloor, currentRoomId, restartTrigger]);
+    $drops.set([]);
+  }, [currentFloor, restartTrigger]);
 
-  // Listen for enemy deaths via global handler
+  const dropEvents = useStore($dropEvents);
+  const roomClearEvents = useStore($roomClearEvents);
+
+  // Handle individual enemy drops
   useEffect(() => {
-    let dropIdCounter = 0;
+    if (!dropEvents) return;
+    
+    const { position, roomId } = dropEvents;
+    const dropResult = rollDrop();
 
-    const handleEnemyDeath = (position: [number, number, number]) => {
-      const dropResult = rollDrop();
+    if (!dropResult) return;
 
-      if (!dropResult) {
-        console.log('🎲 No drop this time');
-        return;
+    if (dropResult.type === 'enemy_spawn') {
+      if ((window as any).__spawnEnemiesAt) {
+        (window as any).__spawnEnemiesAt(position, dropResult.spawnCount || 1);
       }
+    } else {
+      const newDrop: Drop = {
+        id: Date.now() + Math.random(),
+        type: dropResult.type,
+        position,
+        roomId,
+      };
+      if (dropResult.type === 'chest') (newDrop as any).variety = dropResult.chestVariety || 1;
+      $drops.set([...$drops.get(), newDrop]);
+      console.log(`🎁 Enemy drop spawned: ${newDrop.type} in room ${roomId}`);
+    }
+  }, [dropEvents]);
 
-      console.log(`🎲 Drop rolled: ${dropResult.type}`, dropResult);
+  // Handle room clear loot
+  useEffect(() => {
+    if (!roomClearEvents) return;
 
-      if (dropResult.type === 'enemy_spawn') {
-        // Spawn enemies immediately using global spawn function
-        console.log(`👹 Spawning ${dropResult.spawnCount} enemies at drop location!`);
-        if ((window as any).__spawnEnemiesAt) {
-          (window as any).__spawnEnemiesAt(position, dropResult.spawnCount || 1);
-        }
-      } else {
-        // Create pickup item
-        const newDrop: Drop = {
-          id: dropIdCounter++,
-          type: dropResult.type,
-          position,
-        };
+    const { position, roomId, roomType } = roomClearEvents;
+    console.log(`🎁 DropManager: Handling room clear loot for ${roomType} at ${position} in room ${roomId}`);
+    const dropResult = rollRoomClearLoot(roomType);
 
-        // Store chest variety in the drop object
-        if (dropResult.type === 'chest') {
-          (newDrop as any).variety = dropResult.chestVariety || 1;
-        }
+    if (!dropResult) return;
 
-        setDrops((prev) => [...prev, newDrop]);
-      }
+    const newDrop: Drop = {
+      id: Date.now() + Math.random(),
+      type: dropResult.type,
+      position,
+      roomId,
     };
-
-    (window as any).__handleEnemyDrop = handleEnemyDeath;
-
-    return () => {
-      delete (window as any).__handleEnemyDrop;
-    };
-  }, [onEnemySpawn]);
+    if (dropResult.type === 'chest') (newDrop as any).variety = dropResult.chestVariety || 1;
+    if (dropResult.type === 'item') (newDrop as any).itemId = dropResult.itemId;
+    
+    console.log(`🎁 Room clear loot spawned: ${newDrop.type} in room ${roomId}`, newDrop);
+    $drops.set([...$drops.get(), newDrop]);
+  }, [roomClearEvents]);
 
   const handleCollectKey = (id: number) => {
-    setDrops((prev) => prev.filter((d) => d.id !== id));
-    setKeysCollected((prev) => prev + 1);
-    console.log(`🔑 Total keys: ${keysCollected + 1}`);
+    $drops.set($drops.get().filter((d) => d.id !== id));
+    addItem('key');
+    console.log('🔑 Key collected!');
   };
 
   const handleCollectBomb = (id: number) => {
-    setDrops((prev) => prev.filter((d) => d.id !== id));
-    setBombsCollected((prev) => prev + 1);
-    console.log(`💣 Total bombs: ${bombsCollected + 1}`);
+    $drops.set($drops.get().filter((d) => d.id !== id));
+    addItem('bomb');
+    console.log('💣 Bomb collected!');
   };
 
   const handleCollectChest = (id: number, variety: number) => {
-    setDrops((prev) => prev.filter((d) => d.id !== id));
+    $drops.set($drops.get().filter((d) => d.id !== id));
     console.log(`💎 Chest opened with ${variety} items!`);
-    // TODO: Give player items
+    $coins.set($coins.get() + variety * 5);
   };
+
+  const handleCollectCoin = (id: number) => {
+    $drops.set($drops.get().filter((d) => d.id !== id));
+    $coins.set($coins.get() + 1);
+    console.log(`🪙 Collected coin! Total: ${$coins.get()}`);
+  };
+
+  const handleCollectItem = (id: number, itemId: string) => {
+    $drops.set($drops.get().filter((d) => d.id !== id));
+    addItem(itemId);
+    console.log(`✨ Collected item: ${itemId}`);
+  };
+
+  // Only render drops for the current room
+  const roomDrops = drops.filter(d => d.roomId === currentRoomId);
 
   return (
     <>
-      {drops.map((drop) => {
+      {roomDrops.map((drop) => {
         if (drop.type === 'key') {
           return (
             <Key
               key={drop.id}
               position={drop.position}
-              playerPosition={playerPosition}
               onCollect={() => handleCollectKey(drop.id)}
             />
           );
@@ -106,7 +126,6 @@ export function DropManager({ onEnemySpawn }: DropManagerProps) {
             <Bomb
               key={drop.id}
               position={drop.position}
-              playerPosition={playerPosition}
               onCollect={() => handleCollectBomb(drop.id)}
             />
           );
@@ -116,8 +135,24 @@ export function DropManager({ onEnemySpawn }: DropManagerProps) {
               key={drop.id}
               position={drop.position}
               variety={(drop as any).variety || 1}
-              playerPosition={playerPosition}
               onCollect={() => handleCollectChest(drop.id, (drop as any).variety || 1)}
+            />
+          );
+        } else if (drop.type === 'coin') {
+          return (
+            <Coin
+              key={drop.id}
+              position={drop.position}
+              onCollect={() => handleCollectCoin(drop.id)}
+            />
+          );
+        } else if (drop.type === 'item') {
+          return (
+            <Item
+              key={drop.id}
+              position={drop.position}
+              itemId={(drop as any).itemId || 'unknown'}
+              onCollect={() => handleCollectItem(drop.id, (drop as any).itemId || 'unknown')}
             />
           );
         }

@@ -5,7 +5,7 @@ import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier'
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Vector3 } from 'three';
-import { $plane } from '../../stores/game';
+import { $plane, $stats } from '../../stores/game';
 import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
 import { PlayerController } from './PlayerController';
@@ -17,6 +17,7 @@ export function Player() {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const plane = useStore($plane);
+  const stats = useStore($stats);
   const health = useStore($health);
   const restartTrigger = useStore($restartTrigger);
   // Use a ref for teleport signal to avoid re-renders during the physics loop
@@ -233,7 +234,7 @@ export function Player() {
       canSleep={false}
       userData={{ isPlayer: true }}
     >
-      <CuboidCollider args={[0.5, 0.5, 0.5]} />
+      <CuboidCollider args={[0.5 * stats.resolution, 0.5 * stats.resolution, 0.5 * stats.resolution]} />
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial
