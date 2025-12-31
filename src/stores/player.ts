@@ -13,6 +13,8 @@ export const $maxHealth = atom<number>(100);
 
 // Player position (for tracking, physics handles actual position)
 export const $position = atom<[number, number, number]>([0, 0.5, 0]);
+// Player velocity (for momentum effects)
+export const $velocity = atom<[number, number, number]>([0, 0, 0]);
 
 // Player invulnerability flag (for spawn protection)
 export const $isInvulnerable = atom<boolean>(false);

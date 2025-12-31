@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export function Tutorial() {
   const [showTutorial, setShowTutorial] = useState(true);
@@ -60,7 +60,6 @@ export function Tutorial() {
         'Avoid enemies - they deal damage when close.',
         'Kill enemies to earn Pixels (currency).',
         'Collect green items, yellow pixels, and cyan upgrades.',
-        'Press R to restart your run.',
       ],
     },
   ];

@@ -4,6 +4,7 @@ import { RapierRigidBody } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import { $plane } from '../../stores/game';
 import { $isTeleporting } from '../../stores/player';
+import { $knockbackEvents } from '../../systems/events';
 
 interface PlayerControllerProps {
   rigidBodyRef: React.RefObject<RapierRigidBody>;
@@ -37,6 +38,24 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [plane]); // Re-bind if plane changes just in case
+
+  // Handle knockback events
+  useEffect(() => {
+    const unsubscribe = $knockbackEvents.subscribe((event) => {
+      if (!event || !rigidBodyRef.current) return;
+      
+      const rb = rigidBodyRef.current;
+      const impulse = {
+        x: event.direction[0] * event.force,
+        y: 2, // Small upward pop
+        z: event.direction[2] * event.force
+      };
+      
+      console.log('💥 Applying knockback to player:', impulse);
+      rb.applyImpulse(impulse, true);
+    });
+    return unsubscribe;
+  }, [rigidBodyRef]);
 
   useFrame(() => {
     if (!rigidBodyRef.current || isTeleporting) return;

@@ -4,14 +4,13 @@ import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Vector3 } from 'three';
 import { $plane, $stats } from '../../stores/game';
-import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo } from '../../stores/player';
+import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo, $velocity } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
 import { PlayerController } from './PlayerController';
 
 const SPAWN_POSITION: [number, number, number] = [0, 0.5, 0];
-const PLAYER_SPAWN_INVULNERABILITY = 5000; // 5 seconds - increased for safety
+const PLAYER_SPAWN_INVULNERABILITY = 2000; // 2 seconds - reduced for easier testing
 
 export function Player() {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
@@ -296,27 +295,20 @@ function PlayerPositionTracker({
   useFrame(() => {
     if (!meshRef.current) return;
     // Get world position (not local position relative to parent)
-    const worldPos = new Vector3();
+    const worldPos = new THREE.Vector3();
     meshRef.current.getWorldPosition(worldPos);
     $position.set([worldPos.x, worldPos.y, worldPos.z]);
 
-    // Void Safety Net: If player falls through floor, respawn them
-    if (worldPos.y < -10) {
-        const rb = rigidBodyRef.current;
-        if (rb) {
+    const rb = rigidBodyRef.current;
+    if (rb) {
+        const vel = rb.linvel();
+        $velocity.set([vel.x, vel.y, vel.z]);
+
+        // Void Safety Net: If player falls through floor, respawn them
+        if (worldPos.y < -10) {
             // Respawn at current X/Z but high up
             rb.setTranslation({ x: worldPos.x, y: 5, z: worldPos.z }, true);
             rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        }
-    }
-
-    // Debug log for position and velocity
-    const rb = rigidBodyRef.current;
-    if (rb) {
-        const v = rb.linvel();
-        if (Math.abs(v.y) > 0.01 || Math.abs(v.x) > 0.01 || Math.abs(v.z) > 0.01) {
-            // const t = rb.translation();
-            // console.log('📍 RB Pos:', t, '💨 RB Vel:', v);
         }
     }
   });

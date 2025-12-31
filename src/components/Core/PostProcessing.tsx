@@ -40,18 +40,14 @@ export function PostProcessing() {
         darkness={0.5} 
       />
 
-      { (stats.sharpness > 0.8 ? (
-        <Bloom 
-          intensity={bloomIntensity} 
-          luminanceThreshold={0.2} 
-          mipmapBlur 
-        />
-      ) : null) as any }
+      <Bloom 
+        intensity={stats.sharpness > 0.8 ? bloomIntensity : 0} 
+        luminanceThreshold={0.2} 
+        mipmapBlur 
+      />
 
       {/* Threshold/Sketch look for extreme contrast/sharpness */}
-      { (stats.contrast > 0.9 ? (
-        <Noise opacity={0.1} />
-      ) : null) as any }
+      <Noise opacity={stats.contrast > 0.9 ? 0.1 : 0} />
     </EffectComposer>
   );
 }

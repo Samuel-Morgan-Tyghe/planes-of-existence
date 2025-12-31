@@ -118,9 +118,20 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       sensor
       onIntersectionEnter={({ other }) => {
         const userData = other.rigidBodyObject?.userData;
+        
         if (userData?.type === 'enemy' && !hitRef.current) {
           hitRef.current = true;
           onHit?.(data.damage, userData.id);
+          onDestroy();
+        } else if (userData?.isBomb) {
+          // Push the bomb!
+          const bombRigidBody = other.rigidBody;
+          if (bombRigidBody) {
+            const pushForce = data.damage * 2; // Scale push force by damage
+            const impulse = directionRef.current.clone().multiplyScalar(pushForce);
+            bombRigidBody.applyImpulse(impulse, true);
+            console.log('🎯 Projectile hit bomb! Pushing with force:', pushForce);
+          }
           onDestroy();
         }
       }}

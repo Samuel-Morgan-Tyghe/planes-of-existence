@@ -233,12 +233,29 @@ export function HUD() {
         }}
       >
         Coins: {coins}
-      </div>      {/* Combat Stats */}
+      </div>
+
+      {/* Bombs */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '180px',
+          left: '20px',
+          backgroundColor: '#000000',
+          border: '2px solid #ff4400',
+          padding: '8px',
+          fontSize: '14px',
+          color: '#ff4400',
+        }}
+      >
+        Bombs: {inventory['bomb'] || 0} (E)
+      </div>
+      {/* Combat Stats */}
       {showCombatStats && (
         <div
           style={{
             position: 'absolute',
-            top: '180px',
+            top: '230px',
             left: '20px',
             backgroundColor: 'rgba(0, 0, 0, 0.8)',
             border: '2px solid #00ffff',
@@ -343,7 +360,7 @@ export function HUD() {
         <div>WASD: Move</div>
         <div>Arrow Keys: Shoot</div>
         <div>Tab/1/2/3: Switch Plane</div>
-        <div>R: Restart</div>
+        <div>E: Throw Bomb</div>
         <div>Ctrl+S: Toggle Stats</div>
         <div>Ctrl+D: Debug</div>
         <div style={{ marginTop: '4px', fontSize: '9px', opacity: 0.8 }}>
@@ -553,8 +570,8 @@ export function HUD() {
           </div>
           <div style={{ marginBottom: '8px' }}><strong>Movement:</strong> WASD</div>
           <div style={{ marginBottom: '8px' }}><strong>Shoot:</strong> Arrow Keys (hold direction)</div>
+          <div style={{ marginBottom: '8px' }}><strong>Throw Bomb:</strong> E</div>
           <div style={{ marginBottom: '8px' }}><strong>Switch Plane:</strong> Tab (cycle) or 1/2/3</div>
-          <div style={{ marginBottom: '8px' }}><strong>Restart:</strong> R</div>
           <div style={{ marginBottom: '8px' }}><strong>Debug:</strong> Ctrl+D</div>
           <div style={{ marginTop: '12px', fontSize: '10px', opacity: '0.8' }}>
             <strong>Tip:</strong> Look for floating "ENEMY" labels above colored cubes. Enemies do MELEE attacks (close range, not projectiles) - they hurt you when they get within 2 units. Watch for red "⚠ ATTACKING ⚠" warnings and pulsing red spheres! When you take damage, your screen will flash red and you'll see a red beam from the enemy to you.

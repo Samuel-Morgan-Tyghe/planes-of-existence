@@ -2,33 +2,46 @@ import { useStore } from '@nanostores/react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
-import { $plane, $stats } from '../../stores/game';
-import { $position, $projectiles, addProjectiles, removeProjectile } from '../../stores/player';
+import { $plane, $stats, useBomb } from '../../stores/game';
+import { $position, $projectiles, $velocity, addProjectiles, removeProjectile } from '../../stores/player';
 import { fireWeapon } from '../../systems/combat';
 import { emitDamage } from '../../systems/events';
 import { Projectile } from './Projectile';
 
 export function WeaponSystem() {
   const projectiles = useStore($projectiles);
-  const stats = useStore($stats); // Read stats for fireRate
+  const stats = useStore($stats);
   const projectileIdCounter = useRef(0);
   const lastFireTime = useRef(0);
   
-  // fireRate is shots per second, so cooldown is 1000 / fireRate
   const fireCooldown = 1000 / stats.fireRate; 
   const arrowKeysRef = useRef<Set<string>>(new Set());
+  const wasdKeysRef = useRef<Set<string>>(new Set());
+  const { camera } = useThree();
+  const plane = useStore($plane);
+  const isMouseDownRef = useRef(false);
 
   useEffect(() => {
-    console.log('🎮 WeaponSystem MOUNTED');
     const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
       if (e.key.startsWith('Arrow')) {
         arrowKeysRef.current.add(e.key);
+      }
+      if (['w', 'a', 's', 'd'].includes(key)) {
+        wasdKeysRef.current.add(key);
+      }
+      if (key === 'e') {
+        handleThrowBomb();
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
       if (e.key.startsWith('Arrow')) {
         arrowKeysRef.current.delete(e.key);
+      }
+      if (['w', 'a', 's', 'd'].includes(key)) {
+        wasdKeysRef.current.delete(key);
       }
     };
 
@@ -36,15 +49,10 @@ export function WeaponSystem() {
     window.addEventListener('keyup', handleKeyUp);
 
     return () => {
-      console.log('🎮 WeaponSystem UNMOUNTED');
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
-
-  const isMouseDownRef = useRef(false);
-  const { camera } = useThree();
-  const plane = useStore($plane);
+  }, [plane, camera]);
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
@@ -61,9 +69,7 @@ export function WeaponSystem() {
     };
   }, []);
 
-  // Continuous firing like Binding of Isaac
   useFrame(() => {
-    // Check if we should fire
     let shouldFire = false;
     let direction: [number, number, number] | null = null;
 
@@ -113,10 +119,54 @@ export function WeaponSystem() {
     });
 
     if (newProjectiles.length > 0) {
-        console.log(`🔫 Firing ${newProjectiles.length} projectiles. Total: ${projectiles.length + newProjectiles.length}`);
         addProjectiles(newProjectiles);
     }
   });
+
+  const handleThrowBomb = () => {
+    const currentPos = $position.get();
+    const moveDir = new Vector3(0, 0, 0);
+    const wasd = wasdKeysRef.current;
+    
+    if (wasd.has('w')) moveDir.z -= 1;
+    if (wasd.has('s')) moveDir.z += 1;
+    if (wasd.has('a')) moveDir.x -= 1;
+    if (wasd.has('d')) moveDir.x += 1;
+
+    let finalDir = new Vector3(0, 0, -1); // Default
+
+    if (moveDir.lengthSq() > 0) {
+      finalDir.copy(moveDir).normalize();
+    } else {
+      // Fallback to shooting direction
+      const shootingDir = new Vector3(0, 0, 0);
+      const arrows = arrowKeysRef.current;
+      if (arrows.has('ArrowUp')) shootingDir.z -= 1;
+      if (arrows.has('ArrowDown')) shootingDir.z += 1;
+      if (arrows.has('ArrowLeft')) shootingDir.x -= 1;
+      if (arrows.has('ArrowRight')) shootingDir.x += 1;
+      
+      if (shootingDir.lengthSq() > 0) {
+        finalDir.copy(shootingDir).normalize();
+      } else if (plane === 'FPS') {
+        finalDir.set(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+      }
+    }
+
+    const direction: [number, number, number] = [finalDir.x, finalDir.y, finalDir.z];
+
+    // Spawn closer to player to allow collision, but slightly offset
+    const offset = new Vector3(...direction).multiplyScalar(1.2);
+    const spawnPos: [number, number, number] = [
+      currentPos[0] + offset.x,
+      currentPos[1] + 1.2, // Chest height
+      currentPos[2] + offset.z
+    ];
+
+    const playerVel = $velocity.get();
+    console.log('💣 Throwing bomb in direction:', direction, 'with momentum:', playerVel);
+    useBomb(spawnPos, direction, playerVel);
+  };
 
   const handleHit = useCallback((damage: number, enemyId?: number) => {
     if (enemyId !== undefined) {
@@ -124,7 +174,6 @@ export function WeaponSystem() {
     }
   }, []);
 
-  // Weapon system logic
   return (
     <>
       {projectiles.map((proj) => (
@@ -139,4 +188,3 @@ export function WeaponSystem() {
     </>
   );
 }
-

@@ -32,8 +32,19 @@ type RoomClearEvent = {
   timestamp: number;
 };
 
+type KnockbackEvent = {
+  direction: [number, number, number];
+  force: number;
+  timestamp: number;
+};
+
 export const $roomClearEvents = atom<RoomClearEvent | null>(null);
+export const $knockbackEvents = atom<KnockbackEvent | null>(null);
 
 export const emitRoomClearLoot = (position: [number, number, number], roomId: number, roomType: string) => {
   $roomClearEvents.set({ position, roomId, roomType, timestamp: Date.now() });
+};
+
+export const emitKnockback = (direction: [number, number, number], force: number) => {
+  $knockbackEvents.set({ direction, force, timestamp: Date.now() });
 };

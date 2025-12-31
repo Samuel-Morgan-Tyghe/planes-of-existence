@@ -36,3 +36,13 @@ export interface ProjectileData {
   pierce?: number;
   trueDamage?: boolean;
 }
+
+export interface ThrownBomb {
+  id: number;
+  position: [number, number, number];
+  direction: [number, number, number];
+  initialVelocity: [number, number, number];
+  exploded: boolean;
+  explosionPos?: [number, number, number];
+  fuse: number;
+}

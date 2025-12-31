@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { $restartTrigger } from '../../stores/restart';
 import { CameraManager } from '../Cameras/CameraManager';
 import { PlaneSwitcher } from '../Cameras/PlaneSwitcher';
@@ -9,6 +9,7 @@ import { Player } from '../Player/Player';
 import { WeaponSystem } from '../Player/WeaponSystem';
 import { DropManager } from '../World/DropManager';
 import { GridMap } from '../World/GridMap';
+import { ThrownBombGroup } from '../World/ThrownBombGroup';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
@@ -37,23 +38,22 @@ export function Scene() {
 
   const handleSpawnRequest = useCallback(() => {}, []);
 
-  useEffect(() => {
-    console.log('🎬 Scene MOUNTED');
-    return () => console.log('🎬 Scene UNMOUNTED');
-  }, []);
-
   return (
     <>
       <CameraManager />
       <PlaneSwitcher />
-      <GridMap key={`gridmap-${restartTrigger}`} />
+      <GridMap key={`grid-${restartTrigger}`} />
       <Player key={`player-${restartTrigger}`} />
+      
       <ErrorBoundary>
         <WeaponSystem key={`weapon-${restartTrigger}`} />
       </ErrorBoundary>
+
       <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
       <DropManager key={`drops-${restartTrigger}`} />
       <EffectsManager />
+
+      <ThrownBombGroup />
     </>
   );
 }

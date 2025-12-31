@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
-import { $currentFloor, $currentRoomId, $floorData, $roomCleared, $visitedRooms } from '../../stores/game';
+import { $brokenWalls, $currentFloor, $currentRoomId, $floorData, $roomCleared, $visitedRooms } from '../../stores/game';
 import { $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
@@ -17,6 +17,7 @@ export function GridMap() {
   const roomCleared = useStore($roomCleared);
   const playerPosition = useStore($position);
   const visitedRooms = useStore($visitedRooms);
+  const brokenWalls = useStore($brokenWalls);
   const lastTransitionTime = useRef(0);
 
   // Generate floor layout when floor changes or restart
@@ -303,6 +304,13 @@ export function GridMap() {
                     (x < layout.grid[0].length - 1 && (layout.grid[y][x+1] === 5 || layout.grid[y][x+1] === 6));
 
                   if (hasDoorNearby) return null;
+
+                  // Check if wall is broken
+                  const roomBrokenWalls = brokenWalls[room.id];
+                  if (roomBrokenWalls?.has(`${x},${y}`)) {
+                    return null;
+                  }
+
                   return <Wall key={`wall-${room.id}-${x}-${y}`} position={worldPos} visible={isVisited} />;
                 } else if (tile === 4 && roomCleared && isCurrentRoom) {
                   return (

@@ -1,7 +1,7 @@
 import { atom, map } from 'nanostores';
 import { Drop } from '../types/drops';
 import type { EnemyState } from '../types/enemies';
-import type { PlaneType, PlayerStats } from '../types/game';
+import type { PlaneType, PlayerStats, ThrownBomb } from '../types/game';
 import { ITEM_DEFINITIONS } from '../types/items';
 import type { FloorData } from '../types/room';
 
@@ -35,7 +35,9 @@ export const $stats = map<PlayerStats>({
 });
 
 // Inventory (itemId -> count/level)
-export const $inventory = map<Record<string, number>>({});
+export const $inventory = map<Record<string, number>>({
+  'bomb': 5, // Start with some bombs for testing
+});
 export const $coins = atom<number>(0);
 
 // Floor system
@@ -63,6 +65,12 @@ export const $showCombatStats = atom<boolean>(false);
 
 // Camera shake trigger (intensity)
 export const $cameraShake = atom<number>(0);
+
+// Thrown bombs in the world
+export const $thrownBombs = map<Record<number, ThrownBomb>>({});
+
+// Broken walls: roomId -> Set of "x,y" coordinates
+export const $brokenWalls = map<Record<number, Set<string>>>({});
 
 // Actions
 export const switchPlane = (plane: PlaneType) => {
@@ -108,4 +116,59 @@ export const togglePause = () => {
 
 export const toggleCombatStats = () => {
   $showCombatStats.set(!$showCombatStats.get());
+};
+
+let bombIdCounter = 0;
+export const useBomb = (position: [number, number, number], direction: [number, number, number], playerVelocity?: [number, number, number]) => {
+  const inventory = $inventory.get();
+  const bombCount = inventory['bomb'] || 0;
+
+  if (bombCount > 0) {
+    $inventory.setKey('bomb', bombCount - 1);
+    
+    const throwForce = 15;
+    const initialVelocity: [number, number, number] = [
+      direction[0] * throwForce + (playerVelocity?.[0] || 0),
+      3 + (playerVelocity?.[1] || 0),
+      direction[2] * throwForce + (playerVelocity?.[2] || 0)
+    ];
+
+    const id = bombIdCounter++;
+    const newBomb: ThrownBomb = {
+      id,
+      position,
+      direction,
+      initialVelocity,
+      exploded: false,
+      fuse: 3.0,
+    };
+    
+    $thrownBombs.setKey(id, newBomb);
+    console.log('💣 Bomb added to $thrownBombs store:', newBomb);
+    return true;
+  }
+  
+  console.log('❌ No bombs left!');
+  return false;
+};
+
+export const updateThrownBomb = (id: number, data: Partial<ThrownBomb>) => {
+  const bomb = $thrownBombs.get()[id];
+  if (bomb) {
+    $thrownBombs.setKey(id, { ...bomb, ...data });
+  }
+};
+
+export const removeThrownBomb = (id: number) => {
+  const bombs = { ...$thrownBombs.get() };
+  delete bombs[id];
+  $thrownBombs.set(bombs);
+};
+
+export const breakWall = (roomId: number, x: number, y: number) => {
+  const current = $brokenWalls.get()[roomId] || new Set<string>();
+  const next = new Set(current);
+  next.add(`${x},${y}`);
+  $brokenWalls.setKey(roomId, next);
+  console.log(`🧱 Wall broken at room ${roomId}, pos ${x},${y}`);
 };
