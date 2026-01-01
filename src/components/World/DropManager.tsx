@@ -32,7 +32,22 @@ export function DropManager({ }: DropManagerProps) {
   useEffect(() => {
     if (!dropEvents) return;
     
-    const { position, roomId } = dropEvents;
+    const { position, roomId, forcedItem } = dropEvents;
+
+    if (forcedItem) {
+      // Force drop specific item
+      const newDrop: Drop = {
+        id: Date.now() + Math.random(),
+        type: 'item',
+        position,
+        roomId,
+      };
+      (newDrop as any).itemId = forcedItem;
+      $drops.set([...$drops.get(), newDrop]);
+      console.log(`🎁 Forced item drop: ${forcedItem} in room ${roomId}`);
+      return;
+    }
+
     const dropResult = rollDrop();
 
     if (!dropResult) return;

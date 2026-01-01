@@ -7,6 +7,7 @@ import { $restartTrigger } from '../../stores/restart';
 import { $damageEvents, emitDrop, emitRoomClearLoot } from '../../systems/events';
 import type { EnemyState } from '../../types/enemies';
 import { ENEMY_DEFINITIONS } from '../../types/enemies';
+import { ITEM_DEFINITIONS } from '../../types/items';
 import { generateRoomLayout, gridToWorld } from '../../utils/floorGen';
 import { Enemy } from './Enemy';
 
@@ -117,6 +118,13 @@ export function EnemySpawner({
           const worldPos = gridToWorld(gridX, gridY, roomLayout.worldOffset);
           const randomEnemy = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
 
+          // Glitchers have a chance to hold a random item
+          let heldItem: string | undefined;
+          if (randomEnemy.id === 'glitch_basic') {
+            const itemIds = Object.keys(ITEM_DEFINITIONS);
+            heldItem = itemIds[Math.floor(Math.random() * itemIds.length)];
+          }
+
           allNewEnemies.push({
             id: enemyIdCounterRef.current++,
             roomId: room.id,
@@ -124,6 +132,7 @@ export function EnemySpawner({
             health: randomEnemy.health,
             position: [worldPos[0], worldPos[1] + 0.5, worldPos[2]],
             isDead: false,
+            heldItem,
           });
         });
       }
@@ -209,7 +218,9 @@ export function EnemySpawner({
     }
 
     // Trigger drop roll
-    emitDrop(enemyPosition, roomId);
+    // 10% chance to drop the held item if it exists
+    const dropItem = dyingEnemy.heldItem && Math.random() < 0.1 ? dyingEnemy.heldItem : undefined;
+    emitDrop(enemyPosition, roomId, dropItem);
 
     onEnemyKilled?.(enemyId);
   };

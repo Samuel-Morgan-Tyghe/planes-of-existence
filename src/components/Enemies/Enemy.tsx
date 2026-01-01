@@ -6,6 +6,8 @@ import { Vector3 } from 'three';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
 import { addEnemyProjectile } from '../../stores/projectiles';
 import type { EnemyState } from '../../types/enemies';
+import { ITEM_DEFINITIONS } from '../../types/items';
+import { calculateProjectileStats } from '../../utils/combat';
 import { HitEffect } from '../Effects/HitEffect';
 
 interface EnemyProps {
@@ -38,7 +40,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   const [hitEffects, setHitEffects] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
   const hitEffectIdCounter = useRef(0);
   
-  const isRanged = enemy.definition.attackType === 'ranged';
+  const isRanged = enemy.definition.attackType === 'ranged' || !!enemy.heldItem;
   const attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
   const detectionRange = Math.max(ENEMY_DETECTION_RANGE, attackRange + 5);
 
@@ -143,15 +145,28 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
 
           const type = enemy.definition.id === 'echoer' ? 'soundwave' : 'normal';
           
-          console.log(`🚀 Enemy ${enemy.id} firing ${type} projectile at ${projectileOrigin}`);
+          // Calculate stats based on held item using utility
+          const { damage, speed, size, color } = calculateProjectileStats(
+            {
+              damage: enemy.definition.damage,
+              speed: enemy.definition.projectileSpeed || 10,
+              size: 1.0,
+              color: enemy.definition.color,
+            },
+            enemy.heldItem,
+            ITEM_DEFINITIONS
+          );
+
+          console.log(`🚀 Enemy ${enemy.id} firing ${type} projectile at ${projectileOrigin} with item ${enemy.heldItem}`);
           
           addEnemyProjectile({
             origin: projectileOrigin,
             direction: [direction.x, direction.y, direction.z],
             type: type as 'normal' | 'soundwave',
-            damage: enemy.definition.damage,
-            speed: enemy.definition.projectileSpeed || 10,
-            color: enemy.definition.color,
+            damage: damage,
+            speed: speed,
+            color: color,
+            size: size,
           });
         } else {
           takeDamage(enemy.definition.damage);
@@ -301,6 +316,17 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           emissiveIntensity={0.5}
         />
       </mesh>
+      {/* Held Item Indicator */}
+      {enemy.heldItem && (
+        <mesh position={[0, enemy.definition.size + 0.5, 0]}>
+          <boxGeometry args={[0.3, 0.3, 0.3]} />
+          <meshStandardMaterial
+            color="#ffd700" // Gold color for item
+            emissive="#ffd700"
+            emissiveIntensity={1.0}
+          />
+        </mesh>
+      )}
     </RigidBody>
     </>
   );

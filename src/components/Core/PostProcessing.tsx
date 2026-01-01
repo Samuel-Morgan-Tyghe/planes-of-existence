@@ -28,7 +28,7 @@ export function PostProcessing() {
         saturation={stats.saturation - 1.0} // HueSaturation uses offset from 0
       />
       <BrightnessContrast 
-        brightness={stats.brightness - 1.0} 
+        brightness={Math.min(stats.brightness - 1.0, 0.1)} 
         contrast={stats.contrast - 0.5} 
       />
       

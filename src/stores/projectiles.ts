@@ -8,6 +8,7 @@ export interface ProjectileState {
   damage: number;
   speed: number;
   color: string;
+  size?: number;
 }
 
 export const $enemyProjectiles = atom<Record<number, ProjectileState>>({});

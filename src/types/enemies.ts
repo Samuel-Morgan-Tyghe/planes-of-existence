@@ -138,5 +138,6 @@ export interface EnemyState {
   health: number;
   position: [number, number, number];
   isDead: boolean;
+  heldItem?: string; // Item ID if the enemy is holding one
 }
 

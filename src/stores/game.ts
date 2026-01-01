@@ -191,6 +191,12 @@ export const spawnEnemy = (definitionId: string, position: [number, number, numb
     isDead: false,
   };
 
+  // Glitchers have a chance to hold a random item
+  if (definition.id === 'glitch_basic') {
+    const itemIds = Object.keys(ITEM_DEFINITIONS);
+    newEnemy.heldItem = itemIds[Math.floor(Math.random() * itemIds.length)];
+  }
+
   console.log(`👹 Manually spawning enemy: ${definition.name} (ID: ${newId}) in Room: ${currentRoomId} at [${position.join(', ')}]`);
   $enemies.set([...currentEnemies, newEnemy]);
   $enemiesAlive.set($enemiesAlive.get() + 1);

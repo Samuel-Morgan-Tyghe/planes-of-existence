@@ -10,6 +10,7 @@ type DropEvent = {
   position: [number, number, number];
   roomId: number;
   timestamp: number;
+  forcedItem?: string;
 };
 
 // Simple event bus using Nanostores atoms
@@ -21,8 +22,8 @@ export const emitDamage = (enemyId: number, damage: number) => {
   $damageEvents.set({ enemyId, damage, timestamp: Date.now() });
 };
 
-export const emitDrop = (position: [number, number, number], roomId: number) => {
-  $dropEvents.set({ position, roomId, timestamp: Date.now() });
+export const emitDrop = (position: [number, number, number], roomId: number, forcedItem?: string) => {
+  $dropEvents.set({ position, roomId, timestamp: Date.now(), forcedItem });
 };
 
 type RoomClearEvent = {
