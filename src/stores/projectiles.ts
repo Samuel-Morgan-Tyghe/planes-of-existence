@@ -1,4 +1,8 @@
+import type { RapierRigidBody } from '@react-three/rapier';
 import { atom } from 'nanostores';
+
+// Map of projectile IDs to their physics bodies for direct access
+export const projectileBodies = new Map<number, RapierRigidBody>();
 
 export interface ProjectileState {
   id: number;

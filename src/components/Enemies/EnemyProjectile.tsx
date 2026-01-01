@@ -3,6 +3,7 @@ import { BallCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
 import { takeDamage } from '../../stores/player';
+import { projectileBodies } from '../../stores/projectiles';
 
 interface EnemyProjectileProps {
   origin: [number, number, number];
@@ -16,18 +17,27 @@ interface EnemyProjectileProps {
 const PROJECTILE_LIFETIME = 5; // 5 seconds
 
 export function EnemyProjectile({
+  id,
   origin,
   direction,
   speed,
   damage,
-  color,
   onDestroy,
-}: EnemyProjectileProps) {
+}: EnemyProjectileProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
   const lifetimeRef = useRef(0);
   const hitRef = useRef(false);
   const directionRef = useRef(new Vector3(...direction).normalize());
+
+  // Register physics body for instanced rendering
+  useEffect(() => {
+    if (rigidBodyRef.current) {
+      projectileBodies.set(id, rigidBodyRef.current);
+    }
+    return () => {
+      projectileBodies.delete(id);
+    };
+  }, [id]);
 
   // Initialize velocity once
   useEffect(() => {
@@ -83,7 +93,7 @@ export function EnemyProjectile({
       onCollisionEnter={(e) => {
         const userData = e.other.rigidBody?.userData as any;
         if (userData?.isWall) {
-          console.log('🧱 EnemyProjectile hit wall');
+          // console.log('🧱 EnemyProjectile hit wall');
           onDestroy();
         } else if (userData?.isPlayer) {
           console.log('💥 EnemyProjectile hit player!');
@@ -94,30 +104,6 @@ export function EnemyProjectile({
       }}
     >
       <BallCollider args={[0.5]} />
-      
-      {/* Main projectile - glowing sphere */}
-      <mesh ref={meshRef} castShadow>
-        <sphereGeometry args={[0.5, 12, 12]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={5.0}
-          transparent
-          opacity={0.9}
-        />
-      </mesh>
-
-      {/* Outer glow */}
-      <mesh>
-        <sphereGeometry args={[0.5, 8, 8]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={3.0}
-          transparent
-          opacity={0.4}
-        />
-      </mesh>
     </RigidBody>
   );
 }

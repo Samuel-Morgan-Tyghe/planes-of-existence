@@ -3,6 +3,7 @@ import { RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { takeDamage } from '../../stores/player';
+import { projectileBodies } from '../../stores/projectiles';
 
 interface SoundWaveProps {
   origin: [number, number, number];
@@ -16,30 +17,38 @@ interface SoundWaveProps {
 const PROJECTILE_LIFETIME = 6;
 
 export function SoundWave({
+  id,
   origin,
   direction,
   speed,
   damage,
-  color,
   onDestroy,
-}: SoundWaveProps) {
+}: SoundWaveProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
   const lifetimeRef = useRef(0);
   const hitRef = useRef(false);
-  console.log(`🌊 SoundWave ${origin} component rendering. Hit: ${hitRef.current}`);
   const directionRef = useRef(new THREE.Vector3(...direction).normalize());
+
+  // Register physics body for instanced rendering
+  useEffect(() => {
+    if (rigidBodyRef.current) {
+      projectileBodies.set(id, rigidBodyRef.current);
+    }
+    return () => {
+      projectileBodies.delete(id);
+    };
+  }, [id]);
 
   // Initialize velocity
   useEffect(() => {
     if (!rigidBodyRef.current) return;
     const velocity = directionRef.current.clone().multiplyScalar(speed);
     rigidBodyRef.current.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
-    console.log('🔊 SoundWave spawned at', origin, 'direction', direction);
+    // console.log('🔊 SoundWave spawned at', origin, 'direction', direction);
   }, [speed]);
 
   // Main update loop
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (hitRef.current) return;
 
     if (rigidBodyRef.current) {
@@ -56,12 +65,6 @@ export function SoundWave({
     if (lifetimeRef.current >= PROJECTILE_LIFETIME) {
       onDestroy();
       return;
-    }
-
-    // Animate mesh (pulsing effect)
-    if (meshRef.current) {
-      const scale = 1 + Math.sin(state.clock.elapsedTime * 10) * 0.2;
-      meshRef.current.scale.set(scale, scale, scale);
     }
   });
 
@@ -80,7 +83,7 @@ export function SoundWave({
       onIntersectionEnter={(e) => {
         const userData = e.other.rigidBody?.userData as any;
         if (userData?.isWall) {
-          console.log('🔊 SoundWave hit wall');
+          // console.log('🔊 SoundWave hit wall');
           onDestroy();
         } else if (userData?.isPlayer) {
           console.log('🔊 SoundWave hit player!');
@@ -90,28 +93,7 @@ export function SoundWave({
         }
       }}
     >
-      {/* Sound wave visual - a ring or disc */}
-      <mesh ref={meshRef} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.5, 0.15, 16, 32]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={4}
-          transparent
-          opacity={0.8}
-        />
-      </mesh>
-      {/* Inner glow */}
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.4, 32]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={2}
-          transparent
-          opacity={0.6}
-        />
-      </mesh>
+      {/* No mesh - rendered via InstancedMesh in ProjectileManager */}
     </RigidBody>
   );
 }
