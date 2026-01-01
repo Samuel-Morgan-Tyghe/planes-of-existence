@@ -102,6 +102,21 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     projectileSpeed: 8,
     fireRate: 1500,
   },
+  echoer: {
+    id: 'echoer',
+    name: 'Echoer',
+    health: 40,
+    damage: 12,
+    speed: 1.2,
+    size: 1.1,
+    color: '#00ff7f', // Spring Green
+    dropChance: 0.5,
+    experience: 35,
+    attackType: 'ranged', // We'll handle the specific 'echo' logic in Enemy.tsx
+    attackRange: 10,
+    projectileSpeed: 6,
+    fireRate: 2500,
+  },
   boss: {
     id: 'boss',
     name: 'The Glitch Lord',

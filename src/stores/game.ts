@@ -1,6 +1,7 @@
 import { atom, map } from 'nanostores';
 import { Drop } from '../types/drops';
 import type { EnemyState } from '../types/enemies';
+import { ENEMY_DEFINITIONS } from '../types/enemies';
 import type { PlaneType, PlayerStats, ThrownBomb } from '../types/game';
 import { ITEM_DEFINITIONS } from '../types/items';
 import type { FloorData } from '../types/room';
@@ -171,4 +172,25 @@ export const breakWall = (roomId: number, x: number, y: number) => {
   next.add(`${x},${y}`);
   $brokenWalls.setKey(roomId, next);
   console.log(`🧱 Wall broken at room ${roomId}, pos ${x},${y}`);
+};
+
+export const spawnEnemy = (definitionId: string, position: [number, number, number]) => {
+  const definition = ENEMY_DEFINITIONS[definitionId];
+  if (!definition) return;
+
+  const currentEnemies = $enemies.get();
+  const newId = Math.max(0, ...currentEnemies.map(e => e.id)) + 1;
+  
+  const newEnemy: EnemyState = {
+    id: newId,
+    roomId: $currentRoomId.get(),
+    definition,
+    health: definition.health,
+    position,
+    isDead: false,
+  };
+
+  $enemies.set([...currentEnemies, newEnemy]);
+  $enemiesAlive.set($enemiesAlive.get() + 1);
+  console.log(`👹 Manually spawned enemy: ${definition.name} (ID: ${newId}) at [${position.join(', ')}]`);
 };

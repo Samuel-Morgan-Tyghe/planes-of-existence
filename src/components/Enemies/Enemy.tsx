@@ -7,6 +7,7 @@ import { $isInvulnerable, takeDamage } from '../../stores/player';
 import type { EnemyState } from '../../types/enemies';
 import { HitEffect } from '../Effects/HitEffect';
 import { EnemyProjectile } from './EnemyProjectile';
+import { SoundWave } from './SoundWave';
 
 interface EnemyProps {
   enemy: EnemyState;
@@ -26,7 +27,6 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const [isAttacking, setIsAttacking] = useState(false);
-  const [attackPulse, setAttackPulse] = useState(0);
   const [distanceToPlayer, setDistanceToPlayer] = useState(999);
   const currentPositionRef = useRef<[number, number, number]>(enemy.position);
   const [damageFlash, setDamageFlash] = useState(false);
@@ -37,7 +37,12 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   const SPAWN_INVULNERABILITY_TIME = ENEMY_SPAWN_DELAY; // Delay before enemy can attack
 
   // Projectile management for ranged enemies
-  const [projectiles, setProjectiles] = useState<Array<{ id: number; origin: [number, number, number]; direction: [number, number, number] }>>([]);
+  const [projectiles, setProjectiles] = useState<Array<{ 
+    id: number; 
+    origin: [number, number, number]; 
+    direction: [number, number, number];
+    type?: 'normal' | 'soundwave';
+  }>>([]);
   const projectileIdCounter = useRef(0);
   const [hitEffects, setHitEffects] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
   const hitEffectIdCounter = useRef(0);
@@ -95,10 +100,6 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       onPositionUpdate?.(enemy.id, newPos);
     }
 
-    // Animate attack pulse
-    if (attackPulse > 0) {
-      setAttackPulse((prev) => Math.max(0, prev - 0.05));
-    }
   });
 
   useFrame(() => {
@@ -167,10 +168,13 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           ];
 
           const id = projectileIdCounter.current++;
+          const type = enemy.definition.id === 'echoer' ? 'soundwave' : 'normal';
+          
           setProjectiles(prev => [...prev, {
             id,
             origin: projectileOrigin,
             direction: [direction.x, direction.y, direction.z],
+            type
           }]);
         } else {
           // Melee attack
@@ -181,7 +185,6 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         
         // Visual feedback - flash red when attacking
         setIsAttacking(true);
-        setAttackPulse(1.0);
         setTimeout(() => setIsAttacking(false), 500);
         
         if (meshRef.current) {
@@ -197,14 +200,6 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
               material.emissiveIntensity = 2.0;
             }
           }, 500);
-        }
-      } else {
-        // Show attack warning when in range but on cooldown
-        const timeUntilAttack = ENEMY_ATTACK_COOLDOWN - (now - lastAttackTime.current);
-        if (timeUntilAttack < 500) {
-          setAttackPulse(Math.max(0, timeUntilAttack / 500));
-        } else {
-          setAttackPulse(0);
         }
       }
       
@@ -241,16 +236,29 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       ))}
       {/* Render enemy projectiles */}
       {projectiles.map((proj) => (
-        <EnemyProjectile
-          key={proj.id}
-          origin={proj.origin}
-          direction={proj.direction}
-          speed={enemy.definition.projectileSpeed || 10}
-          damage={enemy.definition.damage}
-          color={enemy.definition.color}
-          onDestroy={() => handleProjectileDestroy(proj.id)}
-          playerPosition={playerPosition}
-        />
+        proj.type === 'soundwave' ? (
+          <SoundWave
+            key={proj.id}
+            origin={proj.origin}
+            direction={proj.direction}
+            speed={enemy.definition.projectileSpeed || 6}
+            damage={enemy.definition.damage}
+            color={enemy.definition.color}
+            onDestroy={() => handleProjectileDestroy(proj.id)}
+            playerPosition={playerPosition}
+          />
+        ) : (
+          <EnemyProjectile
+            key={proj.id}
+            origin={proj.origin}
+            direction={proj.direction}
+            speed={enemy.definition.projectileSpeed || 10}
+            damage={enemy.definition.damage}
+            color={enemy.definition.color}
+            onDestroy={() => handleProjectileDestroy(proj.id)}
+            playerPosition={playerPosition}
+          />
+        )
       ))}
 
       {/* Enemy */}
@@ -308,122 +316,13 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
             whiteSpace: 'nowrap',
           }}
         >
-          <div>{distanceToPlayer <= attackRange ? (isRanged ? '⚠ SHOOTING ⚠' : '⚠ ATTACKING ⚠') : (isRanged ? 'SNIPER' : 'ENEMY')}</div>
+          <div>{distanceToPlayer <= attackRange ? (isRanged ? '⚠ SHOOTING ⚠' : '⚠ ATTACKING ⚠') : enemy.definition.name}</div>
           <div style={{ fontSize: '10px', marginTop: '2px' }}>{Math.ceil(enemy.health)}/{enemy.definition.health} HP</div>
         </div>
       </Html>
       {/* Attack warning indicator - BIG pulsing red sphere when attacking */}
-      {attackPulse > 0 && (
-        <>
-          <mesh position={[0, enemy.definition.size / 2 + 0.5, 0]}>
-            <sphereGeometry args={[1.5 * (1 + attackPulse * 0.5), 16, 16]} />
-            <meshStandardMaterial
-              color="#ff0000"
-              emissive="#ff0000"
-              emissiveIntensity={attackPulse * 5.0}
-              transparent
-              opacity={attackPulse * 0.6}
-            />
-          </mesh>
-          {/* Inner bright core */}
-          <mesh position={[0, enemy.definition.size / 2 + 0.5, 0]}>
-            <sphereGeometry args={[0.8 * attackPulse, 12, 12]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              emissive="#ffffff"
-              emissiveIntensity={attackPulse * 8.0}
-              transparent
-              opacity={attackPulse * 0.9}
-            />
-          </mesh>
-        </>
-      )}
       {/* Attack beam - draw a line from enemy to player when in attack range */}
-      {distanceToPlayer <= ENEMY_ATTACK_RANGE && (
-        <line>
-          <bufferGeometry attach="geometry">
-            <bufferAttribute
-              attach="attributes-position"
-              count={2}
-              array={new Float32Array([
-                0, enemy.definition.size / 2, 0,
-                playerPosition[0] - currentPositionRef.current[0],
-                playerPosition[1] - currentPositionRef.current[1],
-                playerPosition[2] - currentPositionRef.current[2]
-              ])}
-              itemSize={3}
-            />
-          </bufferGeometry>
-          <lineBasicMaterial
-            attach="material"
-            color="#ff0000"
-            linewidth={5}
-            opacity={isAttacking ? 1.0 : 0.5}
-            transparent
-          />
-        </line>
-      )}
       {/* Attack range indicator - ALWAYS SHOW when player is nearby */}
-      {distanceToPlayer <= ENEMY_DETECTION_RANGE && (
-        <>
-          {/* Show detection range as yellow */}
-          {distanceToPlayer > attackRange && distanceToPlayer <= ENEMY_DETECTION_RANGE && (
-            <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[attackRange - 0.1, attackRange + 0.1, 32]} />
-              <meshStandardMaterial
-                color={isRanged ? "#ffff00" : "#ffff00"}
-                emissive={isRanged ? "#ffff00" : "#ffff00"}
-                emissiveIntensity={1.5}
-                transparent
-                opacity={0.5}
-                side={2}
-              />
-            </mesh>
-          )}
-
-          {/* RED DANGER ZONE - Attack range circle */}
-          {distanceToPlayer <= attackRange && (
-            <>
-              {/* Outer ring - bright red (or yellow for ranged) */}
-              <mesh position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[attackRange - 0.2, attackRange, 32]} />
-                <meshStandardMaterial
-                  color={isRanged ? "#ffff00" : "#ff0000"}
-                  emissive={isRanged ? "#ffff00" : "#ff0000"}
-                  emissiveIntensity={5.0}
-                  transparent
-                  opacity={0.9}
-                  side={2}
-                />
-              </mesh>
-              {/* Filled danger zone */}
-              <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[attackRange, 32]} />
-                <meshStandardMaterial
-                  color={isRanged ? "#ffff00" : "#ff0000"}
-                  emissive={isRanged ? "#ffff00" : "#ff0000"}
-                  emissiveIntensity={3.0}
-                  transparent
-                  opacity={0.4}
-                  side={2}
-                />
-              </mesh>
-              {/* Pulsing inner core */}
-              <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[attackRange * 0.5, 32]} />
-                <meshStandardMaterial
-                  color="#ffffff"
-                  emissive="#ffffff"
-                  emissiveIntensity={attackPulse > 0 ? 8.0 : 4.0}
-                  transparent
-                  opacity={attackPulse > 0 ? 0.8 : 0.4}
-                  side={2}
-                />
-              </mesh>
-            </>
-          )}
-        </>
-      )}
       {/* Health bar */}
       <mesh position={[0, enemy.definition.size / 2 + 0.8, 0]}>
         <boxGeometry args={[0.6, 0.05, 0.05]} />

@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
-import { $coins, $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, $showCombatStats, $stats, toggleCombatStats, togglePause } from '../../stores/game';
+import { $coins, $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, $showCombatStats, $stats, spawnEnemy, toggleCombatStats, togglePause } from '../../stores/game';
 import { $pixels } from '../../stores/meta';
 import { $health, $maxHealth, $position } from '../../stores/player';
 import { debugState } from '../../utils/debug';
@@ -542,9 +542,28 @@ export function HUD() {
               fontFamily: 'monospace',
               fontWeight: 'bold',
               fontSize: '18px',
+              marginBottom: '10px',
+              width: '200px',
             }}
           >
             RESUME
+          </button>
+          <button
+            onClick={() => spawnEnemy('echoer', playerPosition)}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#00ff7f',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              fontSize: '18px',
+              width: '200px',
+            }}
+          >
+            SPAWN ECHOER
           </button>
         </div>
       )}
