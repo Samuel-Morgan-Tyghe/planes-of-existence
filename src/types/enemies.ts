@@ -59,8 +59,8 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     dropChance: 0.4,
     experience: 20,
     attackType: 'ranged',
-    attackRange: 15, // Can attack from 15 units away
-    projectileSpeed: 12, // Fast projectiles
+    attackRange: 30, // Can attack from 15 units away
+    projectileSpeed: 20, // Fast projectiles
     fireRate: 2000, // Fire every 2 seconds
   },
   rusher: {
@@ -68,7 +68,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     name: 'Rusher',
     health: 15,
     damage: 4,
-    speed: 4.0, // Very fast
+    speed: 8.0, // Same as player base speed
     size: 0.6,
     color: '#ff4500', // Orange-Red
     dropChance: 0.2,
