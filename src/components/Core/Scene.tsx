@@ -5,6 +5,7 @@ import { CameraManager } from '../Cameras/CameraManager';
 import { PlaneSwitcher } from '../Cameras/PlaneSwitcher';
 import { EffectsManager } from '../Effects/EffectsManager';
 import { EnemySpawner } from '../Enemies/EnemySpawner';
+import { ProjectileManager } from '../Enemies/ProjectileManager';
 import { Player } from '../Player/Player';
 import { WeaponSystem } from '../Player/WeaponSystem';
 import { DropManager } from '../World/DropManager';
@@ -50,6 +51,7 @@ export function Scene() {
       </ErrorBoundary>
 
       <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
+      <ProjectileManager />
       <DropManager key={`drops-${restartTrigger}`} />
       <EffectsManager />
 

@@ -1,13 +1,12 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
+import { addEnemyProjectile } from '../../stores/projectiles';
 import type { EnemyState } from '../../types/enemies';
 import { HitEffect } from '../Effects/HitEffect';
-import { EnemyProjectile } from './EnemyProjectile';
-import { SoundWave } from './SoundWave';
 
 interface EnemyProps {
   enemy: EnemyState;
@@ -18,10 +17,10 @@ interface EnemyProps {
   onPositionUpdate?: (enemyId: number, position: [number, number, number]) => void;
 }
 
-const ENEMY_DETECTION_RANGE = 10;
+const ENEMY_DETECTION_RANGE = 50; // Room-wide detection
 const ENEMY_ATTACK_RANGE = 2;
 const ENEMY_ATTACK_COOLDOWN = 1000; // ms
-const ENEMY_SPAWN_DELAY = 6000; // 6 seconds before enemy can attack (increased for player safety)
+const ENEMY_SPAWN_DELAY = 1000; // 1 second for faster testing
 
 export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate }: EnemyProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
@@ -36,19 +35,12 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   const isDeadRef = useRef(false);
   const SPAWN_INVULNERABILITY_TIME = ENEMY_SPAWN_DELAY; // Delay before enemy can attack
 
-  // Projectile management for ranged enemies
-  const [projectiles, setProjectiles] = useState<Array<{ 
-    id: number; 
-    origin: [number, number, number]; 
-    direction: [number, number, number];
-    type?: 'normal' | 'soundwave';
-  }>>([]);
-  const projectileIdCounter = useRef(0);
   const [hitEffects, setHitEffects] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
   const hitEffectIdCounter = useRef(0);
-
+  
   const isRanged = enemy.definition.attackType === 'ranged';
   const attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
+  const detectionRange = Math.max(ENEMY_DETECTION_RANGE, attackRange + 5);
 
   // Handle damage from projectiles
   // Legacy hack removed - using event system now
@@ -102,88 +94,70 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
 
   });
 
-  useFrame(() => {
-    if (!rigidBodyRef.current || enemy.isDead || !active) return;
-
-    const rb = rigidBodyRef.current;
-    const now = Date.now();
-    const timeSinceSpawn = now - spawnTime.current;
-
-    // Don't activate AI until spawn invulnerability period ends
-    if (timeSinceSpawn < SPAWN_INVULNERABILITY_TIME) {
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      return;
-    }
-
-    const playerPos = new Vector3(...playerPosition);
-    const enemyVec = new Vector3(...currentPositionRef.current);
-
-    const distance = enemyVec.distanceTo(playerPos);
-    setDistanceToPlayer(distance);
-
-    // Removed excessive logging for performance
-
-    // Move toward player if in range (but ranged enemies keep distance)
-    // Rotate mesh to face player
-    if (meshRef.current) {
-      meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
-    }
-
-    // Move toward player if in range (but ranged enemies keep distance)
+  const updateMovement = (
+    rb: RapierRigidBody,
+    distance: number,
+    playerPos: Vector3,
+    enemyVec: Vector3
+  ) => {
     if (enemy.definition.id === 'turret') {
-       // Turrets don't move
-       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    } else if (distance < ENEMY_DETECTION_RANGE && distance > attackRange) {
-      const direction = new Vector3()
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    } else if (distance < detectionRange && distance > attackRange) {
+      const velocity = new Vector3()
         .subVectors(playerPos, enemyVec)
         .normalize()
         .multiplyScalar(enemy.definition.speed);
-
-      rb.setLinvel({ x: direction.x, y: 0, z: direction.z }, true);
+      rb.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
     } else if (isRanged && distance > attackRange * 0.7 && distance <= attackRange) {
-      // Ranged enemies stay at distance and stop moving when in range
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    } else if (distance <= attackRange) {
-      // Attack player (only after spawn invulnerability AND player invulnerability check)
-      // Double-check player invulnerability before attacking
-      if ($isInvulnerable.get()) {
-        // Player is invulnerable, don't attack
-        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        return;
-      }
+    } else if (distance <= attackRange && !isRanged) {
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    } else {
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    }
+  };
+
+  const updateAttack = (
+    now: number,
+    distance: number,
+    playerPos: Vector3,
+    enemyVec: Vector3
+  ) => {
+    if (distance <= attackRange) {
+      if ($isInvulnerable.get()) return;
 
       const fireRate = isRanged ? (enemy.definition.fireRate || 2000) : ENEMY_ATTACK_COOLDOWN;
 
       if (now - lastAttackTime.current > fireRate) {
-        console.log('🔴 Enemy', enemy.id, 'attacking player! Distance:', distance.toFixed(2), 'Damage:', enemy.definition.damage, 'Type:', isRanged ? 'RANGED' : 'melee');
+        console.log('🔴 Enemy', enemy.id, 'attacking player! Distance:', distance.toFixed(2), 'Type:', isRanged ? 'RANGED' : 'melee');
 
         if (isRanged) {
-          // Fire projectile at player
           const direction = new Vector3().subVectors(playerPos, enemyVec).normalize();
           const currentPos = currentPositionRef.current;
+          const spawnOffset = enemy.definition.size * 2.0;
           const projectileOrigin: [number, number, number] = [
-            currentPos[0] + direction.x * 1,
-            currentPos[1],
-            currentPos[2] + direction.z * 1,
+            currentPos[0] + direction.x * spawnOffset,
+            1.0,
+            currentPos[2] + direction.z * spawnOffset,
           ];
 
-          const id = projectileIdCounter.current++;
           const type = enemy.definition.id === 'echoer' ? 'soundwave' : 'normal';
           
-          setProjectiles(prev => [...prev, {
-            id,
+          console.log(`🚀 Enemy ${enemy.id} firing ${type} projectile at ${projectileOrigin}`);
+          
+          addEnemyProjectile({
             origin: projectileOrigin,
             direction: [direction.x, direction.y, direction.z],
-            type
-          }]);
+            type: type as 'normal' | 'soundwave',
+            damage: enemy.definition.damage,
+            speed: enemy.definition.projectileSpeed || 10,
+            color: enemy.definition.color,
+          });
         } else {
-          // Melee attack
           takeDamage(enemy.definition.damage);
         }
 
         lastAttackTime.current = now;
-        
-        // Visual feedback - flash red when attacking
         setIsAttacking(true);
         setTimeout(() => setIsAttacking(false), 500);
         
@@ -202,18 +176,35 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           }, 500);
         }
       }
-      
-      // Stop moving when attacking
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    } else {
-      // Idle
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
-  });
+  };
 
-  const handleProjectileDestroy = useCallback((id: number) => {
-    setProjectiles(prev => prev.filter(p => p.id !== id));
-  }, []);
+  useFrame(() => {
+    if (!rigidBodyRef.current || enemy.isDead || !active) return;
+
+    const rb = rigidBodyRef.current;
+    const now = Date.now();
+    const timeSinceSpawn = now - spawnTime.current;
+
+    // Don't activate AI until spawn invulnerability period ends
+    if (timeSinceSpawn < SPAWN_INVULNERABILITY_TIME) {
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      return;
+    }
+
+    const playerPos = new Vector3(...playerPosition);
+    const enemyVec = new Vector3(...currentPositionRef.current);
+    const distance = enemyVec.distanceTo(playerPos);
+    setDistanceToPlayer(distance);
+
+    // Rotate mesh to face player
+    if (meshRef.current) {
+      meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
+    }
+
+    updateMovement(rb, distance, playerPos, enemyVec);
+    updateAttack(now, distance, playerPos, enemyVec);
+  });
 
   if (enemy.isDead || !active) return null;
 
@@ -233,32 +224,6 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           color={enemy.definition.color}
           onComplete={() => handleHitEffectComplete(effect.id)}
         />
-      ))}
-      {/* Render enemy projectiles */}
-      {projectiles.map((proj) => (
-        proj.type === 'soundwave' ? (
-          <SoundWave
-            key={proj.id}
-            origin={proj.origin}
-            direction={proj.direction}
-            speed={enemy.definition.projectileSpeed || 6}
-            damage={enemy.definition.damage}
-            color={enemy.definition.color}
-            onDestroy={() => handleProjectileDestroy(proj.id)}
-            playerPosition={playerPosition}
-          />
-        ) : (
-          <EnemyProjectile
-            key={proj.id}
-            origin={proj.origin}
-            direction={proj.direction}
-            speed={enemy.definition.projectileSpeed || 10}
-            damage={enemy.definition.damage}
-            color={enemy.definition.color}
-            onDestroy={() => handleProjectileDestroy(proj.id)}
-            playerPosition={playerPosition}
-          />
-        )
       ))}
 
       {/* Enemy */}

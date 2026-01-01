@@ -26,8 +26,21 @@ export function restartRun() {
     sharpness: 0.5,
     saturation: 1.0,
     contrast: 0.5,
-    brightness: 0.5,
+    brightness: 1.0,
     resolution: 1.0,
+    range: 2.0,
+    fireRate: 5.0,
+    projectileSize: 1.0,
+    damage: 1.0,
+    projectileSpeed: 10.0,
+    critChance: 0.05,
+    armorPen: 0,
+    pierce: 0,
+    trueDamage: false,
+    dodgeChance: 0,
+    stealthMultiplier: 1.0,
+    lootRarityBonus: 0,
+    incomingDamageMultiplier: 1.0,
   });
   
   // Clear inventory

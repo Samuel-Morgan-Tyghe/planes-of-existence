@@ -4,7 +4,7 @@
 
 const DEBUG_ENABLED = typeof window !== 'undefined' && 
   (localStorage.getItem('debug') === 'true' || 
-   import.meta.env.DEV);
+   (import.meta as any).env.DEV);
 
 export const debugLog = (...args: any[]) => {
   if (DEBUG_ENABLED) {

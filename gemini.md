@@ -26,3 +26,5 @@
      - **Camera State**: Move `zoomScale` and `shakeIntensity` from `CameraManager.tsx` to `src/stores/game.ts`.
      - **Loot State**: Move `lootItems` from `LootSpawner.tsx` to a global store.
      - **Enemy Visual State**: Move `isAttacking` and `damageFlash` to a reactive map if other systems need to sync with them.
+   - **Data Structures**:
+     - **Object Maps vs Arrays**: When managing collections of entities (projectiles, enemies, drops), prefer using `Record<number, T>` or `Map<number, T>` over arrays. This allows for O(1) lookups and removals by ID, which is critical for performance in high-frequency updates.

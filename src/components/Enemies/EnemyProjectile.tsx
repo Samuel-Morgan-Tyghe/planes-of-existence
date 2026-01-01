@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody, RigidBody } from '@react-three/rapier';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
 import { takeDamage } from '../../stores/player';
 
@@ -11,11 +11,9 @@ interface EnemyProjectileProps {
   damage: number;
   color: string;
   onDestroy: () => void;
-  playerPosition: [number, number, number];
 }
 
 const PROJECTILE_LIFETIME = 5; // 5 seconds
-const HIT_DISTANCE = 0.8; // Distance to consider a hit on player
 
 export function EnemyProjectile({
   origin,
@@ -24,13 +22,12 @@ export function EnemyProjectile({
   damage,
   color,
   onDestroy,
-  playerPosition,
 }: EnemyProjectileProps) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const lifetimeRef = useRef(0);
   const hitRef = useRef(false);
-  const [currentPosition, setCurrentPosition] = useState<[number, number, number]>(origin);
+  console.log(`👻 EnemyProjectile ${origin} component rendering. Hit: ${hitRef.current}`);
   const directionRef = useRef(new Vector3(...direction).normalize());
 
   // Initialize velocity once
@@ -59,33 +56,14 @@ export function EnemyProjectile({
     }
   });
 
-  // Main update loop - track position, lifetime, and collision
+  // Main update loop - track lifetime
   useFrame((_state, delta) => {
     if (hitRef.current) return;
-
-    // Track position from rigid body (world position)
-    if (rigidBodyRef.current) {
-      const pos = rigidBodyRef.current.translation();
-      const newPos: [number, number, number] = [pos.x, pos.y, pos.z];
-      setCurrentPosition(newPos);
-    }
 
     lifetimeRef.current += delta;
 
     // Destroy when lifetime expires
     if (lifetimeRef.current >= PROJECTILE_LIFETIME) {
-      onDestroy();
-      return;
-    }
-
-    // Check collision with player
-    const projVec = new Vector3(...currentPosition);
-    const playerVec = new Vector3(...playerPosition);
-    const distance = projVec.distanceTo(playerVec);
-
-    if (distance < HIT_DISTANCE) {
-      hitRef.current = true;
-      takeDamage(damage);
       onDestroy();
       return;
     }
@@ -97,22 +75,27 @@ export function EnemyProjectile({
       colliders="ball"
       mass={0.1}
       position={origin}
-      sensor={false}
+      sensor={true}
       linearDamping={0}
       angularDamping={0}
       gravityScale={0}
       userData={{ isEnemyProjectile: true, damage }}
-      onCollisionEnter={(e) => {
-        // Destroy projectile on wall collision
-        const userData = e.other.rigidBody?.userData;
-        if (userData && (userData as any).isWall) {
+      onIntersectionEnter={(e) => {
+        const userData = e.other.rigidBody?.userData as any;
+        if (userData?.isWall) {
+          console.log('� EnemyProjectile hit wall');
+          onDestroy();
+        } else if (userData?.isPlayer) {
+          console.log('💥 EnemyProjectile hit player!');
+          hitRef.current = true;
+          takeDamage(damage);
           onDestroy();
         }
       }}
     >
       {/* Main projectile - glowing sphere */}
       <mesh ref={meshRef} castShadow>
-        <sphereGeometry args={[0.3, 12, 12]} />
+        <sphereGeometry args={[0.5, 12, 12]} />
         <meshStandardMaterial
           color={color}
           emissive={color}

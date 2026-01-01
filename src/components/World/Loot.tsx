@@ -1,7 +1,7 @@
-import { RigidBody, RapierRigidBody } from '@react-three/rapier';
-import { useRef, useEffect, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { useStore } from '@nanostores/react';
+import { useFrame } from '@react-three/fiber';
+import { RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { addItem } from '../../stores/game';
 import { addPixels } from '../../stores/meta';

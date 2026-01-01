@@ -1,12 +1,11 @@
 import { useStore } from '@nanostores/react';
 import {
-    Bloom,
-    BrightnessContrast,
-    EffectComposer,
-    HueSaturation,
-    Noise,
-    Pixelation,
-    Vignette
+  Bloom,
+  BrightnessContrast,
+  EffectComposer,
+  HueSaturation,
+  Pixelation,
+  Vignette
 } from '@react-three/postprocessing';
 import { $stats } from '../../stores/game';
 
@@ -24,7 +23,7 @@ export function PostProcessing() {
   const bloomIntensity = stats.sharpness > 0.8 ? 1.5 : 0.5;
 
   return (
-    <EffectComposer disableNormalPass>
+    <EffectComposer>
       <HueSaturation 
         saturation={stats.saturation - 1.0} // HueSaturation uses offset from 0
       />
@@ -46,8 +45,6 @@ export function PostProcessing() {
         mipmapBlur 
       />
 
-      {/* Threshold/Sketch look for extreme contrast/sharpness */}
-      <Noise opacity={stats.contrast > 0.9 ? 0.1 : 0} />
     </EffectComposer>
   );
 }

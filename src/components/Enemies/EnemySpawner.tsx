@@ -18,6 +18,7 @@ export function EnemySpawner({
   onSpawnRequest?: (position: [number, number, number], count: number) => void;
 }) {
   const enemies = useStore($enemies);
+  console.log(`🔍 EnemySpawner Render | totalEnemies: ${enemies.length}`);
   const playerPosition = useStore($position);
   const restartTrigger = useStore($restartTrigger);
   const currentFloor = useStore($currentFloor);
@@ -149,12 +150,15 @@ export function EnemySpawner({
   }, [restartTrigger, currentFloor, floorData]);
 
   // Handle room changes for roomCleared state
+  // Handle room changes for roomCleared state
   useEffect(() => {
     if (!floorData) return;
     
     const roomEnemies = enemies.filter(e => e.roomId === currentRoomId && !e.isDead);
     const roomKey = `${currentFloor}-${currentRoomId}`;
-    const isCleared = clearedRoomsRef.current.has(roomKey) || roomEnemies.length === 0;
+    const isCleared = roomEnemies.length === 0;
+    
+    console.log(`🔍 EnemySpawner Effect | Room: ${currentRoomId} | Total: ${enemies.length} | InRoom: ${roomEnemies.length} | isCleared: ${isCleared}`);
     
     $roomCleared.set(isCleared);
     
@@ -173,6 +177,13 @@ export function EnemySpawner({
         console.log(`🎁 Emitting room clear loot for room ${currentRoomId} (type: ${room.type}) at ${centerPos}`);
         emitRoomClearLoot(centerPos, currentRoomId, room.type);
       }
+    } else if (!isCleared && clearedRoomsRef.current.has(roomKey)) {
+      // If enemies are spawned in a cleared room, it's no longer cleared
+      console.log(`⚠️ Room ${currentRoomId} is no longer cleared!`);
+      clearedRoomsRef.current.delete(roomKey);
+      const newClearedRooms = new Set($clearedRooms.get());
+      newClearedRooms.delete(currentRoomId);
+      $clearedRooms.set(newClearedRooms);
     }
   }, [currentRoomId, enemies, currentFloor, floorData]);
 
@@ -266,16 +277,22 @@ export function EnemySpawner({
 
   return (
     <>
-      {enemies.map((enemy) => (
-        <Enemy
-          key={`${currentFloor}-${enemy.id}`}
-          enemy={enemy}
-          active={enemy.roomId === currentRoomId}
-          playerPosition={playerPosition}
-          onDeath={handleEnemyDeath}
-          onPositionUpdate={updateEnemyPosition}
-        />
-      ))}
+      {enemies.map((enemy) => {
+        const isActive = enemy.roomId === currentRoomId;
+        // Log for every enemy on every render (temporarily)
+        console.log(`🔍 EnemySpawner Map | Enemy ${enemy.id} | roomId: ${enemy.roomId} (${typeof enemy.roomId}) | currentRoomId: ${currentRoomId} (${typeof currentRoomId}) | isActive: ${isActive}`);
+        
+        return (
+          <Enemy
+            key={`${currentFloor}-${enemy.id}`}
+            enemy={enemy}
+            active={isActive}
+            playerPosition={playerPosition}
+            onDeath={handleEnemyDeath}
+            onPositionUpdate={updateEnemyPosition}
+          />
+        );
+      })}
     </>
   );
 }

@@ -9,14 +9,12 @@ interface DoorProps {
   locked: boolean;
   playerPosition: [number, number, number];
   onEnter: () => void;
-  onNear?: () => void; // Callback when player gets near (for revealing room)
   visible?: boolean;
 }
 
 const ACTIVATION_DISTANCE = 2.5;
-const REVEAL_DISTANCE = 5; // Distance to reveal the adjacent room
 
-export function Door({ position, direction, locked, playerPosition, onEnter, onNear, visible = true }: DoorProps) {
+export function Door({ position, direction, locked, playerPosition, onEnter, visible = true }: DoorProps) {
   const [isNear, setIsNear] = useState(false);
   const [pulse, setPulse] = useState(0);
 

@@ -181,16 +181,17 @@ export const spawnEnemy = (definitionId: string, position: [number, number, numb
   const currentEnemies = $enemies.get();
   const newId = Math.max(0, ...currentEnemies.map(e => e.id)) + 1;
   
+  const currentRoomId = $currentRoomId.get();
   const newEnemy: EnemyState = {
     id: newId,
-    roomId: $currentRoomId.get(),
+    roomId: currentRoomId,
     definition,
     health: definition.health,
     position,
     isDead: false,
   };
 
+  console.log(`👹 Manually spawning enemy: ${definition.name} (ID: ${newId}) in Room: ${currentRoomId} at [${position.join(', ')}]`);
   $enemies.set([...currentEnemies, newEnemy]);
   $enemiesAlive.set($enemiesAlive.get() + 1);
-  console.log(`👹 Manually spawned enemy: ${definition.name} (ID: ${newId}) at [${position.join(', ')}]`);
 };

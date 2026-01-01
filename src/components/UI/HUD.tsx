@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
-import { $coins, $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, $showCombatStats, $stats, spawnEnemy, toggleCombatStats, togglePause } from '../../stores/game';
+import { $coins, $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, $showCombatStats, $stats, toggleCombatStats, togglePause } from '../../stores/game';
 import { $pixels } from '../../stores/meta';
 import { $health, $maxHealth, $position } from '../../stores/player';
 import { debugState } from '../../utils/debug';
@@ -548,23 +548,6 @@ export function HUD() {
           >
             RESUME
           </button>
-          <button
-            onClick={() => spawnEnemy('echoer', playerPosition)}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#00ff7f',
-              color: '#000',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontFamily: 'monospace',
-              fontWeight: 'bold',
-              fontSize: '18px',
-              width: '200px',
-            }}
-          >
-            SPAWN ECHOER
-          </button>
         </div>
       )}
 
@@ -591,7 +574,6 @@ export function HUD() {
           <div style={{ marginBottom: '8px' }}><strong>Shoot:</strong> Arrow Keys (hold direction)</div>
           <div style={{ marginBottom: '8px' }}><strong>Throw Bomb:</strong> E</div>
           <div style={{ marginBottom: '8px' }}><strong>Switch Plane:</strong> Tab (cycle) or 1/2/3</div>
-          <div style={{ marginBottom: '8px' }}><strong>Debug:</strong> Ctrl+D</div>
           <div style={{ marginTop: '12px', fontSize: '10px', opacity: '0.8' }}>
             <strong>Tip:</strong> Look for floating "ENEMY" labels above colored cubes. Enemies do MELEE attacks (close range, not projectiles) - they hurt you when they get within 2 units. Watch for red "⚠ ATTACKING ⚠" warnings and pulsing red spheres! When you take damage, your screen will flash red and you'll see a red beam from the enemy to you.
           </div>
@@ -616,4 +598,3 @@ export function HUD() {
     </div>
   );
 }
-

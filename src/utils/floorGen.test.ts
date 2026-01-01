@@ -75,7 +75,7 @@ describe('Map Generation', () => {
 
     // Check for doors (5 or 6)
     // The room should have doors corresponding to its connections
-    room.doors.forEach(door => {
+    room.doors.forEach(() => {
         // We can't easily check exact coordinates without duplicating logic, 
         // but we can check if there are ANY door tiles
         let hasDoorTiles = false;
@@ -113,7 +113,7 @@ describe('Map Generation', () => {
   it('should generate loot', () => {
     const seed = 12345;
     const floor = generateFloor(1, seed);
-    const room = floor.rooms[0]; // Start room usually doesn't have loot, but let's check a normal room
+    // Start room usually doesn't have loot, but let's check a normal room
     
     // Loot is generated in generateRoomLayout
     // We need to check multiple rooms to find one with loot
