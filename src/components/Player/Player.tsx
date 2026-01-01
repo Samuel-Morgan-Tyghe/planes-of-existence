@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { $plane, $stats } from '../../stores/game';
+import { $currentFloor, $plane, $stats } from '../../stores/game';
 import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo, $velocity } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
 import { PlayerController } from './PlayerController';
@@ -19,6 +19,7 @@ export function Player() {
   const stats = useStore($stats);
   const health = useStore($health);
   const restartTrigger = useStore($restartTrigger);
+  const currentFloor = useStore($currentFloor);
   // Use a ref for teleport signal to avoid re-renders during the physics loop
   const teleportTargetRef = useRef<[number, number, number] | null>(null);
   const teleportFrameLockRef = useRef(0);
@@ -94,7 +95,7 @@ export function Player() {
       setIsInvulnerable(false);
       $isInvulnerable.set(false);
     }, PLAYER_SPAWN_INVULNERABILITY);
-  }, [restartTrigger]);
+  }, [restartTrigger, currentFloor]);
 
   // Sync teleport signal to ref
   useEffect(() => {
