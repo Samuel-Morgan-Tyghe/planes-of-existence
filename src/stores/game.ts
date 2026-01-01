@@ -126,7 +126,7 @@ export const useBomb = (position: [number, number, number], direction: [number, 
   if (bombCount > 0) {
     $inventory.setKey('bomb', bombCount - 1);
     
-    const throwForce = 15;
+    const throwForce = 10;
     const initialVelocity: [number, number, number] = [
       direction[0] * throwForce + (playerVelocity?.[0] || 0),
       3 + (playerVelocity?.[1] || 0),

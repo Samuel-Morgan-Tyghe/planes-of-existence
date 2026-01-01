@@ -101,7 +101,6 @@ export function EnemyProjectile({
       linearDamping={0}
       angularDamping={0}
       gravityScale={0}
-      collisionGroups={0x00020003}
       userData={{ isEnemyProjectile: true, damage }}
       onCollisionEnter={(e) => {
         // Destroy projectile on wall collision

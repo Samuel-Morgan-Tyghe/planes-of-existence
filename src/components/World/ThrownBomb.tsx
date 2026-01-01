@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { BallCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useRef, useState } from 'react';
 import * as THREE from 'three';
-import { $cameraShake, $currentRoomId, $enemies, $floorData, breakWall, removeThrownBomb, updateThrownBomb } from '../../stores/game';
+import { $cameraShake, $currentRoomId, $enemyPositions, $floorData, breakWall, removeThrownBomb, updateThrownBomb } from '../../stores/game';
 import { $position, takeDamage } from '../../stores/player';
 import { emitDamage, emitKnockback } from '../../systems/events';
 import { getRoomWorldSize } from '../../utils/floorGen';
@@ -25,7 +25,6 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
   const fuseRef = useRef(initialFuse || 3.0);
   const explosionInitiated = useRef(false);
   
-  const enemies = useStore($enemies);
   const roomId = useStore($currentRoomId);
   const floorData = useStore($floorData);
 
@@ -73,16 +72,18 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
 
     console.log('💥 BOOM at', bombPos);
 
-    // 1. Damage enemies
     const blastRadius = 4;
-    enemies.forEach((enemy) => {
-      const dx = enemy.position[0] - bombPos[0];
-      const dz = enemy.position[2] - bombPos[2];
+
+    // 1. Damage enemies using current positions
+    Object.entries($enemyPositions.get()).forEach(([enemyId, pos]) => {
+      const enemyPos = pos as [number, number, number];
+      const dx = enemyPos[0] - bombPos[0];
+      const dz = enemyPos[2] - bombPos[2];
       const distance = Math.sqrt(dx * dx + dz * dz);
 
       if (distance < blastRadius) {
-        const damage = 10 * (1 - distance / blastRadius);
-        emitDamage(enemy.id, damage);
+        const damage = 15 * (1 - distance / blastRadius); // Increased base damage slightly
+        emitDamage(parseInt(enemyId), damage);
       }
     });
 
@@ -161,9 +162,11 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
       position={position}
       linearVelocity={initialVelocity}
       type="dynamic"
-      restitution={0.4}
-      friction={0.8}
-      gravityScale={1.5}
+      mass={3}
+      restitution={0.1}
+      friction={1.2}
+      linearDamping={1.0}
+      gravityScale={3.0}
       canSleep={false}
       ccd={true}
       userData={{ isBomb: true }}

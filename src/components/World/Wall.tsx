@@ -8,7 +8,11 @@ interface WallProps {
 export function Wall({ position, visible = true }: WallProps) {
   // console.log('🧱 Wall mounted at', position); // Uncomment for verbose wall logging
   return (
-    <RigidBody type="fixed" position={position} userData={{ isWall: true }}>
+    <RigidBody 
+      type="fixed" 
+      position={position} 
+      userData={{ isWall: true }}
+    >
       <CuboidCollider args={[0.5, 4, 0.5]} />
       <mesh castShadow receiveShadow visible={visible}>
         <boxGeometry args={[1, 8, 1]} />

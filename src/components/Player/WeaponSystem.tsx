@@ -123,6 +123,8 @@ export function WeaponSystem() {
     }
   });
 
+  const lastMoveDirRef = useRef<Vector3>(new Vector3(0, 0, -1));
+
   const handleThrowBomb = () => {
     const currentPos = $position.get();
     const moveDir = new Vector3(0, 0, 0);
@@ -133,10 +135,11 @@ export function WeaponSystem() {
     if (wasd.has('a')) moveDir.x -= 1;
     if (wasd.has('d')) moveDir.x += 1;
 
-    let finalDir = new Vector3(0, 0, -1); // Default
+    let finalDir = new Vector3().copy(lastMoveDirRef.current);
 
     if (moveDir.lengthSq() > 0) {
       finalDir.copy(moveDir).normalize();
+      lastMoveDirRef.current.copy(finalDir);
     } else {
       // Fallback to shooting direction
       const shootingDir = new Vector3(0, 0, 0);

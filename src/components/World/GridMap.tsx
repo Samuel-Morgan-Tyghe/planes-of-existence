@@ -217,7 +217,11 @@ export function GridMap() {
           <group key={room.id}>
             {/* Floor for this room - ONLY render physics if visited */}
             {isVisited ? (
-              <RigidBody type="fixed" userData={{ isFloor: true }} position={[layout.worldOffset[0], -0.5, layout.worldOffset[2]]}>
+              <RigidBody 
+                type="fixed" 
+                userData={{ isFloor: true }} 
+                position={[layout.worldOffset[0], -0.5, layout.worldOffset[2]]}
+              >
                 <CuboidCollider args={[roomWorldSize / 2, 0.5, roomWorldSize / 2]} />
                 <mesh
                   receiveShadow
@@ -254,7 +258,11 @@ export function GridMap() {
 
             {/* Solid boundary walls on edges where there's no door - ONLY if visited */}
             {isVisited && !room.doors.some(d => d.direction === 'north') && (
-              <RigidBody type="fixed" userData={{ isWall: true, indestructible: true }} position={[layout.worldOffset[0], 3.5, layout.worldOffset[2] - roomWorldSize / 2]}>
+              <RigidBody 
+                type="fixed" 
+                userData={{ isWall: true, indestructible: true }} 
+                position={[layout.worldOffset[0], 3.5, layout.worldOffset[2] - roomWorldSize / 2]}
+              >
                 <CuboidCollider args={[roomWorldSize / 2, 4, 0.5]} />
                 <mesh castShadow receiveShadow>
                   <boxGeometry args={[roomWorldSize, 8, 1]} />
@@ -263,7 +271,11 @@ export function GridMap() {
               </RigidBody>
             )}
             {isVisited && !room.doors.some(d => d.direction === 'south') && (
-              <RigidBody type="fixed" userData={{ isWall: true, indestructible: true }} position={[layout.worldOffset[0], 3.5, layout.worldOffset[2] + roomWorldSize / 2]}>
+              <RigidBody 
+                type="fixed" 
+                userData={{ isWall: true, indestructible: true }} 
+                position={[layout.worldOffset[0], 3.5, layout.worldOffset[2] + roomWorldSize / 2]}
+              >
                 <CuboidCollider args={[roomWorldSize / 2, 4, 0.5]} />
                 <mesh castShadow receiveShadow>
                   <boxGeometry args={[roomWorldSize, 8, 1]} />
@@ -272,7 +284,11 @@ export function GridMap() {
               </RigidBody>
             )}
             {isVisited && !room.doors.some(d => d.direction === 'east') && (
-              <RigidBody type="fixed" userData={{ isWall: true, indestructible: true }} position={[layout.worldOffset[0] + roomWorldSize / 2, 3.5, layout.worldOffset[2]]}>
+              <RigidBody 
+                type="fixed" 
+                userData={{ isWall: true, indestructible: true }} 
+                position={[layout.worldOffset[0] + roomWorldSize / 2, 3.5, layout.worldOffset[2]]}
+              >
                 <CuboidCollider args={[0.5, 4, roomWorldSize / 2]} />
                 <mesh castShadow receiveShadow>
                   <boxGeometry args={[1, 8, roomWorldSize]} />
@@ -281,7 +297,11 @@ export function GridMap() {
               </RigidBody>
             )}
             {isVisited && !room.doors.some(d => d.direction === 'west') && (
-              <RigidBody type="fixed" userData={{ isWall: true, indestructible: true }} position={[layout.worldOffset[0] - roomWorldSize / 2, 3.5, layout.worldOffset[2]]}>
+              <RigidBody 
+                type="fixed" 
+                userData={{ isWall: true, indestructible: true }} 
+                position={[layout.worldOffset[0] - roomWorldSize / 2, 3.5, layout.worldOffset[2]]}
+              >
                 <CuboidCollider args={[0.5, 4, roomWorldSize / 2]} />
                 <mesh castShadow receiveShadow>
                   <boxGeometry args={[1, 8, roomWorldSize]} />

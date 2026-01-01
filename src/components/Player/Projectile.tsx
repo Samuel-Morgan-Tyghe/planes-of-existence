@@ -12,7 +12,6 @@ interface ProjectileProps {
   onHit?: (damage: number, enemyId: number) => void;
 }
 
-const HIT_DISTANCE = 0.8;
 
 export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) {
   const { world, rapier } = useRapier();
@@ -66,7 +65,7 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       }
     }
 
-    // Fallback hit detection
+    // Fallback hit detection (proximity)
     const enemyPositionsMap = $enemyPositions.get();
     const realTimeEnemies = Object.entries(enemyPositionsMap).map(([id, pos]) => ({
       id: parseInt(id),
@@ -79,7 +78,10 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       const dz = positionRef.current.z - enemy.position[2];
       const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-      if (distance < HIT_DISTANCE * scale && !hitRef.current) {
+      // More generous fallback for large enemies
+      // We don't have size in the map yet, so we use a slightly larger base distance
+      const baseHitDist = 1.2; 
+      if (distance < baseHitDist * scale && !hitRef.current) {
         hitRef.current = true;
         onHit?.(data.damage, enemy.id);
         onDestroy();
@@ -119,9 +121,9 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       onIntersectionEnter={({ other }) => {
         const userData = other.rigidBodyObject?.userData;
         
-        if (userData?.type === 'enemy' && !hitRef.current) {
+        if (userData?.isEnemy && !hitRef.current) {
           hitRef.current = true;
-          onHit?.(data.damage, userData.id);
+          onHit?.(data.damage, userData.enemyId);
           onDestroy();
         } else if (userData?.isBomb) {
           // Push the bomb!
@@ -136,6 +138,7 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
         }
       }}
       gravityScale={0}
+      ccd={true}
     >
       <mesh ref={meshRef} castShadow scale={[scale, scale, scale]}>
         <sphereGeometry args={[0.2, 16, 16]} />

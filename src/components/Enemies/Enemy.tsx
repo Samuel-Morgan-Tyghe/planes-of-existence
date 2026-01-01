@@ -1,6 +1,6 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
@@ -256,13 +256,15 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       {/* Enemy */}
     <RigidBody
       ref={rigidBodyRef}
-      colliders="cuboid"
+      colliders={false}
       mass={1}
       position={enemy.position}
-      userData={{ isEnemy: true, enemyId: enemy.id, health: enemy.health }}
+      userData={{ isEnemy: true, enemyId: enemy.id, health: enemy.health, size: enemy.definition.size }}
       enabledTranslations={[true, true, true]}
       lockRotations={true}
+      ccd={true}
     >
+      <CuboidCollider args={[enemy.definition.size / 2, enemy.definition.size / 2, enemy.definition.size / 2]} />
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[enemy.definition.size, enemy.definition.size, enemy.definition.size]} />
         <meshStandardMaterial
