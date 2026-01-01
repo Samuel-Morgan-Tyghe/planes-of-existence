@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import { RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { BallCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
 import { takeDamage } from '../../stores/player';
@@ -27,7 +27,6 @@ export function EnemyProjectile({
   const meshRef = useRef<THREE.Mesh>(null);
   const lifetimeRef = useRef(0);
   const hitRef = useRef(false);
-  console.log(`👻 EnemyProjectile ${origin} component rendering. Hit: ${hitRef.current}`);
   const directionRef = useRef(new Vector3(...direction).normalize());
 
   // Initialize velocity once
@@ -72,18 +71,19 @@ export function EnemyProjectile({
   return (
     <RigidBody
       ref={rigidBodyRef}
-      colliders="ball"
+      colliders={false} // Use explicit collider below
       mass={0.1}
       position={origin}
-      sensor={true}
+      sensor={false} // Physical object for CCD
       linearDamping={0}
       angularDamping={0}
       gravityScale={0}
+      ccd={true} // Continuous Collision Detection
       userData={{ isEnemyProjectile: true, damage }}
-      onIntersectionEnter={(e) => {
+      onCollisionEnter={(e) => {
         const userData = e.other.rigidBody?.userData as any;
         if (userData?.isWall) {
-          console.log('� EnemyProjectile hit wall');
+          console.log('🧱 EnemyProjectile hit wall');
           onDestroy();
         } else if (userData?.isPlayer) {
           console.log('💥 EnemyProjectile hit player!');
@@ -93,6 +93,8 @@ export function EnemyProjectile({
         }
       }}
     >
+      <BallCollider args={[0.5]} />
+      
       {/* Main projectile - glowing sphere */}
       <mesh ref={meshRef} castShadow>
         <sphereGeometry args={[0.5, 12, 12]} />
