@@ -5,7 +5,7 @@ import { calculateGrowthStats } from '../../logic/growthLogic';
 import { $clearedRooms, $currentFloor, $currentRoomId, $enemies, $enemiesAlive, $enemyPositions, $floorData, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
-import { $damageEvents, emitDrop, emitRoomClearLoot } from '../../systems/events';
+import { $corruptionEvents, $damageEvents, emitDrop, emitRoomClearLoot } from '../../systems/events';
 import type { EnemyState } from '../../types/enemies';
 import { ENEMY_DEFINITIONS } from '../../types/enemies';
 import { ITEM_DEFINITIONS } from '../../types/items';
@@ -263,16 +263,53 @@ export function EnemySpawner({
     $enemies.set(updatedEnemies);
   }, []);
 
-  // Listen for damage events
-  useEffect(() => {
-    const unsubscribe = $damageEvents.subscribe((event) => {
-      if (event) {
+  const handleCorruption = useCallback((targetId: number) => {
+    console.log(`🟣 Corrupting enemy ${targetId}!`);
+    const currentEnemies = $enemies.get();
+    const updatedEnemies = currentEnemies.map((e) => {
+      if (e.id === targetId) {
+        // Buff Stats
+        const newHealth = e.definition.health * 2; // Heal to double max health
+        
+        // Mutate definition for this instance (shallow copy to avoid affecting others)
+        // Note: In a real ECS we'd have components, but here we hack the definition or state
+        // To make it persistent without deep rework, we'll store overrides in a new property if we had one,
+        // but for now let's just use the `isCorrupted` flag in Enemy.tsx to scale things or hack definition here.
+        // Actually, let's create a mutated definition.
+        const mutatedDefinition = {
+          ...e.definition,
+          damage: e.definition.damage * 1.5,
+          speed: e.definition.speed * 1.2,
+          color: '#800080', // Purple
+          size: e.definition.size * 1.3, // Grow
+        };
 
-        handleEnemyDamage(event.enemyId, event.damage);
+        return {
+          ...e,
+          health: newHealth,
+          definition: mutatedDefinition,
+          isCorrupted: true,
+        };
       }
+      return e;
     });
-    return () => unsubscribe();
-  }, [handleEnemyDamage, currentRoomId]);
+    $enemies.set(updatedEnemies);
+  }, []);
+
+  // Listen for damage events
+  // Listen for damage and corruption events
+  useEffect(() => {
+    const unsubDamage = $damageEvents.subscribe((event) => {
+      if (event) handleEnemyDamage(event.enemyId, event.damage);
+    });
+    const unsubCorruption = $corruptionEvents.subscribe((event) => {
+      if (event) handleCorruption(event.targetId);
+    });
+    return () => {
+      unsubDamage();
+      unsubCorruption();
+    };
+  }, [handleEnemyDamage, handleCorruption, currentRoomId]);
 
   // Expose spawn function via callback
   useEffect(() => {

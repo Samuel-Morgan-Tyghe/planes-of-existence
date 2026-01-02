@@ -49,3 +49,14 @@ export const emitRoomClearLoot = (position: [number, number, number], roomId: nu
 export const emitKnockback = (direction: [number, number, number], force: number) => {
   $knockbackEvents.set({ direction, force, timestamp: Date.now() });
 };
+
+type CorruptionEvent = {
+  targetId: number;
+  timestamp: number;
+};
+
+export const $corruptionEvents = atom<CorruptionEvent | null>(null);
+
+export const emitCorruption = (targetId: number) => {
+  $corruptionEvents.set({ targetId, timestamp: Date.now() });
+};

@@ -3,9 +3,12 @@ import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
+import { updateCorrupterAI } from '../../logic/enemies/corrupter';
 import { calculateGrowthStats } from '../../logic/growthLogic';
+import { $enemies, $enemyPositions } from '../../stores/game';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
 import { addEnemyProjectile } from '../../stores/projectiles';
+import { emitCorruption, emitDamage } from '../../systems/events';
 import type { EnemyState } from '../../types/enemies';
 import { ITEM_DEFINITIONS } from '../../types/items';
 import { calculateProjectileStats } from '../../utils/combat';
@@ -45,7 +48,8 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   const dynamicStatsRef = useRef({ speed: enemy.definition.speed, damage: enemy.definition.damage });
 
   const isRanged = enemy.definition.attackType === 'ranged' || !!enemy.heldItem;
-  const attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
+  let attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
+  if (enemy.definition.id === 'corruption') attackRange = 0.5; // Must collide
   const detectionRange = Math.max(ENEMY_DETECTION_RANGE, attackRange + 5);
 
   // Handle damage from projectiles
@@ -215,12 +219,40 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
 
     const playerPos = new Vector3(...playerPosition);
     const enemyVec = new Vector3(...currentPositionRef.current);
-    const distance = enemyVec.distanceTo(playerPos);
-    setDistanceToPlayer(distance);
+    const distanceToPlayer = enemyVec.distanceTo(playerPos);
+    
+    // Default target is player
+    let targetPos = playerPos;
+    let distanceToTarget = distanceToPlayer;
 
-    // Rotate mesh to face player
+    // Corrupter Logic: Target nearest non-corrupted ally
+    if (enemy.definition.id === 'corruption') {
+      const result = updateCorrupterAI(
+        enemyVec,
+        enemy,
+        $enemies.get(),
+        $enemyPositions.get(), // Pass live positions
+        {
+          emitCorruption: (id) => emitCorruption(id),
+          die: () => emitDamage(enemy.id, 9999) // Kill self correctly
+        }
+      );
+
+      if (result) {
+        targetPos = result.targetPos;
+        distanceToTarget = result.distanceToTarget;
+      } else {
+         // No allies found - idle or wander, DO NOT TARGET PLAYER
+         targetPos = enemyVec; 
+         distanceToTarget = 0;
+      }
+    }
+
+    setDistanceToPlayer(distanceToPlayer); // Keep track of player distance for UI but move towards target
+
+    // Rotate mesh to face target
     if (meshRef.current) {
-      meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
+      meshRef.current.lookAt(targetPos.x, currentPositionRef.current[1], targetPos.z);
     }
 
     // Growth Bug Logic
@@ -245,8 +277,16 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       dynamicStatsRef.current = { speed, damage };
     }
 
-    updateMovement(rb, distance, playerPos, enemyVec, dynamicStatsRef.current.speed);
-    updateAttack(now, distance, playerPos, enemyVec, dynamicStatsRef.current.damage);
+    updateMovement(rb, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.speed);
+    
+    // Only auto-attack if targeting player (or default behavior)
+    // Corrupter handles its own "attack" (sacrifice) in the logic above
+    // STRICT GUARD: Corrupter NEVER attacks player
+    if (enemy.definition.id !== 'corruption') {
+       if (targetPos === playerPos) {
+         updateAttack(now, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.damage);
+       }
+    }
   });
 
   if (enemy.isDead || !active) return null;

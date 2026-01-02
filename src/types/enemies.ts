@@ -179,5 +179,6 @@ export interface EnemyState {
   isDead: boolean;
   heldItem?: string; // Item ID if the enemy is holding one
   spawnTime: number;
+  isCorrupted?: boolean;
 }
 
