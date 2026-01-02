@@ -123,11 +123,50 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     health: 500,
     damage: 20,
     speed: 1.5,
-    size: 3,
+    size: 2.5,
     color: '#ff00ff',
     dropChance: 1.0,
     experience: 500,
     attackType: 'melee',
+  },
+  growth_health: {
+    id: 'growth_health',
+    name: 'Growth Buy (Health)',
+    health: 40,
+    damage: 5,
+    speed: 1.0,
+    size: 0.8,
+    color: '#228B22', // Forest Green
+    dropChance: 0.4,
+    experience: 30,
+    attackType: 'melee',
+  },
+  growth_harden: {
+    id: 'growth_harden',
+    name: 'Growth Bug (Hard)',
+    health: 20,
+    damage: 5,
+    speed: 1.2,
+    size: 0.6,
+    color: '#708090', // Slate Gray
+    dropChance: 0.4,
+    experience: 30,
+    attackType: 'melee',
+  },
+  growth_cannon: {
+    id: 'growth_cannon',
+    name: 'Growth Bug (Cannon)',
+    health: 25,
+    damage: 5,
+    speed: 1.0,
+    size: 0.7,
+    color: '#B22222', // Firebrick
+    dropChance: 0.4,
+    experience: 35,
+    attackType: 'ranged',
+    attackRange: 15,
+    projectileSpeed: 8,
+    fireRate: 2000,
   },
 };
 
@@ -139,5 +178,6 @@ export interface EnemyState {
   position: [number, number, number];
   isDead: boolean;
   heldItem?: string; // Item ID if the enemy is holding one
+  spawnTime: number;
 }
 

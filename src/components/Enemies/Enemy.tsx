@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
+import { calculateGrowthStats } from '../../logic/growthLogic';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
 import { addEnemyProjectile } from '../../stores/projectiles';
 import type { EnemyState } from '../../types/enemies';
@@ -39,7 +40,10 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
 
   const [hitEffects, setHitEffects] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
   const hitEffectIdCounter = useRef(0);
-  
+  // ... (inside component)
+  const timeAliveRef = useRef(0);
+  const dynamicStatsRef = useRef({ speed: enemy.definition.speed, damage: enemy.definition.damage });
+
   const isRanged = enemy.definition.attackType === 'ranged' || !!enemy.heldItem;
   const attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
   const detectionRange = Math.max(ENEMY_DETECTION_RANGE, attackRange + 5);
@@ -79,7 +83,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
 
   // Update position from mesh (synced with physics, safe to read)
   useFrame(() => {
-    if (!active || enemy.isDead) return;
+    if (!active || enemy.isDead || !rigidBodyRef.current) return;
     
     if (meshRef.current) {
       // Get world position from mesh which is updated by Rapier
@@ -100,7 +104,8 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     rb: RapierRigidBody,
     distance: number,
     playerPos: Vector3,
-    enemyVec: Vector3
+    enemyVec: Vector3,
+    dynamicSpeed?: number
   ) => {
     if (enemy.definition.id === 'turret') {
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -108,7 +113,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       const velocity = new Vector3()
         .subVectors(playerPos, enemyVec)
         .normalize()
-        .multiplyScalar(enemy.definition.speed);
+        .multiplyScalar(dynamicSpeed || enemy.definition.speed);
       rb.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
     } else if (isRanged && distance > attackRange * 0.7 && distance <= attackRange) {
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -123,7 +128,8 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     now: number,
     distance: number,
     playerPos: Vector3,
-    enemyVec: Vector3
+    enemyVec: Vector3,
+    dynamicDamage?: number
   ) => {
     if (distance <= attackRange) {
       if ($isInvulnerable.get()) return;
@@ -169,7 +175,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
             size: size,
           });
         } else {
-          takeDamage(enemy.definition.damage);
+          takeDamage(dynamicDamage || enemy.definition.damage);
         }
 
         lastAttackTime.current = now;
@@ -194,7 +200,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     }
   };
 
-  useFrame(() => {
+  useFrame((_state, delta) => {
     if (!rigidBodyRef.current || enemy.isDead || !active) return;
 
     const rb = rigidBodyRef.current;
@@ -217,8 +223,30 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
     }
 
-    updateMovement(rb, distance, playerPos, enemyVec);
-    updateAttack(now, distance, playerPos, enemyVec);
+    // Growth Bug Logic
+    if (enemy.definition.id.startsWith('growth_')) {
+      timeAliveRef.current += delta;
+      
+      const { scale, speed, damage } = calculateGrowthStats(
+        enemy.definition.id,
+        timeAliveRef.current,
+        enemy.definition.size,
+        enemy.definition.speed,
+        enemy.definition.damage
+      );
+
+      // Apply Visual Scale
+      if (meshRef.current) {
+        meshRef.current.scale.set(scale, scale, scale);
+      }
+      
+      // Store dynamic stats in refs for use in other closures (movement/attack)
+      // Using refs avoids triggering re-renders just for logic updates
+      dynamicStatsRef.current = { speed, damage };
+    }
+
+    updateMovement(rb, distance, playerPos, enemyVec, dynamicStatsRef.current.speed);
+    updateAttack(now, distance, playerPos, enemyVec, dynamicStatsRef.current.damage);
   });
 
   if (enemy.isDead || !active) return null;

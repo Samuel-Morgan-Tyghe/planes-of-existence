@@ -1,6 +1,7 @@
 
 import { useStore } from '@nanostores/react';
 import { useCallback, useEffect, useRef } from 'react';
+import { calculateGrowthStats } from '../../logic/growthLogic';
 import { $clearedRooms, $currentFloor, $currentRoomId, $enemies, $enemiesAlive, $enemyPositions, $floorData, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
@@ -46,6 +47,7 @@ export function EnemySpawner({
         health: randomEnemy.health,
         position: [position[0] + offsetX, position[1], position[2] + offsetZ],
         isDead: false,
+        spawnTime: Date.now(),
       });
     }
 
@@ -110,6 +112,7 @@ export function EnemySpawner({
           health: ENEMY_DEFINITIONS.boss.health,
           position: [roomLayout.worldOffset[0], 0.5, roomLayout.worldOffset[2]],
           isDead: false,
+          spawnTime: Date.now(),
         });
       } else {
         const enemyTypes = Object.values(ENEMY_DEFINITIONS).filter(e => e.id !== 'boss');
@@ -133,6 +136,7 @@ export function EnemySpawner({
             position: [worldPos[0], worldPos[1] + 0.5, worldPos[2]],
             isDead: false,
             heldItem,
+            spawnTime: Date.now(),
           });
         });
       }
@@ -225,13 +229,29 @@ export function EnemySpawner({
     onEnemyKilled?.(enemyId);
   };
 
-  const handleEnemyDamage = useCallback((enemyId: number, damage: number) => {
-    console.log(`💥 Enemy ${enemyId} taking ${damage} damage`);
+  const handleEnemyDamage = useCallback((enemyId: number, rawDamage: number) => {
+    // console.log(`💥 Enemy ${enemyId} taking ${rawDamage} damage`);
     const currentEnemies = $enemies.get();
     const updatedEnemies = currentEnemies.map((e) => {
       if (e.id === enemyId) {
-        const newHealth = Math.max(0, e.health - damage);
-        console.log(`  Enemy ${enemyId} health: ${e.health} -> ${newHealth}`);
+        let appliedDamage = rawDamage;
+
+        // Apply Growth Bug defense multiplier
+        if (e.definition.id.startsWith('growth_') && e.spawnTime) {
+           const timeAlive = (Date.now() - e.spawnTime) / 1000;
+           const { healthMultiplier } = calculateGrowthStats(
+             e.definition.id,
+             timeAlive, 
+             e.definition.size,
+             e.definition.speed,
+             e.definition.damage
+           );
+           appliedDamage = rawDamage / healthMultiplier;
+           console.log(`🛡️ Growth Bug Mitigation: ${rawDamage} -> ${appliedDamage.toFixed(2)} (x${healthMultiplier.toFixed(1)})`);
+        }
+
+        const newHealth = Math.max(0, e.health - appliedDamage);
+        // console.log(`  Enemy ${enemyId} health: ${e.health} -> ${newHealth}`);
         return {
           ...e,
           health: newHealth,
