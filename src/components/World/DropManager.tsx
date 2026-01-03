@@ -8,6 +8,7 @@ import { ITEM_DEFINITIONS } from '../../types/items';
 import { Bomb } from './Bomb';
 import { Chest } from './Chest';
 import { Coin } from './Coin';
+import { HealthPickup } from './HealthPickup';
 import { Item } from './Item';
 import { Key } from './Key';
 
@@ -193,6 +194,17 @@ export function DropManager({ }: DropManagerProps) {
               position={drop.position}
               itemId={(drop as any).itemId || 'unknown'}
               onCollect={() => handleCollectItem(drop.id, (drop as any).itemId || 'unknown')}
+            />
+          );
+        } else if (drop.type === 'health') {
+          return (
+            <HealthPickup
+              key={drop.id}
+              position={drop.position}
+              onCollect={() => {
+                $drops.set($drops.get().filter((d) => d.id !== drop.id));
+                console.log('♥ Health collected!');
+              }}
             />
           );
         }
