@@ -132,7 +132,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
   growth_health: {
     id: 'growth_health',
     name: 'Growth Buy (Health)',
-    health: 40,
+    health: 5, // Starts very weak (1-hit kill)
     damage: 5,
     speed: 1.0,
     size: 0.8,
@@ -144,7 +144,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
   growth_harden: {
     id: 'growth_harden',
     name: 'Growth Bug (Hard)',
-    health: 20,
+    health: 5, // Starts very weak
     damage: 5,
     speed: 1.2,
     size: 0.6,
@@ -156,7 +156,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
   growth_cannon: {
     id: 'growth_cannon',
     name: 'Growth Bug (Cannon)',
-    health: 25,
+    health: 5, // Starts very weak
     damage: 5,
     speed: 1.0,
     size: 0.7,

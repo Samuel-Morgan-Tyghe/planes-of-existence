@@ -45,7 +45,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   const hitEffectIdCounter = useRef(0);
   // ... (inside component)
   const timeAliveRef = useRef(0);
-  const dynamicStatsRef = useRef({ speed: enemy.definition.speed, damage: enemy.definition.damage });
+  const dynamicStatsRef = useRef({ speed: enemy.definition.speed, damage: enemy.definition.damage, healthMultiplier: 1.0 });
 
   const isRanged = enemy.definition.attackType === 'ranged' || !!enemy.heldItem;
   let attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
@@ -259,7 +259,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     if (enemy.definition.id.startsWith('growth_')) {
       timeAliveRef.current += delta;
       
-      const { scale, speed, damage } = calculateGrowthStats(
+      const { scale, speed, damage, healthMultiplier } = calculateGrowthStats(
         enemy.definition.id,
         timeAliveRef.current,
         enemy.definition.size,
@@ -274,7 +274,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       
       // Store dynamic stats in refs for use in other closures (movement/attack)
       // Using refs avoids triggering re-renders just for logic updates
-      dynamicStatsRef.current = { speed, damage };
+      dynamicStatsRef.current = { speed, damage, healthMultiplier: healthMultiplier };
     }
 
     updateMovement(rb, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.speed);

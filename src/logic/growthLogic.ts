@@ -43,7 +43,7 @@ export function calculateGrowthStats(
      maxHealthMultiplier = 5.0; // Less tanky
   } else if (variant === 'growth_health') {
      maxAbsScale = 3.0; // Huge
-     maxHealthMultiplier = 20.0; // Very tanky via HP
+     maxHealthMultiplier = 100.0; // Very tanky via HP (compensates for low base stats)
   }
 
   // Calculate generic growth multiplier (time-based linear growth)
