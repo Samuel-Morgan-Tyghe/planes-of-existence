@@ -189,6 +189,7 @@ export const spawnEnemy = (definitionId: string, position: [number, number, numb
     health: definition.health,
     position,
     isDead: false,
+    spawnTime: Date.now(),
   };
 
   // Glitchers have a chance to hold a random item

@@ -20,7 +20,6 @@ export function EnemySpawner({
   onSpawnRequest?: (position: [number, number, number], count: number) => void;
 }) {
   const enemies = useStore($enemies);
-  console.log(`🔍 EnemySpawner Render | totalEnemies: ${enemies.length}`);
   const playerPosition = useStore($position);
   const restartTrigger = useStore($restartTrigger);
   const currentFloor = useStore($currentFloor);
@@ -346,10 +345,7 @@ export function EnemySpawner({
   return (
     <>
       {enemies.map((enemy) => {
-        const isActive = enemy.roomId === currentRoomId;
-        // Log for every enemy on every render (temporarily)
-        console.log(`🔍 EnemySpawner Map | Enemy ${enemy.id} | roomId: ${enemy.roomId} (${typeof enemy.roomId}) | currentRoomId: ${currentRoomId} (${typeof currentRoomId}) | isActive: ${isActive}`);
-        
+        const isActive = enemy.roomId === currentRoomId;        
         return (
           <Enemy
             key={`${currentFloor}-${enemy.id}`}

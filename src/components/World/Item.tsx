@@ -1,6 +1,7 @@
+import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { CuboidCollider, RigidBody } from '@react-three/rapier';
-import { useRef, useState } from 'react';
+import { BallCollider, CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { $position } from '../../stores/player';
 import { ITEM_DEFINITIONS } from '../../types/items';
@@ -11,18 +12,53 @@ interface ItemProps {
   onCollect: () => void;
 }
 
-const COLLECT_DISTANCE = 1.5;
+const COLLECT_DISTANCE = 2.5; 
 const MAGNET_DISTANCE = 6;
 const MAGNET_SPEED = 5;
 
 export function Item({ position, itemId, onCollect }: ItemProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Mesh>(null);
+  const rigidBodyRef = useRef<RapierRigidBody | null>(null);
+  
+  // Logic Refs (Source of Truth for Physics Loop)
+  const isCollectableRef = useRef(false);
+  const collectedRef = useRef(false);
+  
+  // Local state for unmounting
   const [collected, setCollected] = useState(false);
-  const [currentPos, setCurrentPos] = useState<[number, number, number]>(position);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        isCollectableRef.current = true;
+    }, 1000); // 1 second delay
+    return () => clearTimeout(timer);
+  }, []);
+
+  const setBodyRef = (body: RapierRigidBody | null) => {
+      rigidBodyRef.current = body;
+      if (body) {
+          // Initial Impulse (Loot Explosion)
+          const angle = Math.random() * Math.PI * 2;
+          const force = 3 + Math.random() * 2;
+          try {
+            body.applyImpulse({ 
+                x: Math.cos(angle) * force, 
+                y: 5 + Math.random() * 3, 
+                z: Math.sin(angle) * force 
+            }, true);
+            body.applyTorqueImpulse({ 
+                x: Math.random() - 0.5, 
+                y: Math.random() - 0.5, 
+                z: Math.random() - 0.5 
+            }, true);
+          } catch(e) { /* ignore physics errors on unmount */ }
+      }
+  };
 
   const itemDef = ITEM_DEFINITIONS[itemId];
   const visualType = itemDef?.visualType || 'range';
+  const itemName = itemDef?.name || itemId;
 
   const getVisuals = () => {
     switch (visualType) {
@@ -38,40 +74,56 @@ export function Item({ position, itemId, onCollect }: ItemProps) {
   const { color, geometry } = getVisuals();
 
   useFrame((state, delta) => {
-    if (collected) return;
+    if (collectedRef.current || !rigidBodyRef.current) return;
 
+    // Visual bobbing
     if (meshRef.current) {
       meshRef.current.rotation.y += delta * 2;
       meshRef.current.rotation.x += delta * 1.5;
-      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 1.5) * 0.3 + 1.0;
+      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 2.0) * 0.2;
     }
 
     if (glowRef.current) {
       glowRef.current.scale.setScalar(1 + Math.sin(state.clock.elapsedTime * 3) * 0.2);
     }
 
-    // Magnetism and manual distance fallback
+    // Magnetism
     const playerPos = $position.get();
-    const dx = playerPos[0] - currentPos[0];
-    const dz = playerPos[2] - currentPos[2];
-    const distance = Math.sqrt(dx * dx + dz * dz);
+    const rbPosition = rigidBodyRef.current.translation();
+    
+    // Safety check for NaN or infinite positions (teleport bug)
+    if (Math.abs(rbPosition.y) > 500) {
+        rigidBodyRef.current.setTranslation({ x: playerPos[0], y: 5, z: playerPos[2] }, true);
+    }
+    
+    const dx = playerPos[0] - rbPosition.x;
+    const dy = playerPos[1] - rbPosition.y;
+    const dz = playerPos[2] - rbPosition.z;
+    const distance = Math.sqrt(dx * dx + dz * dz); 
+    
+    const canCollect = isCollectableRef.current;
 
-    if (distance < MAGNET_DISTANCE && distance > COLLECT_DISTANCE) {
+    if (distance < MAGNET_DISTANCE && distance > COLLECT_DISTANCE && canCollect) {
+      const strength = 1 - (distance / MAGNET_DISTANCE);
+      const force = MAGNET_SPEED * strength * 20.0;
+      
       const dirX = dx / distance;
       const dirZ = dz / distance;
-      const strength = 1 - (distance / MAGNET_DISTANCE);
-      const move = MAGNET_SPEED * strength * delta;
-      
-      setCurrentPos([
-        currentPos[0] + dirX * move,
-        currentPos[1],
-        currentPos[2] + dirZ * move
-      ]);
+
+      rigidBodyRef.current.applyImpulse({
+        x: dirX * force * delta,
+        y: dy * force * delta + 5.0 * delta,
+        z: dirZ * force * delta
+      }, true);
+      rigidBodyRef.current.setLinearDamping(2.0);
+    } else {
+        rigidBodyRef.current.setLinearDamping(1.0); 
     }
 
-    if (distance < COLLECT_DISTANCE) {
+    // Distance Collection Check
+    if (distance < COLLECT_DISTANCE && canCollect) {
+      collectedRef.current = true;
       setCollected(true);
-      console.log(`✨ Item ${itemId} collected via distance!`);
       onCollect();
     }
   });
@@ -79,19 +131,37 @@ export function Item({ position, itemId, onCollect }: ItemProps) {
   if (collected) return null;
 
   return (
-    <group position={currentPos}>
-      <RigidBody 
-        type="fixed" 
-        sensor
-        onIntersectionEnter={({ other }) => {
-          if (other.rigidBodyObject?.userData?.isPlayer && !collected) {
-            setCollected(true);
-            console.log(`✨ Item ${itemId} collected via collision!`);
-            onCollect();
-          }
-        }}
-      >
-        <CuboidCollider args={[1.0, 1.0, 1.0]} />
+    <RigidBody 
+        ref={setBodyRef}
+        position={position}
+        type="dynamic"
+        colliders={false}
+        linearDamping={1.0}
+        angularDamping={1.0}
+        restitution={0.6}
+        friction={0.5}
+        canSleep={false} 
+        userData={{ type: 'item' }}
+    >
+        {/* Physical Collider */}
+        <CuboidCollider args={[0.4, 0.4, 0.4]} />
+        
+        {/* Backup Sensor Collider for robust collection */}
+        <BallCollider 
+            args={[2.0]} 
+            sensor 
+            onIntersectionEnter={({ other }) => {
+                const canCollect = isCollectableRef.current;
+                const isCollected = collectedRef.current;
+                
+                if (other.rigidBodyObject?.userData?.isPlayer && canCollect && !isCollected) {
+                    collectedRef.current = true;
+                    setCollected(true);
+                    onCollect();
+                }
+            }}
+        />
+
         <mesh ref={meshRef} castShadow>
           {geometry}
           <meshStandardMaterial
@@ -113,9 +183,27 @@ export function Item({ position, itemId, onCollect }: ItemProps) {
           />
         </mesh>
 
-        {/* Point Light */}
         <pointLight color={color} intensity={2} distance={5} />
-      </RigidBody>
-    </group>
+
+        {/* Item Name Label */}
+        <Html position={[0, 1.5, 0]} center>
+          <div
+            style={{
+              backgroundColor: `rgba(0, 0, 0, 0.8)`,
+              color: color,
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              border: `1px solid ${color}`,
+              pointerEvents: 'none'
+            }}
+          >
+           {itemName}
+          </div>
+        </Html>
+    </RigidBody>
   );
 }

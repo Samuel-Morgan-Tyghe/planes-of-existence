@@ -4,6 +4,7 @@ import { $coins, $currentFloor, $currentRoomId, $drops, addItem } from '../../st
 import { $restartTrigger } from '../../stores/restart';
 import { $dropEvents, $roomClearEvents } from '../../systems/events';
 import { Drop, rollDrop, rollRoomClearLoot } from '../../types/drops';
+import { ITEM_DEFINITIONS } from '../../types/items';
 import { Bomb } from './Bomb';
 import { Chest } from './Chest';
 import { Coin } from './Coin';
@@ -104,10 +105,34 @@ export function DropManager({ }: DropManagerProps) {
     console.log('💣 Bomb collected!');
   };
 
-  const handleCollectChest = (id: number, variety: number) => {
+  const handleCollectChest = (id: number, variety: number, position: [number, number, number]) => {
     $drops.set($drops.get().filter((d) => d.id !== id));
     console.log(`💎 Chest opened with ${variety} items!`);
     $coins.set($coins.get() + variety * 5);
+
+    // Spawn items
+    const possibleItems = Object.keys(ITEM_DEFINITIONS);
+    const newDrops: Drop[] = [];
+
+    for (let i = 0; i < variety; i++) {
+        const randomId = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+        const offsetX = (Math.random() - 0.5) * 5.0; // Widen spread to 5 units
+        const offsetZ = (Math.random() - 0.5) * 5.0;
+        
+        const newDrop: Drop = {
+            id: Date.now() + Math.random() + i,
+            type: 'item',
+            position: [position[0] + offsetX, position[1] + 1.5, position[2] + offsetZ],
+            roomId: currentRoomId
+        };
+        (newDrop as any).itemId = randomId;
+        newDrops.push(newDrop);
+    }
+    
+    if (newDrops.length > 0) {
+        $drops.set([...$drops.get(), ...newDrops]);
+        console.log(`🎁 Chest spawned ${newDrops.length} items`);
+    }
   };
 
   const handleCollectCoin = (id: number) => {
@@ -150,7 +175,7 @@ export function DropManager({ }: DropManagerProps) {
               key={drop.id}
               position={drop.position}
               variety={(drop as any).variety || 1}
-              onCollect={() => handleCollectChest(drop.id, (drop as any).variety || 1)}
+              onCollect={() => handleCollectChest(drop.id, (drop as any).variety || 1, drop.position)}
             />
           );
         } else if (drop.type === 'coin') {
