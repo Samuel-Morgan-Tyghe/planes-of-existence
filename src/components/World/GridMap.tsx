@@ -1,12 +1,13 @@
 import { useStore } from '@nanostores/react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
-import { $brokenWalls, $currentFloor, $currentRoomId, $floorData, $roomCleared, $visitedRooms } from '../../stores/game';
+import { $brokenWalls, $currentFloor, $currentRoomId, $floorData, $roomCleared, $runSeed, $visitedRooms } from '../../stores/game';
 import { $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
 import { Door } from './Door';
 import { Portal } from './Portal';
+import { Spikes } from './Spikes';
 import { Wall } from './Wall';
 
 export function GridMap() {
@@ -22,11 +23,12 @@ export function GridMap() {
 
   // Generate floor layout when floor changes or restart
   useEffect(() => {
-    const newFloorData = generateFloor(currentFloor);
+    // Get current seed directly from store
+    const seed = $runSeed.get();
+    const newFloorData = generateFloor(currentFloor, seed);
     $floorData.set(newFloorData);
     $currentRoomId.set(newFloorData.startRoomId);
     $visitedRooms.set(new Set([newFloorData.startRoomId])); // Start room is always visible
-    // $clearedRooms.set(new Set()); // Reset cleared rooms for new floor
   }, [currentFloor, restartTrigger]);
 
   // Mark current room as visited
@@ -332,6 +334,9 @@ export function GridMap() {
                   }
 
                   return <Wall key={`wall-${room.id}-${x}-${y}`} position={worldPos} visible={isVisited} />;
+                } else if (tile === 7) {
+                  // Spikes (Hazard)
+                  return <Spikes key={`spikes-${room.id}-${x}-${y}`} position={worldPos} />;
                 } else if (tile === 4 && roomCleared && isCurrentRoom) {
                   return (
                     <Portal

@@ -418,6 +418,35 @@ export function generateRoomLayout(
     }
   }
 
+  // Place Spikes (Environmental Hazards)
+  // Base count increases with floor number: 3 base + floor * 1.5
+  const spikeCount = Math.floor(3 + floorNumber * 1.5);
+  // Don't spawn too many in small rooms, cap at 15
+  const actualSpikeCount = Math.min(spikeCount, 15);
+  
+  for (let i = 0; i < actualSpikeCount; i++) {
+    let x, y;
+    let attempts = 0;
+    do {
+      x = rng.nextInt(1, ROOM_SIZE - 2);
+      y = rng.nextInt(1, ROOM_SIZE - 2);
+      attempts++;
+      
+      // Safety Checks:
+      // 1. Must be floor (0)
+      // 2. Not player start (center)
+      // 3. Not blocking door (should be handled by grid check, but verify)
+      // 4. Not directly on top of loot/enemy spawn (though valid, let's keep clean)
+    } while (
+        (grid[y][x] !== 0 || (x === playerGridX && y === playerGridY)) && 
+        attempts < 50
+    );
+
+    if (grid[y][x] === 0) {
+      grid[y][x] = 7; // Hazard (Spikes)
+    }
+  }
+
   // Calculate world offset for this room
   const worldOffset: [number, number, number] = [
     room.gridX * ROOM_WORLD_SIZE,

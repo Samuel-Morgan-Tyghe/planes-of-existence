@@ -61,6 +61,9 @@ export const $roomCleared = atom<boolean>(false);
 // Pause state
 export const $isPaused = atom<boolean>(false);
 
+// Random Seed for Procedural Generation
+export const $runSeed = atom<number>(Math.floor(Math.random() * 1000000));
+
 // HUD Visibility
 export const $showCombatStats = atom<boolean>(false);
 
