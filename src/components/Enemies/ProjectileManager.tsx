@@ -125,6 +125,7 @@ export function ProjectileManager() {
             speed={proj.speed}
             damage={proj.damage}
             color={proj.color}
+            size={proj.size || 1.0}
             onDestroy={() => removeEnemyProjectile(proj.id)}
           />
         ) : (
@@ -136,6 +137,7 @@ export function ProjectileManager() {
             speed={proj.speed}
             damage={proj.damage}
             color={proj.color}
+            size={proj.size || 1.0}
             onDestroy={() => removeEnemyProjectile(proj.id)}
           />
         )

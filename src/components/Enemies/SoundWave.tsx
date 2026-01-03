@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import { RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { BallCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { takeDamage } from '../../stores/player';
@@ -11,6 +11,7 @@ interface SoundWaveProps {
   speed: number;
   damage: number;
   color: string;
+  size: number;
   onDestroy: () => void;
 }
 
@@ -23,6 +24,7 @@ export function SoundWave({
   speed,
   damage,
   onDestroy,
+  size,
 }: SoundWaveProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const lifetimeRef = useRef(0);
@@ -52,12 +54,23 @@ export function SoundWave({
     if (hitRef.current) return;
 
     if (rigidBodyRef.current) {
-      // Keep velocity constant (no friction/damping)
+      // Keep speed constant but respect current physics direction (bounce)
       const currentVel = rigidBodyRef.current.linvel();
       const velMag = Math.sqrt(currentVel.x ** 2 + currentVel.y ** 2 + currentVel.z ** 2);
-      if (velMag < speed * 0.9) {
-        const velocity = directionRef.current.clone().multiplyScalar(speed);
-        rigidBodyRef.current.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
+      
+      // If moving too slow or speed needs normalization to target speed
+      if (Math.abs(velMag - speed) > 0.1 || velMag < 0.1) {
+          // Normalize current velocity vector
+          let dir = new THREE.Vector3(currentVel.x, currentVel.y, currentVel.z);
+          if (velMag < 0.1) {
+              // Fallback to original direction if stopped
+              dir = directionRef.current.clone(); 
+          } else {
+              dir.normalize();
+          }
+          
+          const newVel = dir.multiplyScalar(speed);
+          rigidBodyRef.current.setLinvel({ x: newVel.x, y: newVel.y, z: newVel.z }, true);
       }
     }
 
@@ -71,20 +84,21 @@ export function SoundWave({
   return (
     <RigidBody
       ref={rigidBodyRef}
-      colliders="ball"
+      colliders={false}
       mass={0.1}
       position={origin}
-      sensor={true}
+      sensor={false}
       linearDamping={0}
       angularDamping={0}
       gravityScale={0}
+      restitution={1.0}
+      friction={0}
       ccd={true}
       userData={{ isEnemyProjectile: true, damage, isSoundWave: true }}
-      onIntersectionEnter={(e) => {
+      onCollisionEnter={(e) => {
         const userData = e.other.rigidBody?.userData as any;
         if (userData?.isWall) {
-          // console.log('🔊 SoundWave hit wall');
-          onDestroy();
+          // Bounce
         } else if (userData?.isPlayer) {
           console.log('🔊 SoundWave hit player!');
           hitRef.current = true;
@@ -93,7 +107,7 @@ export function SoundWave({
         }
       }}
     >
-      {/* No mesh - rendered via InstancedMesh in ProjectileManager */}
+      <BallCollider args={[0.5 * size]} />
     </RigidBody>
   );
 }

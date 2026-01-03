@@ -2,9 +2,9 @@ import { useStore } from '@nanostores/react';
 import { PerspectiveCamera } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { $currentFloor, $plane, $stats } from '../../stores/game';
+import { $currentFloor, $currentRoomId, $plane, $stats } from '../../stores/game';
 import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo, $velocity } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
 import { PlayerController } from './PlayerController';
@@ -96,6 +96,7 @@ export function Player() {
       $isInvulnerable.set(false);
     }, PLAYER_SPAWN_INVULNERABILITY);
   }, [restartTrigger, currentFloor]);
+
 
   // Sync teleport signal to ref
   useEffect(() => {
@@ -281,8 +282,67 @@ export function Player() {
       )}
       <PlayerController rigidBodyRef={rigidBodyRef} />
       <PlayerPositionTracker meshRef={meshRef} rigidBodyRef={rigidBodyRef} />
+      <InvulnerabilityManager />
     </RigidBody>
   );
+}
+
+// Isolated component to handle invulnerability logic and visuals without re-rendering the main Player
+function InvulnerabilityManager() {
+  const currentRoomId = useStore($currentRoomId);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(false);
+
+  // Handle Room Change
+  useEffect(() => {
+    // Skip the very first run (mount) because Player handles spawn invulnerability
+    if (!mountedRef.current) {
+        mountedRef.current = true;
+        return;
+    }
+
+    console.log('🛡️ InvulnerabilityManager: Room Changed to', currentRoomId);
+    trigger();
+    
+  }, [currentRoomId]);
+
+  // Expose trigger method
+  const trigger = () => {
+    $isInvulnerable.set(true);
+    
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    timeoutRef.current = setTimeout(() => {
+      $isInvulnerable.set(false);
+    }, 1500);
+  };
+  
+  // Listen for manual triggers (like spawn)?
+  // Actually, Player component handles spawn. We just need to SYNC with it.
+  // Or current $isInvulnerable store?
+  
+  // Let's make this component responsible for the VISUAL based on the STORE.
+  // And responsible for TRIGGERING based on Room ID.
+  
+  // Actually, simpler: 
+  // 1. This component sets $isInvulnerable on room change.
+  // 2. This component renders visual if $isInvulnerable is true.
+  
+  const isInvulnerable = useStore($isInvulnerable);
+  
+  return isInvulnerable ? (
+        <mesh>
+          <sphereGeometry args={[1.2, 16, 16]} />
+          <meshStandardMaterial
+            color="#00ffff"
+            emissive="#00ffff"
+            emissiveIntensity={0.5}
+            transparent
+            opacity={0.3}
+            wireframe
+          />
+        </mesh>
+  ) : null;
 }
 
 // Track player position and store it globally

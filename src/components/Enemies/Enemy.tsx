@@ -160,7 +160,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
             {
               damage: enemy.definition.damage,
               speed: enemy.definition.projectileSpeed || 10,
-              size: 1.0,
+              size: enemy.definition.projectileSize || 1.0,
               color: enemy.definition.color,
             },
             enemy.heldItem,

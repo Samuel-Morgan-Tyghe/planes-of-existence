@@ -11,6 +11,7 @@ export interface EnemyDefinition {
   attackType?: 'melee' | 'ranged'; // Attack type
   attackRange?: number; // Range for ranged attacks
   projectileSpeed?: number; // Speed of projectiles for ranged enemies
+  projectileSize?: number; // Size scale of projectiles for ranged enemies (default 1.0)
   fireRate?: number; // Time between shots in ms for ranged enemies
 }
 
@@ -61,6 +62,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     attackType: 'ranged',
     attackRange: 30, // Can attack from 15 units away
     projectileSpeed: 20, // Fast projectiles
+    projectileSize: 0.1, // Small, bullet-like
     fireRate: 2000, // Fire every 2 seconds
   },
   rusher: {

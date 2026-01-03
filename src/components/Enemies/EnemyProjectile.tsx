@@ -11,6 +11,7 @@ interface EnemyProjectileProps {
   speed: number;
   damage: number;
   color: string;
+  size: number;
   onDestroy: () => void;
 }
 
@@ -23,6 +24,7 @@ export function EnemyProjectile({
   speed,
   damage,
   onDestroy,
+  size,
 }: EnemyProjectileProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const lifetimeRef = useRef(0);
@@ -77,7 +79,7 @@ export function EnemyProjectile({
       return;
     }
   });
-
+  
   return (
     <RigidBody
       ref={rigidBodyRef}
@@ -103,7 +105,7 @@ export function EnemyProjectile({
         }
       }}
     >
-      <BallCollider args={[0.5]} />
+      <BallCollider args={[0.5 * size]} />
     </RigidBody>
   );
 }
