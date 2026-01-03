@@ -3,26 +3,23 @@ import { useFrame } from '@react-three/fiber';
 import { BallCollider, CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { $position } from '../../stores/player';
+import { $maxShield, $position, $shield, addShield } from '../../stores/player';
 
-interface BombProps {
+interface ShieldPickupProps {
   position: [number, number, number];
   onCollect: () => void;
 }
 
-const COLLECT_DISTANCE = 2;
-const MAGNET_DISTANCE = 6;
-const MAGNET_SPEED = 5;
+const COLLECT_DISTANCE = 2.0;
 
-export function Bomb({ position, onCollect }: BombProps) {
-  const meshRef = useRef<THREE.Group>(null);
+export function ShieldPickup({ position, onCollect }: ShieldPickupProps) {
+  const meshRef = useRef<THREE.Mesh>(null);
   const rigidBodyRef = useRef<RapierRigidBody | null>(null);
   
   // Logic Refs
   const isCollectableRef = useRef(false);
   const collectedRef = useRef(false);
   const [collected, setCollected] = useState(false);
-  const [pulse, setPulse] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -51,51 +48,47 @@ export function Bomb({ position, onCollect }: BombProps) {
       }
   };
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (collectedRef.current || !rigidBodyRef.current) return;
 
-    setPulse((prev) => (prev + delta * 5) % (Math.PI * 2));
+    if (meshRef.current) {
+      meshRef.current.rotation.y += delta * 3;
+      meshRef.current.rotation.x += delta;
+      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 3.0) * 0.1;
+    }
 
     const playerPos = $position.get();
     const rbPosition = rigidBodyRef.current.translation();
     
-    // Safety check for void
     if (rbPosition.y < -50) {
         rigidBodyRef.current.setTranslation({ x: playerPos[0], y: 5, z: playerPos[2] }, true);
     }
     
     const dx = playerPos[0] - rbPosition.x;
-    const dy = playerPos[1] - rbPosition.y;
+    // const dy = playerPos[1] - rbPosition.y; 
     const dz = playerPos[2] - rbPosition.z;
     const distance = Math.sqrt(dx * dx + dz * dz); 
     
-    // Magnetism
-    if (distance < MAGNET_DISTANCE && distance > COLLECT_DISTANCE && isCollectableRef.current) {
-        const strength = 1 - (distance / MAGNET_DISTANCE);
-        const force = MAGNET_SPEED * strength * 20.0;
-        
-        rigidBodyRef.current.applyImpulse({
-          x: (dx / distance) * force * delta,
-          y: dy * force * delta + 5.0 * delta,
-          z: (dz / distance) * force * delta
-        }, true);
-        rigidBodyRef.current.setLinearDamping(2.0);
-    } else {
-        rigidBodyRef.current.setLinearDamping(1.0);
-    }
-
-    // Distance Check
+    // Logic: Only collect if SHIELD < MAX
     if (distance < COLLECT_DISTANCE && isCollectableRef.current) {
-        collectedRef.current = true;
-        setCollected(true);
-        console.log('💣 Bomb collected!');
-        onCollect();
+        const currentShield = $shield.get();
+        const maxShield = $maxShield.get();
+        
+        if (currentShield < maxShield) {
+            collectedRef.current = true;
+            setCollected(true);
+            addShield(25);
+            onCollect();
+        } else {
+             // Push back feedback
+             // rigidBodyRef.current.applyImpulse({ x: dx * -2, y: 1, z: dz * -2 }, true);
+        }
     }
+    
+    rigidBodyRef.current.setLinearDamping(1.0);
   });
 
   if (collected) return null;
-
-  const pulseScale = 1 + Math.sin(pulse) * 0.15;
 
   return (
     <RigidBody 
@@ -107,7 +100,7 @@ export function Bomb({ position, onCollect }: BombProps) {
         angularDamping={1.0}
         restitution={0.6}
         friction={0.5}
-        userData={{ type: 'pickup_bomb' }}
+        userData={{ type: 'pickup_shield' }}
     >
         <CuboidCollider args={[0.3, 0.3, 0.3]} />
         
@@ -116,42 +109,41 @@ export function Bomb({ position, onCollect }: BombProps) {
             sensor 
             onIntersectionEnter={({ other }) => {
                 if (other.rigidBodyObject?.userData?.isPlayer && isCollectableRef.current && !collectedRef.current) {
-                    collectedRef.current = true;
-                    setCollected(true);
-                    console.log('💣 Bomb collected!');
-                    onCollect();
+                    const currentShield = $shield.get();
+                    const maxShield = $maxShield.get();
+                    
+                    if (currentShield < maxShield) {
+                        collectedRef.current = true;
+                        setCollected(true);
+                        addShield(25);
+                        onCollect();
+                    }
                 }
             }}
         />
 
-      <group ref={meshRef} scale={[pulseScale, pulseScale, pulseScale]}>
-          <mesh>
-            <sphereGeometry args={[0.3, 16, 16]} />
-            <meshStandardMaterial color="#000000" emissive="#ff0000" emissiveIntensity={1.0} />
-          </mesh>
-          {/* Fuse */}
-          <mesh position={[0, 0.35, 0]}>
-            <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
-            <meshStandardMaterial color="#ffaa00" />
-          </mesh>
-           {/* Spark */}
-          <mesh position={[0, 0.5, 0]}>
-            <sphereGeometry args={[0.08, 8, 8]} />
-            <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={5.0} />
-          </mesh>
-        
-        <pointLight color="#ff0000" intensity={3 + Math.sin(pulse) * 2} distance={3} />
-        
+        <mesh ref={meshRef} castShadow>
+          <octahedronGeometry args={[0.5]} />
+          <meshStandardMaterial
+            color="#00ffff"
+            emissive="#00ffff"
+            emissiveIntensity={1.0}
+            metalness={0.8}
+            roughness={0.2}
+          />
+        </mesh>
+
+        <pointLight color="#00ffff" intensity={2} distance={3} />
+
         <Html position={[0, 1.2, 0]} center>
           <div style={{
-             color: '#ff0000', fontWeight: 'bold', fontSize: '14px', 
-             textShadow: '0 0 5px black', border: '1px solid #ff0000',
+             color: '#00ffff', fontWeight: 'bold', fontSize: '14px', 
+             textShadow: '0 0 5px black', border: '1px solid #00ffff',
              padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(0,0,0,0.5)'
           }}>
-            BOMB
+            SHIELD
           </div>
         </Html>
-      </group>
     </RigidBody>
   );
 }

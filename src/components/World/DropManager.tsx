@@ -3,14 +3,14 @@ import { useEffect } from 'react';
 import { $coins, $currentFloor, $currentRoomId, $drops, addItem } from '../../stores/game';
 import { $restartTrigger } from '../../stores/restart';
 import { $dropEvents, $roomClearEvents } from '../../systems/events';
-import { Drop, rollDrop, rollRoomClearLoot } from '../../types/drops';
-import { ITEM_DEFINITIONS } from '../../types/items';
+import { Drop, DropType, rollDrop, rollRoomClearLoot } from '../../types/drops';
 import { Bomb } from './Bomb';
 import { Chest } from './Chest';
 import { Coin } from './Coin';
 import { HealthPickup } from './HealthPickup';
 import { Item } from './Item';
 import { Key } from './Key';
+import { ShieldPickup } from './ShieldPickup';
 
 interface DropManagerProps {
   // onEnemySpawn removed as it was unused
@@ -111,28 +111,27 @@ export function DropManager({ }: DropManagerProps) {
     console.log(`💎 Chest opened with ${variety} items!`);
     $coins.set($coins.get() + variety * 5);
 
-    // Spawn items
-    const possibleItems = Object.keys(ITEM_DEFINITIONS);
+    // Spawn randomized consumables (Health, Shield, Key, Bomb)
+    const possibleDrops = ['health', 'shield', 'key', 'bomb'];
     const newDrops: Drop[] = [];
 
     for (let i = 0; i < variety; i++) {
-        const randomId = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+        const randomType = possibleDrops[Math.floor(Math.random() * possibleDrops.length)] as DropType;
         const offsetX = (Math.random() - 0.5) * 5.0; // Widen spread to 5 units
         const offsetZ = (Math.random() - 0.5) * 5.0;
         
         const newDrop: Drop = {
             id: Date.now() + Math.random() + i,
-            type: 'item',
+            type: randomType,
             position: [position[0] + offsetX, position[1] + 1.5, position[2] + offsetZ],
             roomId: currentRoomId
         };
-        (newDrop as any).itemId = randomId;
         newDrops.push(newDrop);
     }
     
     if (newDrops.length > 0) {
         $drops.set([...$drops.get(), ...newDrops]);
-        console.log(`🎁 Chest spawned ${newDrops.length} items`);
+        console.log(`🎁 Chest spawned ${newDrops.length} consumables`);
     }
   };
 
@@ -207,7 +206,18 @@ export function DropManager({ }: DropManagerProps) {
               }}
             />
           );
-        }
+        } else if (drop.type === 'shield') {
+            return (
+              <ShieldPickup
+                key={drop.id}
+                position={drop.position}
+                onCollect={() => {
+                  $drops.set($drops.get().filter((d) => d.id !== drop.id));
+                  console.log('🛡️ Shield collected!');
+                }}
+              />
+            );
+          }
         return null;
       })}
     </>

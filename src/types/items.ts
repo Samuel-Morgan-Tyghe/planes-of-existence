@@ -383,7 +383,7 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
     name: '8-Bit Downsampler',
     description: 'Game looks like NES. -50% Resolution, -50% Max HP, +20% Dodge Chance.',
     rarity: 'rare',
-    statModifiers: { resolution: -0.5, dodgeChance: 0.2 }
+    statModifiers: { resolution: -0.25, dodgeChance: 0.2 }
   },
   dlss_performance: {
     id: 'dlss_performance',

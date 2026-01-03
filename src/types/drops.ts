@@ -1,4 +1,4 @@
-export type DropType = 'key' | 'bomb' | 'chest' | 'enemy_spawn' | 'coin' | 'item' | 'health';
+export type DropType = 'key' | 'bomb' | 'chest' | 'enemy_spawn' | 'coin' | 'item' | 'health' | 'shield';
 
 export interface Drop {
   id: number;
@@ -20,10 +20,11 @@ export interface DropRollResult {
 export function rollDrop(): DropRollResult | null {
   const roll = Math.random();
 
-  if (roll < 0.05) return { type: 'health' }; // 5% chance for Health
-  if (roll < 0.15) return { type: 'coin' };
-  if (roll < 0.20) return { type: 'key' };
-  if (roll < 0.25) return { type: 'bomb' };
+  if (roll < 0.05) return { type: 'health' }; 
+  if (roll < 0.20) return { type: 'shield' }; // 15% Chance for Shield!
+  if (roll < 0.30) return { type: 'coin' };
+  if (roll < 0.35) return { type: 'key' };
+  if (roll < 0.40) return { type: 'bomb' };
   if (roll < 0.27) return { type: 'chest', chestVariety: 1 };
   if (roll < 0.30) return { type: 'enemy_spawn', spawnCount: 1 };
 
