@@ -419,10 +419,10 @@ export function generateRoomLayout(
   }
 
   // Place Spikes (Environmental Hazards)
-  // Base count increases with floor number: 3 base + floor * 1.5
-  const spikeCount = Math.floor(3 + floorNumber * 1.5);
-  // Don't spawn too many in small rooms, cap at 15
-  const actualSpikeCount = Math.min(spikeCount, 15);
+  // Base count increases with floor number: 10 base + floor * 2
+  const spikeCount = Math.floor(10 + floorNumber * 2);
+  // Don't spawn too many in small rooms, cap at 20
+  const actualSpikeCount = Math.min(spikeCount, 20);
   
   for (let i = 0; i < actualSpikeCount; i++) {
     let x, y;

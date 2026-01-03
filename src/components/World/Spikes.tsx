@@ -37,7 +37,7 @@ export function Spikes({ position }: SpikesProps) {
   };
 
   return (
-    <group position={[position[0], position[1] - 0.45, position[2]]}>
+    <group position={[position[0], position[1], position[2]]}>
       {/* Physics Sensor */}
       <RigidBody type="fixed" sensor onIntersectionEnter={(e) => handleCollision(e.other)}>
         <CuboidCollider args={[0.4, 0.2, 0.4]} />
@@ -46,18 +46,18 @@ export function Spikes({ position }: SpikesProps) {
       {/* Spikes Visuals */}
       <group>
         {/* Central Spike */}
-        <mesh position={[0, 0.2, 0]} rotation={[0, Math.PI / 4, 0]}>
-          <coneGeometry args={[0.15, 0.6, 4]} />
-          <meshStandardMaterial color={active ? '#ff0000' : '#888888'} />
+        <mesh position={[0, 0.3, 0]} rotation={[0, Math.PI / 4, 0]}>
+          <coneGeometry args={[0.2, 0.6, 4]} />
+          <meshStandardMaterial color={active ? '#ffffff' : '#ff0000'} />
         </mesh>
         {/* Smaller surrounding spikes */}
-        <mesh position={[0.25, 0.1, 0.25]} rotation={[0.1, 0, 0.1]}>
-          <coneGeometry args={[0.08, 0.3, 4]} />
-          <meshStandardMaterial color="#666666" />
+        <mesh position={[0.25, 0.15, 0.25]} rotation={[0.2, 0, 0.2]}>
+          <coneGeometry args={[0.1, 0.4, 4]} />
+          <meshStandardMaterial color="#cc0000" />
         </mesh>
-        <mesh position={[-0.25, 0.1, -0.25]} rotation={[-0.1, 0, -0.1]}>
-          <coneGeometry args={[0.08, 0.3, 4]} />
-          <meshStandardMaterial color="#666666" />
+        <mesh position={[-0.25, 0.15, -0.25]} rotation={[-0.2, 0, -0.2]}>
+          <coneGeometry args={[0.1, 0.4, 4]} />
+          <meshStandardMaterial color="#cc0000" />
         </mesh>
         <mesh position={[0.25, 0.1, -0.25]} rotation={[-0.1, 0, 0.1]}>
           <coneGeometry args={[0.08, 0.3, 4]} />

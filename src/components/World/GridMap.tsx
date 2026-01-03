@@ -336,6 +336,7 @@ export function GridMap() {
                   return <Wall key={`wall-${room.id}-${x}-${y}`} position={worldPos} visible={isVisited} />;
                 } else if (tile === 7) {
                   // Spikes (Hazard)
+                  // console.log(`⚠️ Rendering spike at ${worldPos}`); 
                   return <Spikes key={`spikes-${room.id}-${x}-${y}`} position={worldPos} />;
                 } else if (tile === 4 && roomCleared && isCurrentRoom) {
                   return (
