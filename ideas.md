@@ -16,3 +16,8 @@ I want to utilise walls being destroyable with secret rooms and hidden items in 
 I think also the floor should have some rocks  ( half walls ) to make it look like a maze and some should be explodable, some should have tints, some should hide enemies ( rock enemies ) ( with a very subtle indicator to say its a rock enemy)
 
 I think some rooms should have no floor to them and so the user can fall into a pit. falling looses health 
+
+we need to add knockback as a stat and add items 
+
+projectile size should often be linked to projectile damage
+
