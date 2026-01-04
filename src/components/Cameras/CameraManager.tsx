@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import { OrthographicCamera, PointerLockControls } from '@react-three/drei';
+import { OrthographicCamera } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import { OrthographicCamera as ThreeOrthographicCamera } from 'three';
@@ -123,10 +123,7 @@ export function CameraManager() {
         far={200}
       />
 
-      {/* FPS camera is parented to Player component */}
-      {plane === 'FPS' && (
-        <PointerLockControls />
-      )}
+      {/* FPS camera is parented to Player component - Controls handled manually in PlayerController */}
     </>
   );
 }

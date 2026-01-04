@@ -74,11 +74,19 @@ export function WeaponSystem() {
     let direction: [number, number, number] | null = null;
 
     if (plane === 'FPS') {
-        if (isMouseDownRef.current) {
+        const forward = new Vector3();
+        camera.getWorldDirection(forward);
+
+        // Fire on Mouse OR Up Arrow
+        if (isMouseDownRef.current || arrowKeysRef.current.has('ArrowUp')) {
             shouldFire = true;
-            const forward = new Vector3(0, 0, -1);
-            forward.applyQuaternion(camera.quaternion);
             direction = [forward.x, forward.y, forward.z];
+        } else if (arrowKeysRef.current.size > 0) {
+            // Allow directional shooting with arrows in FPS too? Maybe weird, let's stick to forward
+            // If they press Left/Right/Down arrow, maybe shoot relative to camera?
+            // For now, let's just make sure "Attempting to shoot" works.
+             shouldFire = true;
+             direction = [forward.x, forward.y, forward.z];
         }
     } else {
         if (arrowKeysRef.current.size > 0) {
@@ -137,7 +145,12 @@ export function WeaponSystem() {
 
     let finalDir = new Vector3().copy(lastMoveDirRef.current);
 
-    if (moveDir.lengthSq() > 0) {
+    if (plane === 'FPS') {
+       // In FPS, ALWAYS throw where looking
+       const forward = new Vector3();
+       camera.getWorldDirection(forward);
+       finalDir.copy(forward);
+    } else if (moveDir.lengthSq() > 0) {
       finalDir.copy(moveDir).normalize();
       lastMoveDirRef.current.copy(finalDir);
     } else {
@@ -152,7 +165,9 @@ export function WeaponSystem() {
       if (shootingDir.lengthSq() > 0) {
         finalDir.copy(shootingDir).normalize();
       } else if (plane === 'FPS') {
-        finalDir.set(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+        const forward = new Vector3();
+        camera.getWorldDirection(forward);
+        finalDir.copy(forward);
       }
     }
 

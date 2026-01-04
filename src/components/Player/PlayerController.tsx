@@ -2,20 +2,27 @@ import { useStore } from '@nanostores/react';
 import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { $plane } from '../../stores/game';
 import { $isTeleporting } from '../../stores/player';
-import { $knockbackEvents } from '../../systems/events';
 
 interface PlayerControllerProps {
   rigidBodyRef: React.RefObject<RapierRigidBody>;
 }
 
-const JUMP_FORCE = 5;
+const JUMP_FORCE = 8;
+
+// Global state to persist rotation across re-renders/remounts
+let globalPitch = 0;
+let globalYaw = 0;
 
 export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
   const plane = useStore($plane);
   const isTeleporting = useStore($isTeleporting);
   const keysRef = useRef<Set<string>>(new Set());
+  
+  // Use refs to track local usage, but sync with global
+  const isLocked = useRef(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -28,67 +35,129 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       keysRef.current.delete(e.key.toLowerCase());
     };
 
-    console.log('🎮 PlayerController mounted. Current plane:', plane);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
     return () => {
-      console.log('🎮 PlayerController unmounted');
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [plane]); // Re-bind if plane changes just in case
+  }, []); // Run once on mount
 
-  // Handle knockback events
   useEffect(() => {
-    const unsubscribe = $knockbackEvents.subscribe((event) => {
-      if (!event || !rigidBodyRef.current) return;
-      
-      const rb = rigidBodyRef.current;
-      const impulse = {
-        x: event.direction[0] * event.force,
-        y: 2, // Small upward pop
-        z: event.direction[2] * event.force
-      };
-      
-      console.log('💥 Applying knockback to player:', impulse);
-      rb.applyImpulse(impulse, true);
-    });
-    return unsubscribe;
-  }, [rigidBodyRef]);
+    if (plane !== 'FPS') return;
 
-  useFrame(() => {
+    // Check availability of pointer lock API
+    const hasPointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+    if (!hasPointerLock) return;
+
+    const onMouseDown = () => {
+        document.body.requestPointerLock();
+    };
+
+    const onLockChange = () => {
+        isLocked.current = document.pointerLockElement === document.body || 
+                          (document as any).mozPointerLockElement === document.body ||
+                          (document as any).webkitPointerLockElement === document.body;
+        // console.log('🔒 Pointer Lock Changed:', isLocked.current);
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+        if (!isLocked.current) return;
+        
+        const sensitivity = 0.002;
+        
+        // Update global state directly
+        globalYaw -= e.movementX * sensitivity;
+        globalPitch -= e.movementY * sensitivity;
+        
+        // Clamp pitch
+        globalPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, globalPitch));
+    };
+
+    // Initial check
+    onLockChange();
+
+    document.addEventListener('click', onMouseDown);
+    document.addEventListener('pointerlockchange', onLockChange);
+    document.addEventListener('mozpointerlockchange', onLockChange);
+    document.addEventListener('webkitpointerlockchange', onLockChange);
+    document.addEventListener('mousemove', onMouseMove);
+
+    return () => {
+        document.removeEventListener('click', onMouseDown);
+        document.removeEventListener('pointerlockchange', onLockChange);
+        document.removeEventListener('mozpointerlockchange', onLockChange);
+        document.removeEventListener('webkitpointerlockchange', onLockChange);
+        document.removeEventListener('mousemove', onMouseMove);
+    };
+  }, [plane]);
+
+
+  useFrame((state) => {
     if (!rigidBodyRef.current || isTeleporting) return;
 
     const rb = rigidBodyRef.current;
     const keys = keysRef.current;
-    const velocity = rb.linvel();
+    
+    // 1. Manually Apply Rotation logic for FPS
+    if (plane === 'FPS') {
+        const camera = state.camera;
+        
+        // Sync Physics Body to Yaw
+        const q = new THREE.Quaternion();
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), globalYaw);
+        rb.setRotation(q, true);
+        rb.setAngvel({ x: 0, y: 0, z: 0 }, true); // Prevent physics rotation
+        
+        // Sync Camera Pitch (Local X rotation)
+        camera.rotation.x = globalPitch;
+        camera.rotation.y = 0;
+        camera.rotation.z = 0;
+    }
 
+    const velocity = rb.linvel();
     let x = 0;
     let z = 0;
     const speed = 8;
-
-    // Movement based on plane - WASD ONLY
-    if (keys.size > 0) {
-      // console.log('⌨️ Keys pressed:', Array.from(keys));
-    }
-
-    switch (plane) {
-      case '2D':
-        if (keys.has('a')) x = -speed;
-        if (keys.has('d')) x = speed;
-        break;
-      case 'ISO':
-      case 'FPS':
-        if (keys.has('w')) z = -speed;
-        if (keys.has('s')) z = speed;
-        if (keys.has('a')) x = -speed;
-        if (keys.has('d')) x = speed;
-        break;
-    }
-
-    if (x !== 0 || z !== 0) {
-      // console.log('🚀 Setting velocity:', { x, y: velocity.y, z });
+    
+    // 2. Relative Movement
+    if (plane === 'FPS') {
+      // Get direction from the BODY rotation (Yaw)
+      const forward = new THREE.Vector3(0, 0, -1);
+      const right = new THREE.Vector3(1, 0, 0);
+      
+      const bodyRot = new THREE.Quaternion();
+      bodyRot.setFromAxisAngle(new THREE.Vector3(0, 1, 0), globalYaw);
+      
+      forward.applyQuaternion(bodyRot);
+      right.applyQuaternion(bodyRot);
+      
+      const moveVec = new THREE.Vector3(0, 0, 0);
+      if (keys.has('w')) moveVec.add(forward);
+      if (keys.has('s')) moveVec.sub(forward);
+      if (keys.has('d')) moveVec.add(right);
+      if (keys.has('a')) moveVec.sub(right);
+      
+      if (moveVec.length() > 0) {
+        moveVec.normalize().multiplyScalar(speed);
+        x = moveVec.x;
+        z = moveVec.z;
+      }
+    } else {
+      // Standard Global Controls for ISO/2D
+      switch (plane) {
+        case '2D':
+          if (keys.has('a')) x = -speed;
+          if (keys.has('d')) x = speed;
+          break;
+        case 'ISO':
+          if (keys.has('w')) z = -speed;
+          if (keys.has('s')) z = speed;
+          if (keys.has('a')) x = -speed;
+          if (keys.has('d')) x = speed;
+          break;
+      }
     }
 
     // Apply jump impulse if space is pressed and grounded
@@ -96,7 +165,7 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       rb.applyImpulse({ x: 0, y: JUMP_FORCE, z: 0 }, true);
     }
 
-    // Snappy horizontal movement using impulses to avoid overwriting gravity's Y velocity
+    // Snappy horizontal movement
     const mass = rb.mass();
     const impulseX = (x - velocity.x) * mass;
     const impulseZ = (z - velocity.z) * mass;

@@ -402,8 +402,8 @@ export function HUD() {
       <div
         style={{
           position: 'fixed',
-          top: `${mousePosition.y}px`,
-          left: `${mousePosition.x}px`,
+          top: plane === 'FPS' ? '50%' : `${mousePosition.y}px`,
+          left: plane === 'FPS' ? '50%' : `${mousePosition.x}px`,
           transform: 'translate(-50%, -50%)',
           width: '20px',
           height: '20px',

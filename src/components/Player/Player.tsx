@@ -221,7 +221,8 @@ export function Player() {
       case 'FPS':
         // Allow all movement
         rb.setEnabledTranslations(true, true, true, true);
-        // Rotation handled by mouse look
+        // UNLOCK rotations so setRotation works, but we manually zero angvel in Controller
+        rb.lockRotations(false, true); 
         break;
     }
   }, [plane]);
