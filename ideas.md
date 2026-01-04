@@ -21,3 +21,5 @@ we need to add knockback as a stat and add items
 
 projectile size should often be linked to projectile damage
 
+We can encorporate AI as part of the initial run generation, Image generation of assets based on some factor from the user. I like the idea of the user being able to input into a form and then we use those keywords to generate assets for the run.  
+I think we have to glitch all the assets aswell to make this work. I like the idea of names also could be affected. 
