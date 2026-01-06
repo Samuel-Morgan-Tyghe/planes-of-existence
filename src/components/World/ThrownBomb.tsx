@@ -4,10 +4,10 @@ import { BallCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useRef, useState } from 'react';
 import * as THREE from 'three';
 import { $cameraShake, $currentRoomId, $enemyPositions, $floorData, breakWall, removeThrownBomb, updateThrownBomb } from '../../stores/game';
-import { breakCrate, spawnLoot } from '../../stores/loot';
+import { breakCrate } from '../../stores/loot';
 import { $position, takeDamage } from '../../stores/player';
 import { breakRock } from '../../stores/rock';
-import { emitDamage, emitKnockback } from '../../systems/events';
+import { emitDamage, emitDrop, emitKnockback } from '../../systems/events';
 import { getRoomWorldSize } from '../../utils/floorGen';
 
 interface ThrownBombProps {
@@ -214,7 +214,7 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
                 if (ud?.isBreakable) {
                    breakCrate(ud.crateId);
                    const t = other.rigidBody?.translation();
-                   if (t) spawnLoot([t.x, t.y + 0.5, t.z]);
+                   if (t) emitDrop([t.x, 0.1, t.z], roomId);
                 }
                 if (ud?.isRock) {
                    breakRock(ud.rockId);

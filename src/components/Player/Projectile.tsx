@@ -2,8 +2,9 @@ import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RigidBody, useRapier } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
-import { $enemyPositions } from '../../stores/game';
-import { breakCrate, spawnLoot } from '../../stores/loot';
+import { $currentRoomId, $enemyPositions } from '../../stores/game';
+import { breakCrate } from '../../stores/loot';
+import { emitDrop } from '../../systems/events';
 import type { ProjectileData } from '../../types/game';
 import { addEffect } from '../Effects/EffectsManager';
 
@@ -147,7 +148,7 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
         } else if (userData?.isBreakable) {
             breakCrate(userData.crateId); 
             const t = other.rigidBody?.translation();
-            if (t) spawnLoot([t.x, t.y + 0.5, t.z]);
+            if (t) emitDrop([t.x, 0.1, t.z], $currentRoomId.get());
             addEffect({ type: 'impact', position: [t?.x || 0, t?.y || 0, t?.z || 0], color: '#8B4513' });
             onDestroy();
         } else if (userData?.isWall || userData?.isFloor || !userData) {

@@ -123,7 +123,7 @@ export function DropManager({ }: DropManagerProps) {
         const newDrop: Drop = {
             id: Date.now() + Math.random() + i,
             type: randomType,
-            position: [position[0] + offsetX, position[1] + 1.5, position[2] + offsetZ],
+            position: [position[0] + offsetX, position[1] + 0.5, position[2] + offsetZ],
             roomId: currentRoomId
         };
         newDrops.push(newDrop);

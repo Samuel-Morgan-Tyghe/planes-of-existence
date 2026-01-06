@@ -256,7 +256,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     name: 'Slow Slime',
     health: 40,
     damage: 8,
-    speed: 1.0,
+    speed: 10.0,
     size: 1.2,
     color: '#00f2ff', // Cyan
     dropChance: 0.4,
@@ -268,7 +268,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     name: 'Toxic Slime',
     health: 45,
     damage: 10,
-    speed: 1.2,
+    speed: 10.2,
     size: 1.1,
     color: '#32CD32', // LimeGreen
     dropChance: 0.45,

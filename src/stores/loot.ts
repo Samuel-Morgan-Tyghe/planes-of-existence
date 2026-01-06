@@ -1,54 +1,30 @@
 import { map } from 'nanostores';
+import { emitDrop } from '../systems/events';
+import { $currentRoomId } from './game';
+
+// Set of Coordinate strings "room.id-x,y" that have been destroyed
+// This ensures crates don't reappear if we revisit a room
+export const $brokenCrates = map<Record<string, boolean>>({});
 
 export type LootType = 'coin' | 'heart' | 'shield';
 
-export interface LootItem {
-  id: string;
-  type: LootType;
-  position: [number, number, number];
-  value: number; // Amount for coin, heal amount for heart, etc.
-}
-
-// Map of Loot ID -> Loot Data
-export const $activeLoot = map<Record<string, LootItem>>({});
-
-// Set of Coordinate strings "x,y" (or unique IDs) that have been destroyed
-// This ensures crates don't reappear if we revisit a room (though simple tile clearing in GridMap works too)
-// For now, simpler: GridMap will check this store to skip rendering broken crates.
-export const $brokenCrates = map<Record<string, boolean>>({});
-
 export const spawnLoot = (position: [number, number, number], type?: LootType) => {
-  const id = Math.random().toString(36).substr(2, 9);
+  let dropType: string | undefined;
   
-  // Randomize type if not provided
   if (!type) {
     const r = Math.random();
-    if (r < 0.6) type = 'coin';
-    else if (r < 0.9) type = 'heart';
-    else type = 'shield';
+    if (r < 0.6) dropType = 'coin';
+    else if (r < 0.9) dropType = 'health';
+    else dropType = 'shield';
+  } else {
+    if (type === 'heart') dropType = 'health';
+    else dropType = type;
   }
 
-  let value = 1;
-  if (type === 'coin') value = 10;
-  if (type === 'heart') value = 1; // 1 HP
-  if (type === 'shield') value = 10000; // Time based?
-
-  const item: LootItem = { id, type, position, value };
-  
-  $activeLoot.setKey(id, item);
-};
-
-export const collectLoot = (id: string) => {
-  const item = $activeLoot.get()[id];
-  if (!item) return;
-
-  // Effects will be handled by the collector (Player.tsx) reading the item type
-  // Here we just remove it from the world
-  const current = { ...$activeLoot.get() };
-  delete current[id];
-  $activeLoot.set(current);
-  
-  return item;
+  const roomId = $currentRoomId.get();
+  // Spawn at ground level (0.1) instead of in the air (0.5)
+  // because the dynamic rigid bodies have an initial hop impulse.
+  emitDrop([position[0], 0.1, position[2]], roomId, dropType);
 };
 
 export const breakCrate = (id: string) => {
@@ -56,6 +32,5 @@ export const breakCrate = (id: string) => {
 }
 
 export const clearLoot = () => {
-    $activeLoot.set({});
     $brokenCrates.set({});
 }

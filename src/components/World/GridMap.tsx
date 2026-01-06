@@ -7,7 +7,6 @@ import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
 import { Crate } from './Crate';
 import { Door } from './Door';
-import { LootManager } from './LootManager';
 import { Pitfall } from './Pitfall';
 import { Portal } from './Portal';
 import { Rock } from './Rock';
@@ -384,8 +383,6 @@ export function GridMap() {
           />
         );
       })}
-      
-      <LootManager />
     </>
   );
 }
