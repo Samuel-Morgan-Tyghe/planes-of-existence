@@ -206,7 +206,7 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
   if (exploded && explosionPos) {
     return (
       <group>
-        <RigidBody position={explosionPos} type="fixed" sensor>
+        <RigidBody position={explosionPos} type="dynamic" gravityScale={0} sensor>
            <BallCollider 
              args={[3.5]} 
              onIntersectionEnter={({ other }) => {
@@ -214,7 +214,7 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
                 if (ud?.isBreakable) {
                    breakCrate(ud.crateId);
                    const t = other.rigidBody?.translation();
-                   if (t) spawnLoot([t.x, t.y, t.z]);
+                   if (t) spawnLoot([t.x, t.y + 0.5, t.z]);
                 }
                 if (ud?.isRock) {
                    breakRock(ud.rockId);

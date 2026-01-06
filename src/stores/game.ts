@@ -10,6 +10,7 @@ export const $drops = atom<Drop[]>([]);
 
 // Current active plane/view
 export const $plane = atom<PlaneType>('ISO');
+export const $playerYaw = atom<number>(0);
 
 // Player stats (artistic attributes)
 export const $stats = map<PlayerStats>({

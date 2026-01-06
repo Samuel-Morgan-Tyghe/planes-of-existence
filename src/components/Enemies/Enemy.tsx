@@ -114,10 +114,22 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     if (enemy.definition.id === 'turret') {
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     } else if (distance < detectionRange && distance > attackRange) {
-      const velocity = new Vector3()
-        .subVectors(playerPos, enemyVec)
-        .normalize()
-        .multiplyScalar(dynamicSpeed || enemy.definition.speed);
+      
+      // Calculate base direction
+      const baseDirection = new Vector3().subVectors(playerPos, enemyVec).normalize();
+      let finalDirection = baseDirection;
+
+      if (enemy.definition.id === 'parasite') {
+         // Chaotic Movement: Add orthogonal sine wave
+         // Calculate orthogonal vector (XZ plane)
+         const ortho = new Vector3(-baseDirection.z, 0, baseDirection.x);
+         const time = Date.now() / 200; // Frequency
+         const sway = Math.sin(time) * 0.8; // Amplitude
+         
+         finalDirection.add(ortho.multiplyScalar(sway)).normalize();
+      }
+
+      const velocity = finalDirection.multiplyScalar(dynamicSpeed || enemy.definition.speed);
       rb.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
     } else if (isRanged && distance > attackRange * 0.7 && distance <= attackRange) {
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);

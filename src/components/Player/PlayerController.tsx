@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody } from '@react-three/rapier';
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { $plane } from '../../stores/game';
+import { $plane, $playerYaw } from '../../stores/game';
 import { $isTeleporting } from '../../stores/player';
 
 interface PlayerControllerProps {
@@ -114,6 +114,8 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
         camera.rotation.x = globalPitch;
         camera.rotation.y = 0;
         camera.rotation.z = 0;
+        
+        $playerYaw.set(globalYaw);
     }
 
     const velocity = rb.linvel();
