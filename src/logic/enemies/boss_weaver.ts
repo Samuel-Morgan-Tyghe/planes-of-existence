@@ -76,7 +76,7 @@ export function updateWeaverBoss(
   nextBossState.rotationAngle += delta * 2;
 
   if (nextBossState.attackTimer <= 0) {
-    const fireRate = phase === 4 ? 0.15 : phase === 3 ? 0.3 : phase === 2 ? 0.6 : 1.0;
+    const fireRate = phase === 4 ? 0.3 : phase === 3 ? 0.6 : phase === 2 ? 1.0 : 1.5;
     nextBossState.attackTimer = fireRate;
 
     if (phase === 1) {
@@ -90,14 +90,14 @@ export function updateWeaverBoss(
           direction: [dir.x, 0, dir.z],
           type: 'normal',
           damage: enemy.definition.damage,
-          speed: 8,
+          speed: 6, // Was 8
           color: '#8A2BE2',
           size: 1.2
         });
       }
     } else if (phase === 2) {
       // Ring + Target
-      const numProjectiles = 12;
+      const numProjectiles = 10; // Reduced count
       for (let i = 0; i < numProjectiles; i++) {
         const angle = (i * Math.PI * 2) / numProjectiles;
         const dir = new Vector3(Math.cos(angle), 0, Math.sin(angle));
@@ -106,7 +106,7 @@ export function updateWeaverBoss(
           direction: [dir.x, 0, dir.z],
           type: 'normal',
           damage: enemy.definition.damage,
-          speed: 10,
+          speed: 7, // Was 10
           color: '#00FFFF',
           size: 1.0
         });
@@ -118,13 +118,13 @@ export function updateWeaverBoss(
         direction: [dirPlayer.x, 0, dirPlayer.z],
         type: 'normal',
         damage: enemy.definition.damage * 1.5,
-        speed: 15,
+        speed: 12, // Was 15
         color: '#FF0000',
         size: 1.5
       });
     } else if (phase === 3) {
       // Rapid Chaos
-      const numProjectiles = 6;
+      const numProjectiles = 4; // Reduced count
       for (let i = 0; i < numProjectiles; i++) {
         const angle = Math.random() * Math.PI * 2;
         const dir = new Vector3(Math.cos(angle), 0, Math.sin(angle));
@@ -133,15 +133,15 @@ export function updateWeaverBoss(
           direction: [dir.x, 0, dir.z],
           type: 'normal',
           damage: enemy.definition.damage,
-          speed: 12 + Math.random() * 8,
+          speed: 8 + Math.random() * 6, // Was 12 + random 8
           color: Math.random() > 0.5 ? '#FF00FF' : '#4B0082',
           size: 0.8,
           lifetime: 3.0
         });
       }
     } else if (phase === 4) {
-      // GLITCH OVERLOAD: Rapid 16-way oscillating fire
-      const numProjectiles = 16;
+      // GLITCH OVERLOAD: Rapid 12-way oscillating fire (reduced from 16)
+      const numProjectiles = 12;
       const swirl = Math.sin(time * 5) * 1.0;
       for (let i = 0; i < numProjectiles; i++) {
         const angle = (i * Math.PI * 2) / numProjectiles + swirl;
@@ -151,7 +151,7 @@ export function updateWeaverBoss(
           direction: [dir.x, 0, dir.z],
           type: 'normal',
           damage: enemy.definition.damage * 0.8,
-          speed: 10,
+          speed: 8, // Was 10
           color: time % 0.2 > 0.1 ? '#FFFFFF' : '#00FFFF',
           size: 0.7,
           lifetime: 2.0

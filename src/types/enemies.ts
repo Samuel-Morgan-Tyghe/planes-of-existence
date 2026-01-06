@@ -117,7 +117,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     attackType: 'ranged',
     attackRange: 12,
     projectileSpeed: 8,
-    fireRate: 1500,
+    fireRate: 2000,
   },
   echoer: {
     id: 'echoer',
@@ -159,7 +159,7 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     attackType: 'ranged',
     attackRange: 30,
     projectileSpeed: 10,
-    fireRate: 800, // Frequent patterns
+    fireRate: 1200, // Slower base pattern repeat
   },
   growth_health: {
     id: 'growth_health',
