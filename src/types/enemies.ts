@@ -197,6 +197,19 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     experience: 20,
     attackType: 'melee',
   },
+  knight: {
+    id: 'knight',
+    name: 'Knight',
+    health: 40, // Tankier than Hopper
+    damage: 12, // Harder hitting
+    speed: 6.0, 
+    size: 1.1,
+    color: '#4682B4', // SteelBlue
+    dropChance: 0.35,
+    experience: 35,
+    attackType: 'melee',
+  },
+  
 };
 
 export interface EnemyState {

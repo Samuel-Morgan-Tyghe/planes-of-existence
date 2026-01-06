@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import { EnemyState } from '../../types/enemies';
 import { getHopperVelocity } from './behaviors/hopper';
+import { getKnightVelocity } from './behaviors/knight';
 import { getParasiteVelocity } from './behaviors/parasite';
 import { getTurretVelocity } from './behaviors/turret';
 
@@ -27,6 +28,12 @@ export function calculateEnemyVelocity(
      const baseDirection = new Vector3().subVectors(playerPos, enemyVec).normalize();
      return getHopperVelocity(baseDirection, distance, 15, speed); 
   }
+  
+  // 3. Knight Logic
+  if (enemy.definition.id === 'knight') {
+     const baseDirection = new Vector3().subVectors(playerPos, enemyVec).normalize();
+     return getKnightVelocity(baseDirection, distance, 20, speed, enemy.id); 
+  }
 
   // 3. Ranged Positioning (Stop at max range)
   if (isRanged && distance > attackRange * 0.7 && distance <= attackRange) {
@@ -35,7 +42,7 @@ export function calculateEnemyVelocity(
 
   // 4. Melee Positioning (Stop when in hitting range)
   if (!isRanged && distance <= attackRange) {
-     if (enemy.definition.id !== 'parasite' && enemy.definition.id !== 'hopper') {
+     if (enemy.definition.id !== 'parasite' && enemy.definition.id !== 'hopper' && enemy.definition.id !== 'knight') {
         return new Vector3(0, 0, 0);
      }
   }
