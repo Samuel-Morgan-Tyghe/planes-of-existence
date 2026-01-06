@@ -27,7 +27,13 @@ export function Door({ position, direction, locked, playerPosition, onEnter, vis
 
     const wasNear = isNear;
     const nowNear = distance < ACTIVATION_DISTANCE;
+
     setIsNear(nowNear);
+
+    // Debug every ~1s (assuming 60fps)
+    if (Math.random() < 0.01 && distance < 10) {
+       console.log(`[Door Debug] Dir: ${direction}, Locked: ${locked}, Dist: ${distance.toFixed(2)}, Near: ${nowNear}`);
+    }
 
     if (!wasNear && nowNear && !locked) {
       console.log(`🚪 Door ${direction} activated! Position: [${position[0].toFixed(1)}, ${position[2].toFixed(1)}], Player: [${playerPosition[0].toFixed(1)}, ${playerPosition[2].toFixed(1)}], Distance: ${distance.toFixed(2)}`);
@@ -44,20 +50,40 @@ export function Door({ position, direction, locked, playerPosition, onEnter, vis
 
   return (
     <group position={position} visible={visible}>
-      {/* Door frame - sensor collider if unlocked (trigger), solid if locked */}
-      <RigidBody key={`door-rb-${locked}`} type="fixed" sensor={!locked}>
-        <CuboidCollider args={[1.5, 2, 0.15]} rotation={rotation} />
-        <mesh rotation={rotation}>
-          <boxGeometry args={[3, 4, 0.3]} />
-          <meshStandardMaterial
-            color={color}
-            emissive={color}
-            emissiveIntensity={isNear ? 2.0 * pulseIntensity : 1.0}
-            transparent
-            opacity={locked ? 0.7 : 0.2} // Make unlocked doors more transparent
-          />
-        </mesh>
+      {/* 1. Permanent Sensor for Teleportation */}
+      <RigidBody 
+        type="fixed" 
+        sensor 
+        userData={{ isSensor: true }}
+        onIntersectionEnter={() => {
+          if (!locked) {
+            console.log(`🚪 Door ${direction} triggered!`);
+            onEnter();
+          }
+        }}
+      >
+        {/* Slightly larger sensor to ensure detection */}
+        <CuboidCollider args={[1.5, 2, 0.5]} rotation={rotation} />
       </RigidBody>
+
+      {/* 2. Conditional Physical Barrier when Locked */}
+      {locked && (
+        <RigidBody type="fixed" userData={{ isWall: true }}>
+          <CuboidCollider args={[1.5, 2, 0.15]} rotation={rotation} />
+        </RigidBody>
+      )}
+
+      {/* Visuals */}
+      <mesh rotation={rotation}>
+        <boxGeometry args={[3, 4, 0.3]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={isNear ? 2.0 * pulseIntensity : 1.0}
+          transparent
+          opacity={locked ? 0.7 : 0.2} 
+        />
+      </mesh>
 
       {/* Glow effect */}
       {isNear && locked && (

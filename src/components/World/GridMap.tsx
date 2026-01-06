@@ -6,6 +6,7 @@ import { $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
 import { Door } from './Door';
+import { Pitfall } from './Pitfall';
 import { Portal } from './Portal';
 import { Spikes } from './Spikes';
 import { Wall } from './Wall';
@@ -98,7 +99,8 @@ export function GridMap() {
       const roomSize = roomWorldSize;
       const halfRoom = roomSize / 2;
       // Offset from center to put player near the door (but inside room)
-      const doorOffset = halfRoom - 2.5; 
+      // Must be > ACTIVATION_DISTANCE (2.5) to avoid immediate re-trigger
+      const doorOffset = halfRoom - 6.0; 
 
       let offsetX = 0;
       let offsetZ = 0;
@@ -124,20 +126,17 @@ export function GridMap() {
 
       const newWorldOffset: [number, number, number] = [
         targetRoom.gridX * roomWorldSize + offsetX,
-        1.0, // Force safe height above floor
+        3.0, // Force safe height above floor
         targetRoom.gridY * roomWorldSize + offsetZ,
       ];
       
-      console.log(`🚪 Teleporting:`, {
+      console.log(`🚪 Teleporting Player:`, {
+        reason: 'Door Entry',
         fromRoom: currentRoomId,
         toRoom: targetRoom.id,
         direction,
-        roomWorldSize,
-        doorOffset,
-        offsetX,
-        offsetZ,
-        targetGrid: [targetRoom.gridX, targetRoom.gridY],
-        newWorldPos: newWorldOffset
+        offsetApplied: direction === 'north' || direction === 'south' ? offsetZ : offsetX,
+        finalPos: newWorldOffset
       });
 
       $teleportTo.set(newWorldOffset);
@@ -216,36 +215,24 @@ export function GridMap() {
         const isVisited = visitedRooms.has(room.id);
 
         return (
-          <group key={room.id}>
-            {/* Floor for this room - ONLY render physics if visited */}
-            {isVisited ? (
-              <RigidBody 
-                type="fixed" 
-                userData={{ isFloor: true }} 
-                position={[layout.worldOffset[0], -0.5, layout.worldOffset[2]]}
-              >
-                <CuboidCollider args={[roomWorldSize / 2, 0.5, roomWorldSize / 2]} />
-                <mesh
-                  receiveShadow
-                >
-                  <boxGeometry args={[roomWorldSize, 1, roomWorldSize]} />
-                  <meshStandardMaterial
-                    color={isCurrentRoom ? '#333333' : '#222222'}
-                  />
-                </mesh>
-              </RigidBody>
-            ) : (
+            <group key={room.id}>
+            {/* Floor for this room - Always render physics to prevent falling */}
+            <RigidBody 
+              type="fixed" 
+              userData={{ isFloor: true }} 
+              position={[layout.worldOffset[0], -0.5, layout.worldOffset[2]]}
+            >
+              <CuboidCollider args={[roomWorldSize / 2, 0.5, roomWorldSize / 2]} />
               <mesh
                 receiveShadow
-                position={[layout.worldOffset[0], -0.5, layout.worldOffset[2]]}
+                visible={isVisited} // Only visible if visited
               >
                 <boxGeometry args={[roomWorldSize, 1, roomWorldSize]} />
                 <meshStandardMaterial
-                  color="#111111"
-                  visible={false}
+                  color={isCurrentRoom ? '#333333' : '#222222'}
                 />
               </mesh>
-            )}
+            </RigidBody>
 
             {/* Fog of war - black overlay for unvisited rooms */}
             {!isVisited && (
@@ -258,54 +245,54 @@ export function GridMap() {
               </mesh>
             )}
 
-            {/* Solid boundary walls on edges where there's no door - ONLY if visited */}
-            {isVisited && !room.doors.some(d => d.direction === 'north') && (
+            {/* Solid boundary walls - Always render physics */}
+            {!room.doors.some(d => d.direction === 'north') && (
               <RigidBody 
                 type="fixed" 
                 userData={{ isWall: true, indestructible: true }} 
                 position={[layout.worldOffset[0], 3.5, layout.worldOffset[2] - roomWorldSize / 2]}
               >
                 <CuboidCollider args={[roomWorldSize / 2, 4, 0.5]} />
-                <mesh castShadow receiveShadow>
+                <mesh castShadow receiveShadow visible={isVisited}>
                   <boxGeometry args={[roomWorldSize, 8, 1]} />
                   <meshStandardMaterial color="#222222" />
                 </mesh>
               </RigidBody>
             )}
-            {isVisited && !room.doors.some(d => d.direction === 'south') && (
+            {!room.doors.some(d => d.direction === 'south') && (
               <RigidBody 
                 type="fixed" 
                 userData={{ isWall: true, indestructible: true }} 
                 position={[layout.worldOffset[0], 3.5, layout.worldOffset[2] + roomWorldSize / 2]}
               >
                 <CuboidCollider args={[roomWorldSize / 2, 4, 0.5]} />
-                <mesh castShadow receiveShadow>
+                <mesh castShadow receiveShadow visible={isVisited}>
                   <boxGeometry args={[roomWorldSize, 8, 1]} />
                   <meshStandardMaterial color="#222222" />
                 </mesh>
               </RigidBody>
             )}
-            {isVisited && !room.doors.some(d => d.direction === 'east') && (
+            {!room.doors.some(d => d.direction === 'east') && (
               <RigidBody 
                 type="fixed" 
                 userData={{ isWall: true, indestructible: true }} 
                 position={[layout.worldOffset[0] + roomWorldSize / 2, 3.5, layout.worldOffset[2]]}
               >
                 <CuboidCollider args={[0.5, 4, roomWorldSize / 2]} />
-                <mesh castShadow receiveShadow>
+                <mesh castShadow receiveShadow visible={isVisited}>
                   <boxGeometry args={[1, 8, roomWorldSize]} />
                   <meshStandardMaterial color="#222222" />
                 </mesh>
               </RigidBody>
             )}
-            {isVisited && !room.doors.some(d => d.direction === 'west') && (
+            {!room.doors.some(d => d.direction === 'west') && (
               <RigidBody 
                 type="fixed" 
                 userData={{ isWall: true, indestructible: true }} 
                 position={[layout.worldOffset[0] - roomWorldSize / 2, 3.5, layout.worldOffset[2]]}
               >
                 <CuboidCollider args={[0.5, 4, roomWorldSize / 2]} />
-                <mesh castShadow receiveShadow>
+                <mesh castShadow receiveShadow visible={isVisited}>
                   <boxGeometry args={[1, 8, roomWorldSize]} />
                   <meshStandardMaterial color="#222222" />
                 </mesh>
@@ -338,6 +325,9 @@ export function GridMap() {
                   // Spikes (Hazard)
                   // console.log(`⚠️ Rendering spike at ${worldPos}`); 
                   return <Spikes key={`spikes-${room.id}-${x}-${y}`} position={worldPos} />;
+                } else if (tile === 8) {
+                  // Pit (Falling Hazard)
+                  return <Pitfall key={`pit-${room.id}-${x}-${y}`} position={worldPos} />;
                 } else if (tile === 4 && roomCleared && isCurrentRoom) {
                   return (
                     <Portal

@@ -164,11 +164,8 @@ export function WeaponSystem() {
       
       if (shootingDir.lengthSq() > 0) {
         finalDir.copy(shootingDir).normalize();
-      } else if (plane === 'FPS') {
-        const forward = new Vector3();
-        camera.getWorldDirection(forward);
-        finalDir.copy(forward);
-      }
+
+    }
     }
 
     const direction: [number, number, number] = [finalDir.x, finalDir.y, finalDir.z];

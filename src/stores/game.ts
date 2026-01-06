@@ -33,6 +33,8 @@ export const $stats = map<PlayerStats>({
   stealthMultiplier: 1.0,
   lootRarityBonus: 0,
   incomingDamageMultiplier: 1.0,
+  knockback: 1.0,
+  knockbackResistance: 1.0,
 });
 
 // Inventory (itemId -> count/level)

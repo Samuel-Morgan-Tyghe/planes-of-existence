@@ -54,7 +54,7 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
         const parent = hit.collider.parent();
         const userData = (parent as any)?.userData;
 
-        if (userData?.isPlayer || userData?.isFloor) return;
+        if (userData?.isPlayer || userData?.isFloor || userData?.isSensor) return;
 
         if (!hit.collider.isSensor()) {
           if (userData?.isWall) {

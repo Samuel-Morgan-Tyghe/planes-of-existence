@@ -297,6 +297,12 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     setHitEffects(prev => prev.filter(e => e.id !== id));
   };
 
+  const handleIntersection = (_other: any) => {
+    // Collision logic moved to Player.tsx for Contact Damage
+    // We can keep this empty or use it for specific enemy-side logic if needed later
+    if (enemy.isDead || !active) return;
+  };
+
   return (
     <>
       {/* Hit Effects */}
@@ -315,11 +321,13 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       colliders={false}
       mass={1}
       position={enemy.position}
-      userData={{ isEnemy: true, enemyId: enemy.id, health: enemy.health, size: enemy.definition.size }}
+      userData={{ isEnemy: true, enemyId: enemy.id, health: enemy.health, damage: enemy.definition.damage, size: enemy.definition.size }}
       enabledTranslations={[true, true, true]}
       lockRotations={true}
       ccd={true}
+      onIntersectionEnter={(e) => handleIntersection(e.other)}
     >
+      <CuboidCollider args={[enemy.definition.size / 2, enemy.definition.size / 2, enemy.definition.size / 2]} sensor />
       <CuboidCollider args={[enemy.definition.size / 2, enemy.definition.size / 2, enemy.definition.size / 2]} />
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[enemy.definition.size, enemy.definition.size, enemy.definition.size]} />

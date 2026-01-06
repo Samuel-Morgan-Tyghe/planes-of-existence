@@ -41,6 +41,8 @@ export function restartRun() {
     stealthMultiplier: 1.0,
     lootRarityBonus: 0,
     incomingDamageMultiplier: 1.0,
+    knockback: 1.0,
+    knockbackResistance: 1.0,
   });
   
   // Clear inventory

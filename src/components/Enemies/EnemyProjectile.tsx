@@ -23,6 +23,7 @@ export function EnemyProjectile({
   direction,
   speed,
   damage,
+  color,
   onDestroy,
   size,
 }: EnemyProjectileProps & { id: number }) {
@@ -106,6 +107,11 @@ export function EnemyProjectile({
       }}
     >
       <BallCollider args={[0.5 * size]} />
+      {/* Direct Visual Rendering - Bypassing InstancedMesh for reliability */}
+      <mesh castShadow>
+        <sphereGeometry args={[0.5 * size, 8, 8]} />
+        <meshBasicMaterial color={color} toneMapped={false} />
+      </mesh>
     </RigidBody>
   );
 }

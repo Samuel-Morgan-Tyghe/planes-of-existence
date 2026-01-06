@@ -5,8 +5,9 @@ import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier'
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { $currentFloor, $currentRoomId, $plane, $stats } from '../../stores/game';
-import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo, $velocity } from '../../stores/player';
+import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo, $velocity, takeDamage } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
+import { $knockbackEvents } from '../../systems/events';
 import { PlayerController } from './PlayerController';
 
 const SPAWN_POSITION: [number, number, number] = [0, 0.5, 0];
@@ -100,13 +101,29 @@ export function Player() {
 
   // Sync teleport signal to ref
   useEffect(() => {
-    return $teleportTo.subscribe((val) => {
-      if (val) {
-        console.log('📡 Teleport signal received:', val);
-        teleportTargetRef.current = val as [number, number, number];
+    return $teleportTo.subscribe((target) => {
+      if (target) {
+        console.log('📡 Teleport signal received:', target);
+        teleportTargetRef.current = [...target] as [number, number, number];
         $isTeleporting.set(true);
-        teleportFrameLockRef.current = 3; // Lock for 3 frames
+        teleportFrameLockRef.current = 5; // Lock for 5 frames
       }
+    });
+  }, []);
+
+
+  // Handle Knockback events
+  useEffect(() => {
+    return $knockbackEvents.subscribe((event) => {
+      if (!event || !rigidBodyRef.current) return;
+      
+      console.log('💥 Applying knockback to player:', event);
+      const rb = rigidBodyRef.current;
+      rb.applyImpulse({ 
+        x: event.direction[0] * event.force, 
+        y: event.force * 0.5, // Small upward pop
+        z: event.direction[2] * event.force 
+      }, true);
     });
   }, []);
 
@@ -118,15 +135,68 @@ export function Player() {
     }
   }, []);
 
-  // Flash red when taking damage (but not during invulnerability)
+  // Flash red AND trigger I-frames when taking damage
   useEffect(() => {
     if (health < lastHealthRef.current && !isInvulnerableRef.current) {
+      console.log('💔 Player hit! Triggering I-Frames.');
+      
+      // Visuals
       setDamageFlash(true);
-      setDamageIntensity(1.0); // Start at full intensity
-      setTimeout(() => setDamageFlash(false), 300);
+      setDamageIntensity(1.0);
+      
+      // I-Frames
+      setIsInvulnerable(true);
+      $isInvulnerable.set(true);
+      isInvulnerableRef.current = true;
+      
+      // Knockback / Shake usually happens via event, but we ensure state is safe
+      
+      // Clear I-frames after 1s
+      setTimeout(() => {
+        setDamageFlash(false);
+        setIsInvulnerable(false);
+        $isInvulnerable.set(false);
+        isInvulnerableRef.current = false;
+        console.log('🛡️ I-Frames expired.');
+      }, 1000); 
     }
     lastHealthRef.current = health;
   }, [health]);
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleCollision = (other: any) => {
+    if (isDead || isInvulnerableRef.current || $isInvulnerable.get()) return;
+    
+    // Check for Enemy Collision
+    if (other.rigidBodyObject?.userData?.isEnemy) {
+       const enemyData = other.rigidBodyObject.userData;
+       const damage = enemyData.damage || 10;
+       
+       console.log('💥 Player collided with Enemy! Taking damage:', damage);
+       takeDamage(damage);
+       
+       // Calculate Knockback (Enemy -> Player)
+       const enemyPos = other.rigidBodyObject.translation();
+       const playerPos = rigidBodyRef.current?.translation();
+       
+       if (enemyPos && playerPos) {
+           const dirX = playerPos.x - enemyPos.x;
+           const dirZ = playerPos.z - enemyPos.z;
+           const length = Math.sqrt(dirX * dirX + dirZ * dirZ) || 1;
+           
+           // Normalize and Scale
+           // Stronger bounce based on resistance (lower resistance = higher bounce? Or linear?)
+           // Logic: Resistance 1.0 = Normal. Resistance 2.0 = Half bounce.
+           const force = 12.0 / stats.knockbackResistance; 
+           
+           rigidBodyRef.current?.applyImpulse({
+               x: (dirX / length) * force,
+               y: 5.0, // Significant pop up
+               z: (dirZ / length) * force
+           }, true);
+       }
+    }
+  };
 
   // Fade damage indicator over time
   useFrame((_state, delta) => {
@@ -235,6 +305,7 @@ export function Player() {
       gravityScale={1.5}
       canSleep={false}
       userData={{ isPlayer: true }}
+      onCollisionEnter={(e) => handleCollision(e.other)}
     >
       <CuboidCollider args={[0.5 * stats.resolution, 0.5 * stats.resolution, 0.5 * stats.resolution]} />
       <mesh ref={meshRef} castShadow>

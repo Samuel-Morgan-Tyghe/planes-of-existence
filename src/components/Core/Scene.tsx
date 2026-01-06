@@ -1,5 +1,6 @@
 import { useStore } from '@nanostores/react';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
+import { clearEnemyProjectiles } from '../../stores/projectiles';
 import { $restartTrigger } from '../../stores/restart';
 import { CameraManager } from '../Cameras/CameraManager';
 import { PlaneSwitcher } from '../Cameras/PlaneSwitcher';
@@ -34,13 +35,28 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
+import { Physics } from '@react-three/rapier';
+
 export function Scene() {
   const restartTrigger = useStore($restartTrigger);
 
   const handleSpawnRequest = useCallback(() => {}, []);
 
+  useEffect(() => {
+    return () => {
+        clearEnemyProjectiles();
+    };
+  }, []);
+
   return (
-    <>
+    <Physics gravity={[0, -9.81, 0]} debug={false}>
+      <ambientLight intensity={0.5} />
+      <directionalLight 
+        position={[10, 10, 5]} 
+        intensity={1} 
+        castShadow 
+        shadow-mapSize={[2048, 2048]}
+      />
       <CameraManager />
       <PlaneSwitcher />
       <GridMap key={`grid-${restartTrigger}`} />
@@ -56,6 +72,6 @@ export function Scene() {
       <EffectsManager />
 
       <ThrownBombGroup />
-    </>
+    </Physics>
   );
 }

@@ -21,6 +21,9 @@ export interface PlayerStats {
   stealthMultiplier: number;
   lootRarityBonus: number;
   incomingDamageMultiplier: number;
+  // Knockback
+  knockback: number;           // Force applied to enemies
+  knockbackResistance: number; // Resistance to incoming knockback
 }
 
 export interface ProjectileData {

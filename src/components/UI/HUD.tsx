@@ -1,18 +1,17 @@
 import { useStore } from '@nanostores/react';
 import { useEffect, useRef, useState } from 'react';
-import { $coins, $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, $showCombatStats, $stats, toggleCombatStats, togglePause } from '../../stores/game';
+import { $coins, $currentFloor, $currentRoomId, $enemiesAlive, $floorData, $inventory, $isPaused, $plane, $roomCleared, $showCombatStats, toggleCombatStats, togglePause } from '../../stores/game';
 import { $pixels } from '../../stores/meta';
-import { $health, $maxHealth, $maxShield, $position, $shield } from '../../stores/player';
+import { $health, $position } from '../../stores/player';
+import { restartRun } from '../../stores/restart';
 import { debugState } from '../../utils/debug';
+import { HealthBar } from './HUD/HealthBar';
+import { InventoryPanel } from './HUD/InventoryPanel';
+import { StatsPanel } from './HUD/StatsPanel';
 import { MiniMap } from './MiniMap';
 
 export function HUD() {
-  const health = useStore($health);
-  const maxHealth = useStore($maxHealth);
-  const shield = useStore($shield);
-  const maxShield = useStore($maxShield);
   const plane = useStore($plane);
-  const inventory = useStore($inventory);
   const pixels = useStore($pixels);
   const currentFloor = useStore($currentFloor);
   const currentRoomId = useStore($currentRoomId);
@@ -22,8 +21,10 @@ export function HUD() {
   const isPaused = useStore($isPaused);
   const playerPosition = useStore($position);
   const coins = useStore($coins);
-  const stats = useStore($stats);
   const showCombatStats = useStore($showCombatStats);
+  const health = useStore($health);
+
+  const inventory = useStore($inventory);
 
   const [showDebug, setShowDebug] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -32,7 +33,7 @@ export function HUD() {
   const [damageFlash, setDamageFlash] = useState(0); // 0-1 intensity
   const lastHealthRef = useRef(health);
 
-  const healthPercent = (health / maxHealth) * 100;
+
 
   // Flash screen red when taking damage
   useEffect(() => {
@@ -129,57 +130,7 @@ export function HUD() {
         />
       )}
       {/* Health Bar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          width: '200px',
-          backgroundColor: '#000000',
-          border: '2px solid #00ff00',
-          padding: '4px',
-        }}
-      >
-        {/* Shield Bar (Overlay) */}
-        {shield > 0 && (
-            <div
-                style={{
-                    position: 'absolute',
-                    top: '-10px',
-                    left: '-2px',
-                    width: `${(shield / maxShield) * 100}%`,
-                    height: '8px',
-                    backgroundColor: '#00ffff',
-                    border: '1px solid #00ffff',
-                    boxShadow: '0 0 5px #00ffff',
-                    transition: 'width 0.3s',
-                    zIndex: 2
-                }}
-            />
-        )}
-        
-        {/* Shield Text */}
-        {shield > 0 && (
-             <div style={{ 
-                 position: 'absolute', top: '-25px', left: '0', 
-                 color: '#00ffff', fontSize: '10px', fontWeight: 'bold' 
-             }}>
-                 SHIELD: {Math.ceil(shield)}
-             </div>
-        )}
-
-        <div
-          style={{
-            width: `${healthPercent}%`,
-            height: '20px',
-            backgroundColor: healthPercent > 50 ? '#00ff00' : healthPercent > 25 ? '#ffff00' : '#ff0000',
-            transition: 'width 0.3s',
-          }}
-        />
-        <div style={{ marginTop: '4px', fontSize: '12px' }}>
-          HP: {Math.ceil(health)}/{maxHealth}
-        </div>
-      </div>
+      <HealthBar />
 
       {/* Plane Indicator */}
       <div
@@ -281,97 +232,10 @@ export function HUD() {
         Bombs: {inventory['bomb'] || 0} (E)
       </div>
       {/* Combat Stats */}
-      {showCombatStats && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '230px',
-            left: '20px',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            border: '2px solid #00ffff',
-            padding: '10px',
-            fontSize: '12px',
-            color: '#00ffff',
-            minWidth: '150px',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid #00ffff', paddingBottom: '4px' }}>
-            COMBAT MODIFIERS
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span>Damage:</span>
-            <span style={{ color: '#ff0000', fontWeight: 'bold' }}>
-              x{stats.damage.toFixed(2)}
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span>Fire Rate:</span>
-            <span style={{ color: '#ffff00', fontWeight: 'bold' }}>{stats.fireRate.toFixed(1)}/s</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span>Range:</span>
-            <span style={{ color: '#0088ff', fontWeight: 'bold' }}>{stats.range.toFixed(1)}s</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span>Proj. Size:</span>
-            <span style={{ color: '#00ff00', fontWeight: 'bold' }}>{stats.projectileSize.toFixed(2)}x</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Proj. Speed:</span>
-            <span style={{ color: '#00ffff', fontWeight: 'bold' }}>{stats.projectileSpeed.toFixed(1)}</span>
-          </div>
-
-          <div style={{ fontWeight: 'bold', marginTop: '12px', marginBottom: '8px', borderBottom: '1px solid #ff00ff', paddingBottom: '4px', color: '#ff00ff' }}>
-            ARTISTIC ATTRIBUTES
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span>Sharpness:</span>
-            <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{(stats.sharpness * 100).toFixed(0)}%</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span>Saturation:</span>
-            <span style={{ color: '#ff00ff', fontWeight: 'bold' }}>{(stats.saturation * 100).toFixed(0)}%</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span>Contrast:</span>
-            <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{(stats.contrast * 100).toFixed(0)}%</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span>Brightness:</span>
-            <span style={{ color: '#ffff00', fontWeight: 'bold' }}>{(stats.brightness * 100).toFixed(0)}%</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Resolution:</span>
-            <span style={{ color: '#00ff00', fontWeight: 'bold' }}>{(stats.resolution * 100).toFixed(0)}%</span>
-          </div>
-        </div>
-      )}
+      {showCombatStats && <StatsPanel />}
 
       {/* Inventory */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '20px',
-          backgroundColor: '#000000',
-          border: '2px solid #00ff00',
-          padding: '8px',
-          fontSize: '12px',
-          maxWidth: '300px',
-        }}
-      >
-        <div style={{ marginBottom: '4px' }}>Items:</div>
-        {Object.keys(inventory).length === 0 ? (
-          <div style={{ color: '#666' }}>No items</div>
-        ) : (
-          Object.entries(inventory).map(([itemId, count]) => (
-            <div key={itemId} style={{ marginLeft: '8px' }}>
-              {itemId}: x{count}
-            </div>
-          ))
-        )}
-      </div>
+      <InventoryPanel />
 
       {/* Controls Hint */}
       <div
@@ -511,14 +375,31 @@ export function HUD() {
             fontWeight: 'bold',
             zIndex: 3000,
             textAlign: 'center',
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            pointerEvents: 'auto', // Allow clicking the button
           }}
         >
           <div style={{ color: '#ff0000', marginBottom: '10px' }}>YOU DIED</div>
-          <div style={{ fontSize: '14px', color: '#ffffff', opacity: 0.8 }}>
-            Restarting...
-          </div>
+          <button
+            onClick={() => restartRun()}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#00ff00',
+              color: '#000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              fontSize: '18px',
+              textTransform: 'uppercase',
+            }}
+          >
+            Restart
+          </button>
         </div>
       )}
 

@@ -418,34 +418,90 @@ export function generateRoomLayout(
     }
   }
 
-  // Place Spikes (Environmental Hazards)
+  // Helper to place a clump of hazards
+  const placeHazardClump = (tileType: 7 | 8, totalCount: number, minClumpSize: number, maxClumpSize: number) => {
+    let remaining = totalCount;
+    let safetyBreaker = 0;
+
+    while (remaining > 0 && safetyBreaker < 100) {
+      safetyBreaker++;
+      
+      // 1. Pick a random start seed
+      let startX, startY;
+      let attempts = 0;
+      do {
+        startX = rng.nextInt(1, ROOM_SIZE - 2);
+        startY = rng.nextInt(1, ROOM_SIZE - 2);
+        attempts++;
+      } while (
+        (grid[startY][startX] !== 0 || (startX === playerGridX && startY === playerGridY)) && 
+        attempts < 50
+      );
+
+      if (grid[startY][startX] !== 0) continue; // Failed to find start
+
+      // 2. Grow clump
+      const clumpSize = Math.min(remaining, rng.nextInt(minClumpSize, maxClumpSize));
+      const candidates: [number, number][] = [[startX, startY]];
+      const clumpTiles: [number, number][] = [];
+
+      // Add start to grid immediately
+      grid[startY][startX] = tileType;
+      clumpTiles.push([startX, startY]);
+      remaining--;
+      
+      let currentClumpCount = 1;
+
+      while (currentClumpCount < clumpSize && candidates.length > 0) {
+        // Pick random candidate to grow from (makes it irregular)
+        const randIndex = rng.nextInt(0, candidates.length - 1);
+        const [cx, cy] = candidates[randIndex];
+        
+        // Try all neighbors
+        const neighbors = [
+          [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
+        ];
+        
+        // Shuffle neighbors for randomness
+        const shuffled = rng.shuffle(neighbors);
+        
+        let grew = false;
+        for (const [nx, ny] of shuffled) {
+          if (
+            nx > 0 && nx < ROOM_SIZE - 1 && 
+            ny > 0 && ny < ROOM_SIZE - 1 &&
+            grid[ny][nx] === 0 && // Must be empty floor
+            !(nx === playerGridX && ny === playerGridY) // Not player start
+          ) {
+            grid[ny][nx] = tileType;
+            candidates.push([nx, ny]);
+            clumpTiles.push([nx, ny]);
+            currentClumpCount++;
+            remaining--;
+            grew = true;
+            if (currentClumpCount >= clumpSize) break;
+          }
+        }
+        
+        if (!grew) {
+          // If couldn't grow from here, remove from candidates
+          candidates.splice(randIndex, 1);
+        }
+      }
+    }
+  };
+
+  // Place Spikes (Environmental Hazards) - Clumped
   // Base count increases with floor number: 10 base + floor * 2
   const spikeCount = Math.floor(10 + floorNumber * 2);
-  // Don't spawn too many in small rooms, cap at 20
-  const actualSpikeCount = Math.min(spikeCount, 20);
-  
-  for (let i = 0; i < actualSpikeCount; i++) {
-    let x, y;
-    let attempts = 0;
-    do {
-      x = rng.nextInt(1, ROOM_SIZE - 2);
-      y = rng.nextInt(1, ROOM_SIZE - 2);
-      attempts++;
-      
-      // Safety Checks:
-      // 1. Must be floor (0)
-      // 2. Not player start (center)
-      // 3. Not blocking door (should be handled by grid check, but verify)
-      // 4. Not directly on top of loot/enemy spawn (though valid, let's keep clean)
-    } while (
-        (grid[y][x] !== 0 || (x === playerGridX && y === playerGridY)) && 
-        attempts < 50
-    );
+  const actualSpikeCount = Math.min(spikeCount, 25); // Increased cap for clumps
+  placeHazardClump(7, actualSpikeCount, 3, 6);
 
-    if (grid[y][x] === 0) {
-      grid[y][x] = 7; // Hazard (Spikes)
-    }
-  }
+  // Place Pits (Pitfalls) - Clumped
+  // Base count increases with floor number: 5 base + floor
+  const pitCount = Math.floor(5 + floorNumber);
+  const actualPitCount = Math.min(pitCount, 20);
+  placeHazardClump(8, actualPitCount, 2, 5);
 
   // Calculate world offset for this room
   const worldOffset: [number, number, number] = [

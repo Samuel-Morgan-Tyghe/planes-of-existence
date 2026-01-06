@@ -1,19 +1,32 @@
-import { useStore } from '@nanostores/react';
-import { Canvas } from './components/Core/Canvas';
+import { KeyboardControls } from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
+import { useMemo } from 'react';
+import { Scene } from './components/Core/Scene';
 import { HUD } from './components/UI/HUD';
-import { Tutorial } from './components/UI/Tutorial';
-import { $restartTrigger } from './stores/restart';
 import './styles/global.css';
 
 function App() {
-  const restartTrigger = useStore($restartTrigger);
+  const keyboardMap = useMemo(() => [
+    { name: 'forward', keys: ['ArrowUp', 'w', 'W'] },
+    { name: 'backward', keys: ['ArrowDown', 's', 'S'] },
+    { name: 'left', keys: ['ArrowLeft', 'a', 'A'] },
+    { name: 'right', keys: ['ArrowRight', 'd', 'D'] },
+    { name: 'jump', keys: ['Space'] },
+    { name: 'attack', keys: ['Enter', 'Delete', 'Click'] }, // Click handled separately but good to have mapping
+    { name: 'interact', keys: ['e', 'E'] }, // Throw bomb / Interact
+    { name: 'shift', keys: ['Shift'] },
+    { name: 'escape', keys: ['Escape'] },
+  ], []);
 
   return (
-    <div className="app">
-      <Tutorial />
-      <Canvas key={restartTrigger} />
-      <HUD />
-    </div>
+    <KeyboardControls map={keyboardMap}>
+      <div className="app">
+        <Canvas shadows camera={{ position: [0, 15, 10], fov: 50 }}>
+          <Scene />
+        </Canvas>
+        <HUD />
+      </div>
+    </KeyboardControls>
   );
 }
 
