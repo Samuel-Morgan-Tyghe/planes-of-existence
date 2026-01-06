@@ -134,10 +134,10 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
           onHit?.(data.damage, userData.enemyId);
           onDestroy();
         } else if (userData?.isBomb) {
-          // Push the bomb!
+          // Push the bomb slightly (bombs are heavy)
           const bombRigidBody = other.rigidBody;
           if (bombRigidBody) {
-            const pushForce = data.damage * 2;
+            const pushForce = data.damage * 0.2; // Reduced force for heavy bombs
             const impulse = directionRef.current.clone().multiplyScalar(pushForce);
             bombRigidBody.applyImpulse(impulse, true);
           }

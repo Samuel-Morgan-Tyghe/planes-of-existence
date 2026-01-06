@@ -24,6 +24,8 @@ export interface PlayerStats {
   // Knockback
   knockback: number;           // Force applied to enemies
   knockbackResistance: number; // Resistance to incoming knockback
+  // Movement
+  maxJumps: number;            // Number of jumps allowed (1 = single, 2 = double)
 }
 
 export interface ProjectileData {

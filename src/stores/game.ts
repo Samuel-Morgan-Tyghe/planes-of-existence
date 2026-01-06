@@ -36,6 +36,8 @@ export const $stats = map<PlayerStats>({
   incomingDamageMultiplier: 1.0,
   knockback: 1.0,
   knockbackResistance: 1.0,
+  // Movement
+  maxJumps: 1, // Number of jumps allowed (1 = single jump, 2 = double jump)
 });
 
 // Inventory (itemId -> count/level)
@@ -114,6 +116,12 @@ export const addItem = (itemId: string) => {
 
     $stats.set(newStats);
     console.log(`📈 Stats updated after picking up ${itemDef.name}:`, newStats);
+  }
+  
+  // Special handling for double_jump item
+  if (itemId === 'double_jump') {
+    $stats.setKey('maxJumps', 2);
+    console.log('🦘 Double jump unlocked!');
   }
 };
 

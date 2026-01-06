@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody } from '@react-three/rapier';
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { $currentRoomId, $plane, $playerYaw } from '../../stores/game';
+import { $currentRoomId, $plane, $playerYaw, $stats } from '../../stores/game';
 import { $isTeleporting } from '../../stores/player';
 import { $trails } from '../../stores/trails';
 
@@ -20,7 +20,9 @@ let globalYaw = 0;
 export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
   const plane = useStore($plane);
   const isTeleporting = useStore($isTeleporting);
+  const stats = useStore($stats);
   const keysRef = useRef<Set<string>>(new Set());
+  const jumpCountRef = useRef(0); // Track number of jumps performed
   
   // Use refs to track local usage, but sync with global
   const isLocked = useRef(false);
@@ -200,14 +202,20 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
     const isTryingToMove = Math.abs(targetVX) > 0 || Math.abs(targetVZ) > 0;
     
-    // Apply jump impulse if space is pressed and grounded
-    if (keys.has(' ') && isGrounded) {
-      rb.applyImpulse({ x: 0, y: JUMP_FORCE, z: 0 }, true);
-      console.log('🦘 Jump!');
-    }
-    
     // Re-read velocity after jump to ensure movement code doesn't override it
     const currentVelocity = rb.linvel();
+    
+    // Reset jump count when grounded
+    if (isGrounded && jumpCountRef.current > 0) {
+      jumpCountRef.current = 0;
+    }
+    
+    // Apply jump impulse if space is pressed and jumps remaining
+    if (keys.has(' ') && jumpCountRef.current < stats.maxJumps) {
+      rb.applyImpulse({ x: 0, y: JUMP_FORCE, z: 0 }, true);
+      jumpCountRef.current++;
+      console.log(`🦘 Jump ${jumpCountRef.current}/${stats.maxJumps}!`);
+    }
     
     if (isGrounded) {
       if (isTryingToMove) {
@@ -217,7 +225,6 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
           const inputDirZ = targetVZ / MAX_SPEED;
           
           // Speed maintains its current magnitude but instantly snaps to the new direction
-          // This removes the "sliding on ice" feeling when turning.
           const newSpeed = Math.min(MAX_SPEED, currentSpeed + ACCELERATION * 0.5 * delta);
           
           rb.setLinvel({
@@ -257,8 +264,8 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     const finalVel = rb.linvel();
     const finalSpeed = Math.sqrt(finalVel.x * finalVel.x + finalVel.z * finalVel.z);
     
-    if (finalSpeed > MAX_SPEED * 1.05) { 
-        const scale = (MAX_SPEED * 1.05) / finalSpeed;
+    if (finalSpeed > MAX_SPEED * 1.2) { 
+        const scale = (MAX_SPEED * 1.2) / finalSpeed;
         rb.setLinvel({ x: finalVel.x * scale, y: finalVel.y, z: finalVel.z * scale }, true);
     }
   });

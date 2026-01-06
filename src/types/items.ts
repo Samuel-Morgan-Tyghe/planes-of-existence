@@ -406,6 +406,15 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
     rarity: 'uncommon',
     statModifiers: { resolution: -0.2 }
   },
+  
+  // --- MOBILITY ---
+  double_jump: {
+    id: 'double_jump',
+    name: 'Air Dash Protocol',
+    description: 'Defies gravity momentarily. Grants one additional mid-air jump.',
+    rarity: 'uncommon',
+    statModifiers: {} // Mechanical effect handled in PlayerController
+  },
 };
 
 // Synergy Definitions

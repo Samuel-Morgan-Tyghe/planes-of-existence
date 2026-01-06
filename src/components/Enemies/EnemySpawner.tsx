@@ -200,12 +200,19 @@ export function EnemySpawner({
     if (!currentRoom || currentRoom.type !== 'boss') return;
     
     // Check if boss already exists for this room
-    const bossExists = enemies.some(e => e.roomId === currentRoomId && e.definition.id === 'weaver');
-    if (bossExists) return;
+    const currentEnemies = $enemies.get();
+    const bossExists = currentEnemies.some(e => e.roomId === currentRoomId && e.definition.id === 'weaver');
+    if (bossExists) {
+      console.log(`👹 Boss already exists in room ${currentRoomId}`);
+      return;
+    }
     
     // Check if room was already cleared
     const roomKey = `${currentFloor}-${currentRoomId}`;
-    if (clearedRoomsRef.current.has(roomKey)) return;
+    if (clearedRoomsRef.current.has(roomKey)) {
+      console.log(`✅ Boss room ${currentRoomId} already cleared`);
+      return;
+    }
     
     console.log(`👹 Spawning boss in room ${currentRoomId}`);
     const roomLayout = generateRoomLayout(currentRoom, currentFloor, false, floorData.seed);
@@ -223,7 +230,7 @@ export function EnemySpawner({
     $enemies.set([...$enemies.get(), bossEnemy]);
     $enemiesAlive.set($enemies.get().length);
     $roomCleared.set(false);
-  }, [currentRoomId, floorData, currentFloor, enemies]);
+  }, [currentRoomId, floorData, currentFloor]);
 
   const handleEnemyDeath = (enemyId: number) => {
     const currentEnemies = $enemies.get();

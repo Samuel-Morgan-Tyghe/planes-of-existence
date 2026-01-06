@@ -2,6 +2,7 @@ import { atom } from 'nanostores';
 import { $clearedRooms, $currentFloor, $currentRoomId, $inventory, $isPaused, $stats, $visitedRooms, switchPlane } from './game';
 import { $bossDefeated, $enemiesRemaining } from './gameState';
 import { $maxHealth, $position, setHealth } from './player';
+import { resetRocks } from './rock';
 
 // Trigger for forcing scene regeneration
 export const $restartTrigger = atom<number>(0);
@@ -43,6 +44,7 @@ export function restartRun() {
     incomingDamageMultiplier: 1.0,
     knockback: 1.0,
     knockbackResistance: 1.0,
+    maxJumps: 1,
   });
   
   // Clear inventory
