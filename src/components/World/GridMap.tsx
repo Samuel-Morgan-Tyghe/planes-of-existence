@@ -13,6 +13,67 @@ import { Rock } from './Rock';
 import { Spikes } from './Spikes';
 import { Wall } from './Wall';
 
+function MergedFloor({ grid, worldOffset, roomWorldSize, isVisited, isCurrentRoom }: {
+  grid: number[][],
+  worldOffset: [number, number, number],
+  roomWorldSize: number,
+  isVisited: boolean,
+  isCurrentRoom: boolean
+}) {
+  const tileSize = roomWorldSize / grid.length;
+  const halfRoomSize = roomWorldSize / 2;
+
+  const floorPolygons = useMemo(() => {
+    const rectangles: Array<{x: number, y: number, w: number, h: number}> = [];
+    
+    // Simple greedy horizontal merging to reduce collider count
+    for (let y = 0; y < grid.length; y++) {
+      let currentRect: any = null;
+      for (let x = 0; x < grid[y].length; x++) {
+        // Tile 8 is Pit. We omit floor physics/visuals here.
+        const isFloor = grid[y][x] !== 8; 
+        if (isFloor) {
+          if (!currentRect) {
+            currentRect = { x, y, w: 1, h: 1 };
+          } else {
+            currentRect.w++;
+          }
+        } else {
+          if (currentRect) {
+            rectangles.push(currentRect);
+            currentRect = null;
+          }
+        }
+      }
+      if (currentRect) rectangles.push(currentRect);
+    }
+    return rectangles;
+  }, [grid]);
+
+  return (
+    <group position={worldOffset}>
+       {floorPolygons.map((rect, i) => (
+         <RigidBody 
+           key={`floor-rect-${i}`} 
+           type="fixed" 
+           userData={{ isFloor: true }}
+           position={[
+             -halfRoomSize + rect.x * tileSize + (rect.w * tileSize) / 2,
+             -0.5,
+             -halfRoomSize + rect.y * tileSize + (rect.h * tileSize) / 2
+           ]}
+         >
+           <CuboidCollider args={[(rect.w * tileSize) / 2, 0.5, (rect.h * tileSize) / 2]} />
+           <mesh receiveShadow visible={isVisited}>
+             <boxGeometry args={[rect.w * tileSize, 1, rect.h * tileSize]} />
+             <meshStandardMaterial color={isCurrentRoom ? '#333333' : '#222222'} />
+           </mesh>
+         </RigidBody>
+       ))}
+    </group>
+  );
+}
+
 export function GridMap() {
   const restartTrigger = useStore($restartTrigger);
   const currentFloor = useStore($currentFloor);
@@ -224,24 +285,15 @@ export function GridMap() {
 
         if (!isCurrentRoom && !isAdjacent) return null;
         return (
-            <group key={room.id}>
-            {/* Floor for this room - Always render physics to prevent falling */}
-            <RigidBody 
-              type="fixed" 
-              userData={{ isFloor: true }} 
-              position={[layout.worldOffset[0], -0.5, layout.worldOffset[2]]}
-            >
-              <CuboidCollider args={[roomWorldSize / 2, 0.5, roomWorldSize / 2]} />
-              <mesh
-                receiveShadow
-                visible={isVisited} // Only visible if visited
-              >
-                <boxGeometry args={[roomWorldSize, 1, roomWorldSize]} />
-                <meshStandardMaterial
-                  color={isCurrentRoom ? '#333333' : '#222222'}
-                />
-              </mesh>
-            </RigidBody>
+          <group key={room.id}>
+            {/* Merged Floor: Real gaps for Pits (8) */}
+            <MergedFloor 
+              grid={layout.grid} 
+              worldOffset={layout.worldOffset} 
+              roomWorldSize={roomWorldSize}
+              isVisited={isVisited}
+              isCurrentRoom={isCurrentRoom}
+            />
 
             {/* Fog of war - black overlay for unvisited rooms */}
             {!isVisited && (

@@ -476,8 +476,10 @@ function PlayerPositionTracker({
 
         // Void Safety Net: If player falls through floor, respawn them
         if (worldPos.y < -10) {
+            console.log('🕳️ Player fell into the void!');
+            takeDamage(20);
             // Respawn at current X/Z but high up
-            rb.setTranslation({ x: worldPos.x, y: 5, z: worldPos.z }, true);
+            rb.setTranslation({ x: worldPos.x, y: 5.0, z: worldPos.z }, true);
             rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
         }
     }
