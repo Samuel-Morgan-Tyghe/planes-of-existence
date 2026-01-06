@@ -3,6 +3,7 @@ import { EnemyState } from '../../types/enemies';
 import { getBomberVelocity } from './behaviors/bomber';
 import { getHopperVelocity } from './behaviors/hopper';
 import { getKnightVelocity } from './behaviors/knight';
+import { getNovaVelocity } from './behaviors/nova';
 import { getParasiteVelocity } from './behaviors/parasite';
 import { getSlimeVelocity } from './behaviors/slime';
 import { getTurretVelocity } from './behaviors/turret';
@@ -47,6 +48,11 @@ export function calculateEnemyVelocity(
   if (enemy.definition.id.startsWith('slime_')) {
     const baseDirection = new Vector3().subVectors(playerPos, enemyVec).normalize();
     return getSlimeVelocity(baseDirection, distance, 6.0, speed);
+  }
+
+  // 6. Nova logic
+  if (enemy.definition.id === 'nova') {
+    return getNovaVelocity(speed, enemy.id);
   }
 
   // 3. Ranged Positioning (Stop at max range)

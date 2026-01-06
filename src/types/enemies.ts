@@ -275,6 +275,20 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     experience: 35,
     attackType: 'melee',
   },
+  nova: {
+    id: 'nova',
+    name: 'Nova Bug',
+    health: 60,
+    damage: 8,
+    speed: 0.6, // Slow
+    size: 1.4,
+    color: '#FF69B4', // HotPink
+    dropChance: 0.5,
+    experience: 40,
+    attackType: 'ranged',
+    attackRange: 8, // Short range
+    fireRate: 2500, // Every 2.5 seconds
+  },
 };
 
 export interface EnemyState {

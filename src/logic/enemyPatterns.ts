@@ -19,6 +19,7 @@ export interface ProjectileSpawnData {
   speed: number;
   color: string;
   size: number;
+  lifetime?: number;
 }
 
 /**
@@ -37,7 +38,31 @@ export function calculateEnemyAttackPattern(
 
   const type = enemy.definition.id === 'echoer' ? 'soundwave' : 'normal';
 
-  if (enemy.definition.id === 'flanker') {
+  if (enemy.definition.id === 'nova') {
+    // Nova Logic: Fire 8 projectiles in all directions
+    const numProjectiles = 8;
+    for (let i = 0; i < numProjectiles; i++) {
+      const angle = (i * 2 * Math.PI) / numProjectiles;
+      const dir = new Vector3(1, 0, 0).applyAxisAngle(new Vector3(0, 1, 0), angle);
+
+      const projOrigin: [number, number, number] = [
+        enemyVec.x + dir.x * spawnOffset,
+        1.0,
+        enemyVec.z + dir.z * spawnOffset,
+      ];
+
+      results.push({
+        origin: projOrigin,
+        direction: [dir.x, dir.y, dir.z],
+        type: 'normal',
+        damage: enemy.definition.damage,
+        speed: enemy.definition.projectileSpeed || 12, // Faster initial burst
+        color: enemy.definition.color,
+        size: enemy.definition.projectileSize || 0.8,
+        lifetime: 0.6, // Short range
+      });
+    }
+  } else if (enemy.definition.id === 'flanker') {
     // Flanker Logic: Fire 2 projectiles, angled +/- 15 degrees from target
     const angleOffset = Math.PI / 12; // 15 degrees
 

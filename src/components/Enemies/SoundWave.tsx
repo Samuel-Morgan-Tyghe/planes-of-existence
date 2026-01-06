@@ -12,6 +12,7 @@ interface SoundWaveProps {
   damage: number;
   color: string;
   size: number;
+  lifetime?: number;
   onDestroy: () => void;
 }
 
@@ -25,6 +26,7 @@ export function SoundWave({
   damage,
   onDestroy,
   size,
+  lifetime,
 }: SoundWaveProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const lifetimeRef = useRef(0);
@@ -75,7 +77,8 @@ export function SoundWave({
     }
 
     lifetimeRef.current += delta;
-    if (lifetimeRef.current >= PROJECTILE_LIFETIME) {
+    const maxLifetime = lifetime !== undefined ? lifetime : PROJECTILE_LIFETIME;
+    if (lifetimeRef.current >= maxLifetime) {
       onDestroy();
       return;
     }

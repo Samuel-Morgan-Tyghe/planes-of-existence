@@ -22,6 +22,7 @@ export function ProjectileManager() {
             damage={proj.damage}
             color={proj.color}
             size={proj.size || 1.0}
+            lifetime={proj.lifetime}
             onDestroy={() => removeEnemyProjectile(proj.id)}
           />
         ) : (
@@ -34,6 +35,7 @@ export function ProjectileManager() {
             damage={proj.damage}
             color={proj.color}
             size={proj.size || 1.0}
+            lifetime={proj.lifetime}
             onDestroy={() => removeEnemyProjectile(proj.id)}
           />
         )

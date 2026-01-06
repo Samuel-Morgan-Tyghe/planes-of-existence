@@ -12,6 +12,7 @@ interface EnemyProjectileProps {
   damage: number;
   color: string;
   size: number;
+  lifetime?: number;
   onDestroy: () => void;
 }
 
@@ -26,6 +27,7 @@ export function EnemyProjectile({
   color,
   onDestroy,
   size,
+  lifetime,
 }: EnemyProjectileProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const lifetimeRef = useRef(0);
@@ -75,7 +77,8 @@ export function EnemyProjectile({
     lifetimeRef.current += delta;
 
     // Destroy when lifetime expires
-    if (lifetimeRef.current >= PROJECTILE_LIFETIME) {
+    const maxLifetime = lifetime !== undefined ? lifetime : PROJECTILE_LIFETIME;
+    if (lifetimeRef.current >= maxLifetime) {
       onDestroy();
       return;
     }
