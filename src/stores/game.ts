@@ -253,7 +253,7 @@ export const debugRerollEnemies = () => {
   // let's import getRoomWorldSize from floorGen? Or just replicate simple math.
   // floorGen.ts: ROOM_WORLD_SIZE = 40.
   
-  const ROOM_WORLD_SIZE = 40;
+  const ROOM_WORLD_SIZE = 60;
   const worldOffset: [number, number, number] = [
     room.gridX * ROOM_WORLD_SIZE,
     0,
@@ -262,7 +262,7 @@ export const debugRerollEnemies = () => {
   
   // Helper to convert grid to world (replicated from floorGen/GridMap logic)
   const gridToWorldLocal = (gx: number, gy: number) => {
-    const ROOM_SIZE = 20;
+    const ROOM_SIZE = 30;
     const tileSize = ROOM_WORLD_SIZE / ROOM_SIZE;
     const offset = -ROOM_WORLD_SIZE / 2 + tileSize / 2;
     return [

@@ -95,7 +95,7 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
   }, [plane]);
 
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (!rigidBodyRef.current || isTeleporting) return;
 
     const rb = rigidBodyRef.current;
@@ -138,11 +138,8 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     const velocity = rb.linvel();
     // Momentum Settings
     const MAX_SPEED = 12 * speedMult;     
-    const ACCELERATION = 60 * speedMult; 
-    const FRICTION = 20;      
-    const AIR_FRICTION = 10;  
-
-    const delta = 1/60; // Approx fixed time step
+    const ACCELERATION = 80 * speedMult; 
+    const STOP_FRICTION = 100; // Strong stop force
     
     // Calculate target velocity based on input
     let targetVX = 0;
@@ -173,17 +170,25 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       }
     } else {
       // Standard Global Controls for ISO/2D
+      let nx = 0;
+      let nz = 0;
       switch (plane) {
         case '2D':
-          if (keys.has('a')) targetVX = -MAX_SPEED;
-          if (keys.has('d')) targetVX = MAX_SPEED;
+          if (keys.has('a')) nx = -1;
+          if (keys.has('d')) nx = 1;
           break;
         case 'ISO':
-          if (keys.has('w')) targetVZ = -MAX_SPEED;
-          if (keys.has('s')) targetVZ = MAX_SPEED;
-          if (keys.has('a')) targetVX = -MAX_SPEED;
-          if (keys.has('d')) targetVX = MAX_SPEED;
+          if (keys.has('w')) nz = -1;
+          if (keys.has('s')) nz = 1;
+          if (keys.has('a')) nx = -1;
+          if (keys.has('d')) nx = 1;
           break;
+      }
+      
+      if (nx !== 0 || nz !== 0) {
+        const len = Math.sqrt(nx * nx + nz * nz);
+        targetVX = (nx / len) * MAX_SPEED;
+        targetVZ = (nz / len) * MAX_SPEED;
       }
     }
 
@@ -194,67 +199,61 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
 
     // Apply Acceleration / Friction
     const mass = rb.mass();
-    const isGrounded = Math.abs(velocity.y) < 0.1;
+    const isGrounded = Math.abs(velocity.y) < 0.2; // Slightly more lenient grounding
     const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-    
-    // Dynamic Acceleration: Slow to start (Momentum), snap to turn
-    // If we are moving fast (> 20% max speed) and trying to move, we can turn instantly (high accel)
-    const isMovingFast = currentSpeed > MAX_SPEED * 0.2;
     const isTryingToMove = Math.abs(targetVX) > 0 || Math.abs(targetVZ) > 0;
     
-    // Base Accel (Ramp up from stop) = 60 (approx 0.5s to max)
-    // Snap Accel (Turning) = 400 (Instant feel)
-    const SNAP_ACCEL = 400;
-    
-    let accelForce = ACCELERATION;
-    if (isGrounded && isMovingFast && isTryingToMove) {
-        accelForce = SNAP_ACCEL;
-    } else if (!isGrounded) {
-        accelForce = ACCELERATION * 0.5;
+    if (isGrounded) {
+      if (isTryingToMove) {
+        if (currentSpeed > 1.0) {
+          // 🚀 SNAPPY MOVE: Instant direction change with no momentum loss
+          const inputDirX = targetVX / MAX_SPEED;
+          const inputDirZ = targetVZ / MAX_SPEED;
+          
+          // Speed maintains its current magnitude but instantly snaps to the new direction
+          // This removes the "sliding on ice" feeling when turning.
+          const newSpeed = Math.min(MAX_SPEED, currentSpeed + ACCELERATION * 0.5 * delta);
+          
+          rb.setLinvel({
+            x: inputDirX * newSpeed,
+            y: velocity.y,
+            z: inputDirZ * newSpeed
+          }, true);
+        } else {
+          // 🐌 STARTING: Use weighted acceleration to reach initial speed
+          const accelStep = ACCELERATION * delta * mass; 
+          rb.applyImpulse({
+            x: THREE.MathUtils.clamp(targetVX * mass - velocity.x * mass, -accelStep, accelStep),
+            y: 0,
+            z: THREE.MathUtils.clamp(targetVZ * mass - velocity.z * mass, -accelStep, accelStep)
+          }, true);
+        }
+      } else {
+        // 🛑 FAST STOP: Strong snap to standstill
+        const stopForce = STOP_FRICTION * delta * mass;
+        rb.applyImpulse({
+          x: THREE.MathUtils.clamp(-velocity.x * mass, -stopForce, stopForce),
+          y: 0,
+          z: THREE.MathUtils.clamp(-velocity.z * mass, -stopForce, stopForce)
+        }, true);
+      }
+    } else {
+      // ☁️ AIR CONTROL: Direct air steering
+      const airControlForce = 30 * delta * mass;
+       rb.applyImpulse({
+        x: THREE.MathUtils.clamp(targetVX * mass - velocity.x * mass, -airControlForce, airControlForce),
+        y: 0,
+        z: THREE.MathUtils.clamp(targetVZ * mass - velocity.z * mass, -airControlForce, airControlForce)
+      }, true);
     }
-
-    const frictionForce = isGrounded ? FRICTION : AIR_FRICTION;
-
-    // If we are strictly trying to stop (no input), use friction
-    // If we are trying to move, use acceleration
-    const isStoppingX = targetVX === 0;
-    const isStoppingZ = targetVZ === 0;
-
-    // Apply forces
-    let impulseX = 0;
-    let impulseZ = 0;
-
-    // Calculate difference between current and target
-    const diffX = targetVX - velocity.x;
-    const diffZ = targetVZ - velocity.z;
-
-    // X Axis
-    if (Math.abs(diffX) > 0.01) {
-        const force = isStoppingX ? frictionForce : accelForce;
-        // Clamp impulse so we don't overshoot in one frame
-        const maxImpulse = force * delta * mass; 
-        impulseX = THREE.MathUtils.clamp(diffX * mass, -maxImpulse, maxImpulse);
-    }
-
-    // Z Axis
-    if (Math.abs(diffZ) > 0.01) {
-        const force = isStoppingZ ? frictionForce : accelForce;
-        const maxImpulse = force * delta * mass;
-        impulseZ = THREE.MathUtils.clamp(diffZ * mass, -maxImpulse, maxImpulse);
-    }
     
-    if (Math.abs(impulseX) > 0.001 || Math.abs(impulseZ) > 0.001) {
-      rb.applyImpulse({ x: impulseX, y: 0, z: impulseZ }, true);
-    }
+    // Hard speed clamp to prevent accumulated overspeed
+    const finalVel = rb.linvel();
+    const finalSpeed = Math.sqrt(finalVel.x * finalVel.x + finalVel.z * finalVel.z);
     
-    // Safety Clamp: Prevent infinite speed accumulation (reported bug)
-    // We only clamp horizontal speed
-    const currentVel = rb.linvel();
-    const horizontalSpeed = Math.sqrt(currentVel.x * currentVel.x + currentVel.z * currentVel.z);
-    
-    if (horizontalSpeed > MAX_SPEED * 1.1) { // Allow 10% overspeed for physics bounce/impulses
-        const scale = (MAX_SPEED * 1.1) / horizontalSpeed;
-        rb.setLinvel({ x: currentVel.x * scale, y: currentVel.y, z: currentVel.z * scale }, true);
+    if (finalSpeed > MAX_SPEED * 1.05) { 
+        const scale = (MAX_SPEED * 1.05) / finalSpeed;
+        rb.setLinvel({ x: finalVel.x * scale, y: finalVel.y, z: finalVel.z * scale }, true);
     }
   });
 

@@ -338,6 +338,9 @@ export function Player() {
       mass={1}
       gravityScale={1.5}
       canSleep={false}
+      friction={0}
+      linearDamping={0}
+      angularDamping={0}
       userData={{ isPlayer: true }}
       onCollisionEnter={(e) => handleCollision(e.other)}
     >

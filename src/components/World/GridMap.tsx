@@ -216,6 +216,13 @@ export function GridMap() {
         const isCurrentRoom = room.id === currentRoomId;
         const isVisited = visitedRooms.has(room.id);
 
+        // Optimization: Only render current room and its immediate neighbors
+        const isAdjacent = doorConnections.some(conn => 
+          (conn.roomA.id === currentRoomId && conn.roomB.id === room.id) ||
+          (conn.roomB.id === currentRoomId && conn.roomA.id === room.id)
+        );
+
+        if (!isCurrentRoom && !isAdjacent) return null;
         return (
             <group key={room.id}>
             {/* Floor for this room - Always render physics to prevent falling */}
