@@ -118,6 +118,7 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       position={origin}
       type="dynamic"
       sensor
+      userData={{ isPlayerProjectile: true }}
       onIntersectionEnter={({ other }) => {
         const userData = other.rigidBodyObject?.userData;
         
@@ -135,6 +136,9 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
             console.log('🎯 Projectile hit bomb! Pushing with force:', pushForce);
           }
           onDestroy();
+        } else if (userData?.isEnemyProjectile) {
+            console.log('⚔️ Projectiles collided!');
+            onDestroy();
         }
       }}
       gravityScale={0}

@@ -65,6 +65,21 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     projectileSize: 0.1, // Small, bullet-like
     fireRate: 2000, // Fire every 2 seconds
   },
+  flanker: {
+    id: 'flanker',
+    name: 'Flanker',
+    health: 25,
+    damage: 6,
+    speed: 0.7,
+    size: 0.8,
+    color: '#FF8C00', // Dark Orange
+    dropChance: 0.4,
+    experience: 25,
+    attackType: 'ranged',
+    attackRange: 20,
+    projectileSpeed: 8,
+    fireRate: 2000,
+  },
   rusher: {
     id: 'rusher',
     name: 'Rusher',

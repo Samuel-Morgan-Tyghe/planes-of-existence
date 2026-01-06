@@ -119,8 +119,18 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     const velocity = rb.linvel();
     let x = 0;
     let z = 0;
-    const speed = 8;
+    // Momentum Settings
+    const MAX_SPEED = 8;
+    const ACCELERATION = 60; // How fast we reach max speed
+    const FRICTION = 40;     // How fast we stop
+    const AIR_FRICTION = 10; // Less drag in air
+
+    const delta = 1/60; // Approx fixed time step
     
+    // Calculate target velocity based on input
+    let targetVX = 0;
+    let targetVZ = 0;
+
     // 2. Relative Movement
     if (plane === 'FPS') {
       // Get direction from the BODY rotation (Yaw)
@@ -140,22 +150,22 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       if (keys.has('a')) moveVec.sub(right);
       
       if (moveVec.length() > 0) {
-        moveVec.normalize().multiplyScalar(speed);
-        x = moveVec.x;
-        z = moveVec.z;
+        moveVec.normalize().multiplyScalar(MAX_SPEED);
+        targetVX = moveVec.x;
+        targetVZ = moveVec.z;
       }
     } else {
       // Standard Global Controls for ISO/2D
       switch (plane) {
         case '2D':
-          if (keys.has('a')) x = -speed;
-          if (keys.has('d')) x = speed;
+          if (keys.has('a')) targetVX = -MAX_SPEED;
+          if (keys.has('d')) targetVX = MAX_SPEED;
           break;
         case 'ISO':
-          if (keys.has('w')) z = -speed;
-          if (keys.has('s')) z = speed;
-          if (keys.has('a')) x = -speed;
-          if (keys.has('d')) x = speed;
+          if (keys.has('w')) targetVZ = -MAX_SPEED;
+          if (keys.has('s')) targetVZ = MAX_SPEED;
+          if (keys.has('a')) targetVX = -MAX_SPEED;
+          if (keys.has('d')) targetVX = MAX_SPEED;
           break;
       }
     }
@@ -165,12 +175,42 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       rb.applyImpulse({ x: 0, y: JUMP_FORCE, z: 0 }, true);
     }
 
-    // Snappy horizontal movement
+    // Apply Acceleration / Friction
     const mass = rb.mass();
-    const impulseX = (x - velocity.x) * mass;
-    const impulseZ = (z - velocity.z) * mass;
+    const isGrounded = Math.abs(velocity.y) < 0.1;
+
+    // Calculate difference between current and target
+    const diffX = targetVX - velocity.x;
+    const diffZ = targetVZ - velocity.z;
+
+    let accelForce = isGrounded ? ACCELERATION : (ACCELERATION * 0.5);
+    const frictionForce = isGrounded ? FRICTION : AIR_FRICTION;
+
+    // If we are strictly trying to stop (no input), use friction
+    // If we are trying to move, use acceleration
+    const isStoppingX = targetVX === 0;
+    const isStoppingZ = targetVZ === 0;
+
+    // Apply forces
+    let impulseX = 0;
+    let impulseZ = 0;
+
+    // X Axis
+    if (Math.abs(diffX) > 0.01) {
+        const force = isStoppingX ? frictionForce : accelForce;
+        // Clamp impulse so we don't overshoot in one frame
+        const maxImpulse = force * delta * mass; 
+        impulseX = THREE.MathUtils.clamp(diffX * mass, -maxImpulse, maxImpulse);
+    }
+
+    // Z Axis
+    if (Math.abs(diffZ) > 0.01) {
+        const force = isStoppingZ ? frictionForce : accelForce;
+        const maxImpulse = force * delta * mass;
+        impulseZ = THREE.MathUtils.clamp(diffZ * mass, -maxImpulse, maxImpulse);
+    }
     
-    if (Math.abs(impulseX) > 0.01 || Math.abs(impulseZ) > 0.01) {
+    if (Math.abs(impulseX) > 0.001 || Math.abs(impulseZ) > 0.001) {
       rb.applyImpulse({ x: impulseX, y: 0, z: impulseZ }, true);
     }
   });

@@ -98,6 +98,9 @@ export function EnemyProjectile({
         if (userData?.isWall) {
           // console.log('🧱 EnemyProjectile hit wall');
           onDestroy();
+        } else if (userData?.isPlayerProjectile) {
+             console.log('⚔️ Enemy projectile shot down!');
+             onDestroy();
         } else if (userData?.isPlayer) {
           console.log('💥 EnemyProjectile hit player!');
           hitRef.current = true;

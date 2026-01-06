@@ -4,6 +4,7 @@ import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier'
 import { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { updateCorrupterAI } from '../../logic/enemies/corrupter';
+import { calculateEnemyAttackPattern } from '../../logic/enemyPatterns';
 import { calculateGrowthStats } from '../../logic/growthLogic';
 import { $enemies, $enemyPositions } from '../../stores/game';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
@@ -11,7 +12,6 @@ import { addEnemyProjectile } from '../../stores/projectiles';
 import { emitCorruption, emitDamage } from '../../systems/events';
 import type { EnemyState } from '../../types/enemies';
 import { ITEM_DEFINITIONS } from '../../types/items';
-import { calculateProjectileStats } from '../../utils/combat';
 import { HitEffect } from '../Effects/HitEffect';
 
 interface EnemyProps {
@@ -144,40 +144,19 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         console.log('🔴 Enemy', enemy.id, 'attacking player! Distance:', distance.toFixed(2), 'Type:', isRanged ? 'RANGED' : 'melee');
 
         if (isRanged) {
-          const direction = new Vector3().subVectors(playerPos, enemyVec).normalize();
-          const currentPos = currentPositionRef.current;
-          const spawnOffset = enemy.definition.size * 2.0;
-          const projectileOrigin: [number, number, number] = [
-            currentPos[0] + direction.x * spawnOffset,
-            1.0,
-            currentPos[2] + direction.z * spawnOffset,
-          ];
-
-          const type = enemy.definition.id === 'echoer' ? 'soundwave' : 'normal';
-          
-          // Calculate stats based on held item using utility
-          const { damage, speed, size, color } = calculateProjectileStats(
-            {
-              damage: enemy.definition.damage,
-              speed: enemy.definition.projectileSpeed || 10,
-              size: enemy.definition.projectileSize || 1.0,
-              color: enemy.definition.color,
-            },
-            enemy.heldItem,
+          // Use extracted logic to calculate attack pattern
+          const projectiles = calculateEnemyAttackPattern(
+            enemy,
+            playerPos,
+            enemyVec,
             ITEM_DEFINITIONS
           );
 
-          console.log(`🚀 Enemy ${enemy.id} firing ${type} projectile at ${projectileOrigin} with item ${enemy.heldItem}`);
-          
-          addEnemyProjectile({
-            origin: projectileOrigin,
-            direction: [direction.x, direction.y, direction.z],
-            type: type as 'normal' | 'soundwave',
-            damage: damage,
-            speed: speed,
-            color: color,
-            size: size,
+          projectiles.forEach(p => {
+             console.log(`🚀 Enemy ${enemy.id} firing ${p.type} projectile at ${p.origin}`);
+             addEnemyProjectile(p);
           });
+
         } else {
           takeDamage(dynamicDamage || enemy.definition.damage);
         }

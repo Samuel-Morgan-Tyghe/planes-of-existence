@@ -64,8 +64,15 @@ export function Player() {
     if (!rigidBodyRef.current) return;
     
     const rb = rigidBodyRef.current;
-    // Teleport player back to spawn
-    rb.setTranslation({ x: SPAWN_POSITION[0], y: SPAWN_POSITION[1], z: SPAWN_POSITION[2] }, true);
+
+    
+    // Teleport player back to spawn using the robust physics-synced method
+    console.log('🔄 Floor change/Restart detected. Teleporting to spawn via update loop.');
+    teleportTargetRef.current = [...SPAWN_POSITION];
+    $isTeleporting.set(true);
+    teleportFrameLockRef.current = 5; // Lock for 5 frames
+    
+    // Reset linear and angular velocity immediately as well (backup)
     rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
     
