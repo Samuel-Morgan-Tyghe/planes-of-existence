@@ -107,8 +107,8 @@ export function EnemySpawner({
         allNewEnemies.push({
           id: enemyIdCounterRef.current++,
           roomId: room.id,
-          definition: ENEMY_DEFINITIONS.boss,
-          health: ENEMY_DEFINITIONS.boss.health,
+          definition: ENEMY_DEFINITIONS.weaver,
+          health: ENEMY_DEFINITIONS.weaver.health,
           position: [roomLayout.worldOffset[0], 0.5, roomLayout.worldOffset[2]],
           isDead: false,
           spawnTime: Date.now(),

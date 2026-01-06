@@ -146,6 +146,21 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     experience: 500,
     attackType: 'melee',
   },
+  weaver: {
+    id: 'weaver',
+    name: 'The Glitch Weaver',
+    health: 1200, // Mega tank
+    damage: 15, // Damage per projectile
+    speed: 1.0, 
+    size: 4.0, // Large presence
+    color: '#8A2BE2', // BlueViolet
+    dropChance: 1.0,
+    experience: 2000,
+    attackType: 'ranged',
+    attackRange: 30,
+    projectileSpeed: 10,
+    fireRate: 800, // Frequent patterns
+  },
   growth_health: {
     id: 'growth_health',
     name: 'Growth Buy (Health)',

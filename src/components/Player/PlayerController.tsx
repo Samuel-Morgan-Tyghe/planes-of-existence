@@ -139,7 +139,7 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     // Momentum Settings
     const MAX_SPEED = 12 * speedMult;     
     const ACCELERATION = 60 * speedMult; 
-    const FRICTION = 40;      
+    const FRICTION = 20;      
     const AIR_FRICTION = 10;  
 
     const delta = 1/60; // Approx fixed time step

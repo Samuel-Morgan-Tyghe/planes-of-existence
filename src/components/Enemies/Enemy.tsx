@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
+import { updateWeaverBoss, type WeaverBossState } from '../../logic/enemies/boss_weaver';
 import { updateCorrupterAI } from '../../logic/enemies/corrupter';
 import { calculateEnemyVelocity } from '../../logic/enemies/movement';
 import { calculateEnemyAttackPattern } from '../../logic/enemyPatterns';
@@ -51,6 +52,14 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   const dynamicStatsRef = useRef({ speed: enemy.definition.speed, damage: enemy.definition.damage, healthMultiplier: 1.0 });
   const lastTrailPositionRef = useRef<Vector3 | null>(null);
   const lastPoisonTimeRef = useRef(0);
+  const weaverStateRef = useRef<WeaverBossState>({
+    phase: 1,
+    attackTimer: 1.0,
+    patternIndex: 0,
+    rotationAngle: 0,
+    isBlinking: false,
+    blinkCooldown: 3.0
+  });
 
   const isRanged = enemy.definition.attackType === 'ranged' || !!enemy.heldItem;
   let attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
@@ -352,7 +361,55 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       }
     }
 
-    setDistanceToPlayer(distanceToPlayer); // Keep track of player distance for UI but move towards target
+    setDistanceToPlayer(distanceToPlayer); 
+    
+    // Weaver Boss Logic
+    if (enemy.definition.id === 'weaver') {
+      const { velocity: bossVel, projectiles, newBossState, colorOverride, sizeOverride } = updateWeaverBoss(
+        enemy,
+        playerPos,
+        enemyVec,
+        _state.clock.elapsedTime,
+        delta,
+        weaverStateRef.current
+      );
+      weaverStateRef.current = newBossState;
+
+      // Handle Blinking
+      if (newBossState.isBlinking) {
+        const offset = new Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize().multiplyScalar(15);
+        const blinkTarget = playerPos.clone().add(offset);
+        rb.setTranslation({ x: blinkTarget.x, y: currentPositionRef.current[1], z: blinkTarget.z }, true);
+      } else {
+        rb.setLinvel({ x: bossVel.x, y: bossVel.y, z: bossVel.z }, true);
+      }
+
+      // Handle Projectiles
+      projectiles.forEach((p: any) => addEnemyProjectile(p));
+
+      // Visual Overrides
+      if (meshRef.current) {
+        if (colorOverride) {
+           const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+           if (!damageFlash) {
+             mat.color.set(colorOverride);
+             mat.emissive.set(colorOverride);
+           }
+        }
+        if (sizeOverride) {
+           // Base the scale on the actual current size vs definition size
+           const s = sizeOverride / enemy.definition.size;
+           meshRef.current.scale.set(s, s, s);
+        }
+      }
+      
+      // Custom Rotation for Boss
+      if (meshRef.current) {
+        meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
+      }
+
+      return; // Skip default AI
+    }
 
     // Rotate mesh to face target
     if (meshRef.current) {

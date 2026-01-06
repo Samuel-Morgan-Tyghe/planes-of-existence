@@ -1,7 +1,7 @@
 import type { FloorData, GridMap, Room, RoomLayoutData } from '../types/room';
 
-const ROOM_SIZE = 20; // Each room is 20x20 tiles
-const ROOM_WORLD_SIZE = 40; // Each room is 40 units in world space
+const ROOM_SIZE = 30; // Each room is 30x30 tiles
+const ROOM_WORLD_SIZE = 60; // Each room is 60 units in world space
 
 /**
  * Seeded random number generator (Mulberry32)
@@ -233,9 +233,38 @@ export function generateRoomLayout(
   // Room shape is deterministic based on room ID
   const roomType = room.id % 4;
 
-  if (roomType === 0) {
+  if (room.type === 'boss') {
+    // Boss Arena: Large open square
+    for (let y = 1; y < ROOM_SIZE - 1; y++) {
+      for (let x = 1; x < ROOM_SIZE - 1; x++) {
+        grid[y][x] = 0;
+      }
+    }
+    // Add 4 large decorative/strategic pillars
+    const centerX = Math.floor(ROOM_SIZE / 2);
+    const centerY = Math.floor(ROOM_SIZE / 2);
+    const pOffset = Math.floor(ROOM_SIZE / 5);
+    
+    [centerX - pOffset, centerX + pOffset].forEach(cx => {
+      [centerY - pOffset, centerY + pOffset].forEach(cy => {
+        // 2x2 pillar
+        grid[cy][cx] = 9;
+        grid[cy+1][cx] = 9;
+        grid[cy][cx+1] = 9;
+        grid[cy+1][cx+1] = 9;
+      });
+    });
+  } else if (room.type === 'treasure') {
+     // Treasure Room: Octagon/Clipped Corners
+     for (let y = 3; y < ROOM_SIZE - 3; y++) {
+       for (let x = 3; x < ROOM_SIZE - 3; x++) {
+         const distToCenter = Math.sqrt(Math.pow(x - (ROOM_SIZE/2), 2) + Math.pow(y - (ROOM_SIZE/2), 2));
+         if (distToCenter < 7) grid[y][x] = 0;
+       }
+     }
+  } else if (roomType === 0) {
     // Square room
-    const roomSize = Math.random() * 12 + 8; // More spacious (was 14)
+    const roomSize = rng.nextInt(10, 16); 
     const startX = Math.floor((ROOM_SIZE - roomSize) / 2);
     const startY = Math.floor((ROOM_SIZE - roomSize) / 2);
     for (let y = startY; y < startY + roomSize; y++) {
@@ -244,40 +273,32 @@ export function generateRoomLayout(
       }
     }
   } else if (roomType === 1) {
-    // L-shaped room
-    for (let y = 4; y < 16; y++) {
-      for (let x = 4; x < 12; x++) {
-        grid[y][x] = 0;
-      }
+    // L-shaped room (Refined)
+    for (let y = 3; y < 17; y++) {
+      for (let x = 3; x < 12; x++) grid[y][x] = 0;
     }
-    for (let y = 10; y < 16; y++) {
-      for (let x = 12; x < 16; x++) {
-        grid[y][x] = 0;
-      }
+    for (let y = 10; y < 17; y++) {
+      for (let x = 12; x < 17; x++) grid[y][x] = 0;
     }
   } else if (roomType === 2) {
-    // Cross-shaped room
+    // Cross-shaped room (Refined)
     for (let y = 2; y < 18; y++) {
-      for (let x = 8; x < 12; x++) {
-        grid[y][x] = 0;
-      }
+      for (let x = 7; x < 13; x++) grid[y][x] = 0;
     }
-    for (let y = 8; y < 12; y++) {
+    for (let y = 7; y < 13; y++) {
+      for (let x = 2; x < 18; x++) grid[y][x] = 0;
+    }
+  } else {
+    // Spacious room with pillars
+    for (let y = 2; y < 18; y++) {
       for (let x = 2; x < 18; x++) {
         grid[y][x] = 0;
       }
     }
-  } else {
-    // Room with pillars
-    for (let y = 3; y < 17; y++) {
-      for (let x = 3; x < 17; x++) {
-        grid[y][x] = 0;
-      }
-    }
-    grid[7][7] = 1;
-    grid[7][12] = 1;
-    grid[12][7] = 1;
-    grid[12][12] = 1;
+    grid[6][6] = 1;
+    grid[6][13] = 1;
+    grid[13][6] = 1;
+    grid[13][13] = 1;
   }
 
 
