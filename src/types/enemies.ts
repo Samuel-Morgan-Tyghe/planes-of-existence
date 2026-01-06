@@ -289,6 +289,18 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     attackRange: 8, // Short range
     fireRate: 2500, // Every 2.5 seconds
   },
+  reactive_bug: {
+    id: 'reactive_bug',
+    name: 'Spite Bug',
+    health: 80, // Tanky enough to take multiple hits
+    damage: 10,
+    speed: 0.6,
+    size: 1.5,
+    color: '#DC143C', // Crimson
+    dropChance: 0.6,
+    experience: 50,
+    attackType: 'melee', // Moves towards player
+  },
 };
 
 export interface EnemyState {

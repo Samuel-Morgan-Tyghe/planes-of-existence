@@ -63,6 +63,18 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   useEffect(() => {
     if (enemy.isDead && !isDeadRef.current) {
       isDeadRef.current = true;
+      
+      // Reactive Bug: Explode on death
+      if (enemy.definition.id === 'reactive_bug') {
+        const explosionPos: [number, number, number] = [
+          currentPositionRef.current[0],
+          currentPositionRef.current[1] + 0.5,
+          currentPositionRef.current[2]
+        ];
+        console.log(`💥 Spite Bug ${enemy.id} exploding on death!`);
+        spawnThrownBomb(explosionPos, [0, 0, 0], [0, 0, 0], 0.1); 
+      }
+      
       onDeath(enemy.id);
     }
   }, [enemy.isDead, enemy.id, onDeath]);
@@ -86,9 +98,27 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       const currentPos = currentPositionRef.current;
       const effectPos: [number, number, number] = [currentPos[0], currentPos[1] + enemy.definition.size/2, currentPos[2]];
       setHitEffects(prev => [...prev, { id, position: effectPos }]);
+
+      // Reactive Bug: Fire on hit
+      if (enemy.definition.id === 'reactive_bug' && !enemy.isDead) {
+        const playerPos = new Vector3(...playerPosition);
+        const enemyVec = new Vector3(...currentPos);
+        const dir = new Vector3().subVectors(playerPos, enemyVec).normalize();
+        
+        console.log(`🔫 Spite Bug ${enemy.id} reacting to hit!`);
+        addEnemyProjectile({
+          origin: [currentPos[0] + dir.x * 1.5, currentPos[1] + 1.0, currentPos[2] + dir.z * 1.5],
+          direction: [dir.x, dir.y, dir.z],
+          type: 'normal',
+          damage: enemy.definition.damage,
+          speed: 12,
+          color: enemy.definition.color,
+          size: 0.8,
+        });
+      }
     }
     lastHealthRef.current = enemy.health;
-  }, [enemy.health, enemy.id, currentPositionRef, enemy.definition.size]);
+  }, [enemy.health, enemy.id, currentPositionRef, enemy.definition.size, playerPosition]);
 
   // Update position from mesh (synced with physics, safe to read)
   useFrame(() => {

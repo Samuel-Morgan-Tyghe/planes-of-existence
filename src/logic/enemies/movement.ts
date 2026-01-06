@@ -62,7 +62,7 @@ export function calculateEnemyVelocity(
 
   // 4. Melee Positioning (Stop when in hitting range)
   if (!isRanged && distance <= attackRange) {
-     if (enemy.definition.id !== 'parasite' && enemy.definition.id !== 'hopper' && enemy.definition.id !== 'knight') {
+     if (enemy.definition.id !== 'parasite' && enemy.definition.id !== 'hopper' && enemy.definition.id !== 'knight' && enemy.definition.id !== 'reactive_bug') {
         return new Vector3(0, 0, 0);
      }
   }
