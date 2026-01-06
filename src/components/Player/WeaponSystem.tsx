@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
-import { $plane, $stats, useBomb } from '../../stores/game';
+import { $plane, $stats, debugRerollEnemies, useBomb } from '../../stores/game';
 import { $position, $projectiles, $velocity, addProjectiles, removeProjectile } from '../../stores/player';
 import { fireWeapon } from '../../systems/combat';
 import { emitDamage } from '../../systems/events';
@@ -32,6 +32,9 @@ export function WeaponSystem() {
       }
       if (key === 'e') {
         handleThrowBomb();
+      }
+      if (key === 'l') {
+        debugRerollEnemies();
       }
     };
 

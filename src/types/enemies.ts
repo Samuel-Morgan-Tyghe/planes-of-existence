@@ -185,6 +185,18 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     projectileSpeed: 8,
     fireRate: 2000,
   },
+  hopper: {
+    id: 'hopper',
+    name: 'Hopper',
+    health: 25,
+    damage: 8,
+    speed: 8.0, // Fast burst speed
+    size: 0.9,
+    color: '#00FA9A', // MediumSpringGreen
+    dropChance: 0.3,
+    experience: 20,
+    attackType: 'melee',
+  },
 };
 
 export interface EnemyState {

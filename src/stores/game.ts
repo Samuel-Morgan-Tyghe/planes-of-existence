@@ -208,3 +208,84 @@ export const spawnEnemy = (definitionId: string, position: [number, number, numb
   $enemies.set([...currentEnemies, newEnemy]);
   $enemiesAlive.set($enemiesAlive.get() + 1);
 };
+// ... (previous code)
+
+export const debugRerollEnemies = () => {
+  const roomId = $currentRoomId.get();
+  const floorData = $floorData.get();
+  if (!floorData) return;
+  
+  const room = floorData.rooms.find(r => r.id === roomId);
+  if (!room || room.type === 'start') return; // Don't spawn in start room
+  
+  // 1. Filter out existing enemies for this room
+  const allEnemies = $enemies.get();
+  const otherEnemies = allEnemies.filter(e => e.roomId !== roomId);
+  
+  // 2. Generate new enemies for this room using existing spawn points
+  const newEnemies: EnemyState[] = [];
+  const enemyTypes = Object.values(ENEMY_DEFINITIONS).filter(e => e.id !== 'boss'); // No double bosses
+  
+  // We need to re-generate layout to get world positions if they aren't stored on the room
+  // room.enemySpawnPoints contains [gridX, gridY]
+  
+  // To get world coordinates, we need the room's world offset.
+  // We can re-calculate it or use the utility.
+  // room.gridX * ROOM_WORLD_SIZE
+  // let's import getRoomWorldSize from floorGen? Or just replicate simple math.
+  // floorGen.ts: ROOM_WORLD_SIZE = 40.
+  
+  const ROOM_WORLD_SIZE = 40;
+  const worldOffset: [number, number, number] = [
+    room.gridX * ROOM_WORLD_SIZE,
+    0,
+    room.gridY * ROOM_WORLD_SIZE,
+  ];
+  
+  // Helper to convert grid to world (replicated from floorGen/GridMap logic)
+  const gridToWorldLocal = (gx: number, gy: number) => {
+    const ROOM_SIZE = 20;
+    const tileSize = ROOM_WORLD_SIZE / ROOM_SIZE;
+    const offset = -ROOM_WORLD_SIZE / 2 + tileSize / 2;
+    return [
+      worldOffset[0] + offset + gx * tileSize,
+      0.5, // Default height
+      worldOffset[2] + offset + gy * tileSize
+    ] as [number, number, number];
+  };
+
+  room.enemySpawnPoints.forEach(point => {
+    const [gridX, gridY] = point;
+    const pos = gridToWorldLocal(gridX, gridY);
+    
+    const randomEnemy = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+     // Glitchers have a chance to hold a random item
+    let heldItem: string | undefined;
+    if (randomEnemy.id === 'glitch_basic') {
+      const itemIds = Object.keys(ITEM_DEFINITIONS);
+      heldItem = itemIds[Math.floor(Math.random() * itemIds.length)];
+    }
+
+    // Generate a temporary ID. 
+    // Ideally we should use a counter that doesn't conflict.
+    // The previous max ID + 1 + index
+    const maxId = Math.max(0, ...otherEnemies.map(e => e.id), ...newEnemies.map(e => e.id));
+    
+    newEnemies.push({
+      id: maxId + 1,
+      roomId: roomId,
+      definition: randomEnemy,
+      health: randomEnemy.health,
+      position: pos,
+      isDead: false,
+      heldItem,
+      spawnTime: Date.now(),
+    });
+  });
+  
+  $enemies.set([...otherEnemies, ...newEnemies]);
+  $enemiesAlive.set([...otherEnemies, ...newEnemies].length);
+  $roomCleared.set(false);
+  
+  console.log(`🎲 Rerolled ${newEnemies.length} enemies for room ${roomId}`);
+};

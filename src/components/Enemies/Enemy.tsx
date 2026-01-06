@@ -4,6 +4,7 @@ import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier'
 import { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { updateCorrupterAI } from '../../logic/enemies/corrupter';
+import { calculateEnemyVelocity } from '../../logic/enemies/movement';
 import { calculateEnemyAttackPattern } from '../../logic/enemyPatterns';
 import { calculateGrowthStats } from '../../logic/growthLogic';
 import { $enemies, $enemyPositions } from '../../stores/game';
@@ -104,40 +105,33 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
 
   });
 
+  // Refactored Movement Logic
   const updateMovement = (
     rb: RapierRigidBody,
     distance: number,
-    playerPos: Vector3,
+    targetPos: Vector3,
     enemyVec: Vector3,
     dynamicSpeed?: number
   ) => {
-    if (enemy.definition.id === 'turret') {
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    } else if (distance < detectionRange && distance > attackRange) {
-      
-      // Calculate base direction
-      const baseDirection = new Vector3().subVectors(playerPos, enemyVec).normalize();
-      let finalDirection = baseDirection;
-
-      if (enemy.definition.id === 'parasite') {
-         // Chaotic Movement: Add orthogonal sine wave
-         // Calculate orthogonal vector (XZ plane)
-         const ortho = new Vector3(-baseDirection.z, 0, baseDirection.x);
-         const time = Date.now() / 200; // Frequency
-         const sway = Math.sin(time) * 0.8; // Amplitude
-         
-         finalDirection.add(ortho.multiplyScalar(sway)).normalize();
-      }
-
-      const velocity = finalDirection.multiplyScalar(dynamicSpeed || enemy.definition.speed);
-      rb.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
-    } else if (isRanged && distance > attackRange * 0.7 && distance <= attackRange) {
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    } else if (distance <= attackRange && !isRanged) {
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    } else {
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    // We assume detection range checks are done before calling this or inside internal logic if complex.
+    // However, the previous logic checked detectionRange (50) inside updateMovement.
+    // Let's preserve that check here or rely on the utility?
+    // The utility is pure math. State checks should be here.
+    
+    if (distance > detectionRange) {
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        return;
     }
+
+    const velocity = calculateEnemyVelocity(
+        enemy,
+        targetPos,
+        enemyVec,
+        distance,
+        dynamicSpeed
+    );
+    
+    rb.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
   };
 
   const updateAttack = (
