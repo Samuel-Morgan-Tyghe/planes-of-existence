@@ -209,7 +209,72 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     experience: 35,
     attackType: 'melee',
   },
-  
+  bomber: {
+    id: 'bomber',
+    name: 'Bomber',
+    health: 35,
+    damage: 15,
+    speed: 1.5,
+    size: 1.1,
+    color: '#A52A2A', // Brownish
+    dropChance: 0.4,
+    experience: 30,
+    attackType: 'ranged',
+    attackRange: 8, // Short range
+    fireRate: 3000, // Throws every 3 seconds
+  },
+  demolisher: {
+    id: 'demolisher',
+    name: 'Demolisher',
+    health: 80,
+    damage: 15,
+    speed: 0.8, // Very slow
+    size: 1.5,
+    color: '#2F4F4F', // DarkSlateGray
+    dropChance: 0.6,
+    experience: 50,
+    attackType: 'ranged',
+    attackRange: 10,
+    fireRate: 4000, // Slow but powerful
+  },
+  bombardier: {
+    id: 'bombardier',
+    name: 'Bombardier',
+    health: 30,
+    damage: 12,
+    speed: 1.0, 
+    size: 0.9,
+    color: '#FFD700', // Gold
+    dropChance: 0.4,
+    experience: 30,
+    attackType: 'ranged',
+    attackRange: 25, // Long range
+    fireRate: 4000, // Very slow fire rate
+  },
+  slime_slow: {
+    id: 'slime_slow',
+    name: 'Slow Slime',
+    health: 40,
+    damage: 8,
+    speed: 1.0,
+    size: 1.2,
+    color: '#00f2ff', // Cyan
+    dropChance: 0.4,
+    experience: 30,
+    attackType: 'melee',
+  },
+  slime_toxic: {
+    id: 'slime_toxic',
+    name: 'Toxic Slime',
+    health: 45,
+    damage: 10,
+    speed: 1.2,
+    size: 1.1,
+    color: '#32CD32', // LimeGreen
+    dropChance: 0.45,
+    experience: 35,
+    attackType: 'melee',
+  },
 };
 
 export interface EnemyState {

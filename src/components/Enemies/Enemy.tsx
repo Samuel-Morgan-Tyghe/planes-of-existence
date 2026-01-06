@@ -7,12 +7,14 @@ import { updateCorrupterAI } from '../../logic/enemies/corrupter';
 import { calculateEnemyVelocity } from '../../logic/enemies/movement';
 import { calculateEnemyAttackPattern } from '../../logic/enemyPatterns';
 import { calculateGrowthStats } from '../../logic/growthLogic';
-import { $enemies, $enemyPositions } from '../../stores/game';
+import { $enemies, $enemyPositions, enemyUseBomb, spawnThrownBomb } from '../../stores/game';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
 import { addEnemyProjectile } from '../../stores/projectiles';
+import { $trails, addTrail } from '../../stores/trails';
 import { emitCorruption, emitDamage } from '../../systems/events';
 import type { EnemyState } from '../../types/enemies';
 import { ITEM_DEFINITIONS } from '../../types/items';
+import type { TrailType } from '../../types/trails';
 import { HitEffect } from '../Effects/HitEffect';
 
 interface EnemyProps {
@@ -47,6 +49,8 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   // ... (inside component)
   const timeAliveRef = useRef(0);
   const dynamicStatsRef = useRef({ speed: enemy.definition.speed, damage: enemy.definition.damage, healthMultiplier: 1.0 });
+  const lastTrailPositionRef = useRef<Vector3 | null>(null);
+  const lastPoisonTimeRef = useRef(0);
 
   const isRanged = enemy.definition.attackType === 'ranged' || !!enemy.heldItem;
   let attackRange = isRanged ? (enemy.definition.attackRange || 15) : ENEMY_ATTACK_RANGE;
@@ -89,6 +93,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   // Update position from mesh (synced with physics, safe to read)
   useFrame(() => {
     if (!active || enemy.isDead || !rigidBodyRef.current) return;
+    const now = Date.now();
     
     if (meshRef.current) {
       // Get world position from mesh which is updated by Rapier
@@ -101,6 +106,49 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       // Update parent spawner with current position for projectile collision
       // Ensure this is called every frame to keep global state fresh
       onPositionUpdate?.(enemy.id, newPos);
+
+      // Check for Trails
+      const activeTrails = Object.values($trails.get()).filter(t => t.roomId === enemy.roomId);
+      let isSlowed = false;
+      let isOnPoison = false;
+
+      for (const trail of activeTrails) {
+        const trailPos = new Vector3(...trail.position);
+        if (worldPos.distanceTo(trailPos) < trail.size) {
+          if (trail.type === 'slow') isSlowed = true;
+          if (trail.type === 'toxic') isOnPoison = true;
+        }
+      }
+
+      // Apply Slow
+      if (isSlowed) {
+        dynamicStatsRef.current.speed = enemy.definition.speed * 0.4; // 60% slow
+      } else if (!enemy.definition.id.startsWith('growth_')) {
+        // Reset if not a growth bug (which has its own speed logic)
+        dynamicStatsRef.current.speed = enemy.definition.speed;
+      }
+
+      // Apply Poison
+      if (isOnPoison && now - lastPoisonTimeRef.current > 1000) {
+        emitDamage(enemy.id, 2); // 2 poison damage per second
+        lastPoisonTimeRef.current = now;
+      }
+
+      // Slime Trail Logic
+      if (enemy.definition.id.startsWith('slime_')) {
+        const currentPosVec = worldPos.clone();
+        if (!lastTrailPositionRef.current || currentPosVec.distanceTo(lastTrailPositionRef.current) > 1.5) {
+          const type: TrailType = enemy.definition.id === 'slime_slow' ? 'slow' : 'toxic';
+          addTrail(
+            [worldPos.x, worldPos.y, worldPos.z],
+            type,
+            enemy.definition.size * 1.5,
+            6000, // 6 seconds
+            enemy.roomId
+          );
+          lastTrailPositionRef.current = currentPosVec;
+        }
+      }
     }
 
   });
@@ -150,18 +198,59 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         console.log('🔴 Enemy', enemy.id, 'attacking player! Distance:', distance.toFixed(2), 'Type:', isRanged ? 'RANGED' : 'melee');
 
         if (isRanged) {
-          // Use extracted logic to calculate attack pattern
-          const projectiles = calculateEnemyAttackPattern(
-            enemy,
-            playerPos,
-            enemyVec,
-            ITEM_DEFINITIONS
-          );
+          const isBombThrower = ['bomber', 'demolisher', 'bombardier'].includes(enemy.definition.id);
+          if (isBombThrower) {
+            console.log(`💣 Enemy ${enemy.id} throwing bomb(s)!`);
+            const targetDir: [number, number, number] = [playerPos.x - enemyVec.x, 0, playerPos.z - enemyVec.z];
+            const length = Math.sqrt(targetDir[0] * targetDir[0] + targetDir[2] * targetDir[2]);
+            const normalizedDir: [number, number, number] = [targetDir[0] / length, 0, targetDir[2] / length];
 
-          projectiles.forEach(p => {
-             console.log(`🚀 Enemy ${enemy.id} firing ${p.type} projectile at ${p.origin}`);
-             addEnemyProjectile(p);
-          });
+            const throwBomb = (dir: [number, number, number]) => {
+              const spawnPos: [number, number, number] = [
+                enemyVec.x + dir[0] * 1.5,
+                enemyVec.y + 1.2,
+                enemyVec.z + dir[2] * 1.5
+              ];
+              const vel = rigidBodyRef.current?.linvel() || { x: 0, y: 0, z: 0 };
+              
+              if (enemy.definition.id === 'bombardier') {
+                const sniperForce = 20;
+                const bombardierVelocity: [number, number, number] = [
+                  dir[0] * sniperForce + vel.x,
+                  6 + vel.y,
+                  dir[2] * sniperForce + vel.z
+                ];
+                spawnThrownBomb(spawnPos, dir, bombardierVelocity);
+              } else {
+                enemyUseBomb(spawnPos, dir, [vel.x, vel.y, vel.z]);
+              }
+            };
+
+            if (enemy.definition.id === 'demolisher') {
+              // Throw 3 bombs in a fan
+              const angles = [-0.3, 0, 0.3]; // Radians
+              angles.forEach(angle => {
+                const vec = new Vector3(normalizedDir[0], 0, normalizedDir[2]).applyAxisAngle(new Vector3(0, 1, 0), angle);
+                throwBomb([vec.x, 0, vec.z]);
+              });
+            } else {
+              throwBomb(normalizedDir);
+            }
+
+          } else {
+            // Use extracted logic to calculate attack pattern
+            const projectiles = calculateEnemyAttackPattern(
+              enemy,
+              playerPos,
+              enemyVec,
+              ITEM_DEFINITIONS
+            );
+
+            projectiles.forEach(p => {
+              console.log(`🚀 Enemy ${enemy.id} firing ${p.type} projectile at ${p.origin}`);
+              addEnemyProjectile(p);
+            });
+          }
 
         } else {
           takeDamage(dynamicDamage || enemy.definition.damage);

@@ -3,8 +3,9 @@ import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody } from '@react-three/rapier';
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { $plane, $playerYaw } from '../../stores/game';
+import { $currentRoomId, $plane, $playerYaw } from '../../stores/game';
 import { $isTeleporting } from '../../stores/player';
+import { $trails } from '../../stores/trails';
 
 interface PlayerControllerProps {
   rigidBodyRef: React.RefObject<RapierRigidBody>;
@@ -99,7 +100,23 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
 
     const rb = rigidBodyRef.current;
     const keys = keysRef.current;
+    const currentRoomId = $currentRoomId.get();
     
+    // Check for "Slow" Trail
+    const pos = rb.translation();
+    const trailsObj = $trails.get();
+    const activeTrails = Object.values(trailsObj).filter(t => t.roomId === currentRoomId);
+    let speedMult = 1.0;
+    for (const trail of activeTrails) {
+        if (trail.type === 'slow') {
+           const dist = Math.sqrt((pos.x - trail.position[0])**2 + (pos.z - trail.position[2])**2);
+           if (dist < trail.size) {
+               speedMult = 0.4; // 60% slow
+               break;
+           }
+        }
+    }
+
     // 1. Manually Apply Rotation logic for FPS
     if (plane === 'FPS') {
         const camera = state.camera;
@@ -120,10 +137,10 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
 
     const velocity = rb.linvel();
     // Momentum Settings
-    const MAX_SPEED = 12;     // Doubled from 8
-    const ACCELERATION = 60; // Doubled from 60 - Fast ramp up
-    const FRICTION = 40;      // Increased from 40 - Stop relatively quickly
-    const AIR_FRICTION = 10;  // Increased from 10
+    const MAX_SPEED = 12 * speedMult;     
+    const ACCELERATION = 60 * speedMult; 
+    const FRICTION = 40;      
+    const AIR_FRICTION = 10;  
 
     const delta = 1/60; // Approx fixed time step
     

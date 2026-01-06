@@ -1,8 +1,10 @@
 import { Vector3 } from 'three';
 import { EnemyState } from '../../types/enemies';
+import { getBomberVelocity } from './behaviors/bomber';
 import { getHopperVelocity } from './behaviors/hopper';
 import { getKnightVelocity } from './behaviors/knight';
 import { getParasiteVelocity } from './behaviors/parasite';
+import { getSlimeVelocity } from './behaviors/slime';
 import { getTurretVelocity } from './behaviors/turret';
 
 export function calculateEnemyVelocity(
@@ -33,6 +35,18 @@ export function calculateEnemyVelocity(
   if (enemy.definition.id === 'knight') {
      const baseDirection = new Vector3().subVectors(playerPos, enemyVec).normalize();
      return getKnightVelocity(baseDirection, distance, 20, speed, enemy.id); 
+  }
+
+  // 4. Bomber logic
+  if (enemy.definition.id === 'bomber' || enemy.definition.id === 'demolisher' || enemy.definition.id === 'bombardier') {
+    const baseDirection = new Vector3().subVectors(playerPos, enemyVec).normalize();
+    return getBomberVelocity(baseDirection, distance, attackRange, speed);
+  }
+
+  // 5. Slime logic
+  if (enemy.definition.id.startsWith('slime_')) {
+    const baseDirection = new Vector3().subVectors(playerPos, enemyVec).normalize();
+    return getSlimeVelocity(baseDirection, distance, 6.0, speed);
   }
 
   // 3. Ranged Positioning (Stop at max range)

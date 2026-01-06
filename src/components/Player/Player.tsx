@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { $currentFloor, $currentRoomId, $plane, $stats } from '../../stores/game';
 import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo, $velocity, takeDamage } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
+import { $trails } from '../../stores/trails';
 import { $knockbackEvents } from '../../systems/events';
 import { PlayerController } from './PlayerController';
 
@@ -34,6 +35,7 @@ export function Player() {
   const isDeadRef = useRef(false);
   const invulnerabilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deathTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPoisonTimeRef = useRef(0);
 
   // Set invulnerability on initial mount
   useEffect(() => {
@@ -241,6 +243,31 @@ export function Player() {
 
     if (damageIntensity > 0) {
       setDamageIntensity((prev) => Math.max(0, prev - delta * 2)); // Fade over 0.5 seconds
+    }
+
+    // Trail Toxicity Logic for Player
+    const now = Date.now();
+    const currentRoomId = $currentRoomId.get();
+    const trailsObj = $trails.get();
+    const activeTrails = Object.values(trailsObj).filter(t => t.roomId === currentRoomId);
+    const playerPos = rb.translation();
+    
+    let isOnPoison = false;
+    for (const trail of activeTrails) {
+      if (trail.type === 'toxic') {
+        const dist = Math.sqrt((playerPos.x - trail.position[0])**2 + (playerPos.z - trail.position[2])**2);
+        if (dist < trail.size) {
+           isOnPoison = true;
+           break;
+        }
+      }
+    }
+
+    if (isOnPoison && now - lastPoisonTimeRef.current > 1000) {
+      takeDamage(1); // Poison deals 1 damage per second to player
+      lastPoisonTimeRef.current = now;
+      setDamageFlash(true);
+      setTimeout(() => setDamageFlash(false), 200);
     }
   });
 

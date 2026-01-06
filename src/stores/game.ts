@@ -126,6 +126,23 @@ export const toggleCombatStats = () => {
 };
 
 let bombIdCounter = 0;
+
+export const spawnThrownBomb = (position: [number, number, number], direction: [number, number, number], initialVelocity: [number, number, number], fuse: number = 3.0) => {
+  const id = bombIdCounter++;
+  const newBomb: ThrownBomb = {
+    id,
+    position,
+    direction,
+    initialVelocity,
+    exploded: false,
+    fuse,
+  };
+  
+  $thrownBombs.setKey(id, newBomb);
+  console.log('💣 Bomb spawned:', newBomb);
+  return id;
+};
+
 export const useBomb = (position: [number, number, number], direction: [number, number, number], playerVelocity?: [number, number, number]) => {
   const inventory = $inventory.get();
   const bombCount = inventory['bomb'] || 0;
@@ -140,23 +157,24 @@ export const useBomb = (position: [number, number, number], direction: [number, 
       direction[2] * throwForce + (playerVelocity?.[2] || 0)
     ];
 
-    const id = bombIdCounter++;
-    const newBomb: ThrownBomb = {
-      id,
-      position,
-      direction,
-      initialVelocity,
-      exploded: false,
-      fuse: 3.0,
-    };
-    
-    $thrownBombs.setKey(id, newBomb);
-    console.log('💣 Bomb added to $thrownBombs store:', newBomb);
+    spawnThrownBomb(position, direction, initialVelocity);
     return true;
   }
   
   console.log('❌ No bombs left!');
   return false;
+};
+
+export const enemyUseBomb = (position: [number, number, number], direction: [number, number, number], enemyVelocity?: [number, number, number]) => {
+  const throwForce = 8; // Slightly weaker than player throw
+  const initialVelocity: [number, number, number] = [
+    direction[0] * throwForce + (enemyVelocity?.[0] || 0),
+    4 + (enemyVelocity?.[1] || 0), // Higher arc
+    direction[2] * throwForce + (enemyVelocity?.[2] || 0)
+  ];
+
+  spawnThrownBomb(position, direction, initialVelocity);
+  return true;
 };
 
 export const updateThrownBomb = (id: number, data: Partial<ThrownBomb>) => {

@@ -13,6 +13,7 @@ import { WeaponSystem } from '../Player/WeaponSystem';
 import { DropManager } from '../World/DropManager';
 import { GridMap } from '../World/GridMap';
 import { ThrownBombGroup } from '../World/ThrownBombGroup';
+import { TrailManager } from '../World/TrailManager';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
@@ -74,6 +75,7 @@ export function Scene() {
       <EffectsManager />
 
       <ThrownBombGroup />
+      <TrailManager />
     </Physics>
   );
 }
