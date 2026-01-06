@@ -10,6 +10,7 @@ type DropEvent = {
   position: [number, number, number];
   roomId: number;
   timestamp: number;
+  forcedType?: any;
   forcedItem?: string;
 };
 
@@ -22,8 +23,8 @@ export const emitDamage = (enemyId: number, damage: number) => {
   $damageEvents.set({ enemyId, damage, timestamp: Date.now() });
 };
 
-export const emitDrop = (position: [number, number, number], roomId: number, forcedItem?: string) => {
-  $dropEvents.set({ position, roomId, timestamp: Date.now(), forcedItem });
+export const emitDrop = (position: [number, number, number], roomId: number, forcedType?: any, forcedItem?: string) => {
+  $dropEvents.set({ position, roomId, timestamp: Date.now(), forcedType, forcedItem });
 };
 
 type RoomClearEvent = {

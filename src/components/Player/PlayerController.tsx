@@ -28,12 +28,14 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // console.log('⌨️ Key Down:', e.key);
-      keysRef.current.add(e.key.toLowerCase());
+      const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
+      keysRef.current.add(key);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       // console.log('⌨️ Key Up:', e.key);
-      keysRef.current.delete(e.key.toLowerCase());
+      const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
+      keysRef.current.delete(key);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -192,16 +194,20 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       }
     }
 
-    // Apply jump impulse if space is pressed and grounded
-    if (keys.has(' ') && Math.abs(velocity.y) < 0.1) {
-      rb.applyImpulse({ x: 0, y: JUMP_FORCE, z: 0 }, true);
-    }
-
     // Apply Acceleration / Friction
     const mass = rb.mass();
     const isGrounded = Math.abs(velocity.y) < 0.2; // Slightly more lenient grounding
     const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
     const isTryingToMove = Math.abs(targetVX) > 0 || Math.abs(targetVZ) > 0;
+    
+    // Apply jump impulse if space is pressed and grounded
+    if (keys.has(' ') && isGrounded) {
+      rb.applyImpulse({ x: 0, y: JUMP_FORCE, z: 0 }, true);
+      console.log('🦘 Jump!');
+    }
+    
+    // Re-read velocity after jump to ensure movement code doesn't override it
+    const currentVelocity = rb.linvel();
     
     if (isGrounded) {
       if (isTryingToMove) {
@@ -216,7 +222,7 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
           
           rb.setLinvel({
             x: inputDirX * newSpeed,
-            y: velocity.y,
+            y: currentVelocity.y, // Use current velocity to preserve jump
             z: inputDirZ * newSpeed
           }, true);
         } else {

@@ -218,6 +218,15 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
                 }
                 if (ud?.isRock) {
                    breakRock(ud.rockId);
+                   if (ud.isSecret) {
+                      const t = other.rigidBody?.translation();
+                      if (t) {
+                         // Secret rocks guarantee high-value items (like Isaac's tinted rocks)
+                         emitDrop([t.x, 0.1, t.z], roomId, 'shield');
+                         setTimeout(() => emitDrop([t.x + 0.3, 0.1, t.z + 0.3], roomId, 'health'), 50);
+                         setTimeout(() => emitDrop([t.x - 0.3, 0.1, t.z - 0.3], roomId), 100); // One random drop
+                      }
+                   }
                 }
              }}
            />

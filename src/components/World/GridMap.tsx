@@ -389,11 +389,12 @@ export function GridMap() {
                 } else if (tile === 8) {
                   // Pit (Falling Hazard)
                   return <Pitfall key={`pit-${room.id}-${x}-${y}`} position={worldPos} />;
-                } else if (tile === 9) {
-                    // Rock
+                } else if (tile === 9 || tile === 11) {
+                    // Rock (9: Normal, 11: Secret)
+                    const isSecret = tile === 11;
                     const height = 0.5 + Math.abs(Math.sin(x * y * 123.45)) * 1.5;
                     const rockId = `${room.id}-rock-${x}-${y}`;
-                    return <Rock key={`rock-${room.id}-${x}-${y}`} position={worldPos} height={height} id={rockId} />;
+                    return <Rock key={`rock-${room.id}-${x}-${y}`} position={worldPos} height={height} id={rockId} type={isSecret ? 'secret' : 'normal'} />;
                 } else if (tile === 10) {
                     // Crate
                     return <Crate key={`crate-${room.id}-${x}-${y}`} id={`${room.id}-${x}-${y}`} position={worldPos} />;

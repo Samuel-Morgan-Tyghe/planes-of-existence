@@ -313,7 +313,9 @@ export function generateRoomLayout(
   const placeRock = (px: number, py: number) => {
       if (px > 1 && px < ROOM_SIZE - 2 && py > 1 && py < ROOM_SIZE - 2) {
           if (grid[py][px] === 0 && (px !== centerX || py !== centerY)) {
-              grid[py][px] = 9; // Rock
+              // 15% chance for a Secret Rock (Tile 11)
+              const isSecret = rng.next() < 0.15;
+              grid[py][px] = isSecret ? 11 : 9; 
           }
       }
   };

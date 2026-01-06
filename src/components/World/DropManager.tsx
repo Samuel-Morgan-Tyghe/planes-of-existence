@@ -34,7 +34,7 @@ export function DropManager({ }: DropManagerProps) {
   useEffect(() => {
     if (!dropEvents) return;
     
-    const { position, roomId, forcedItem } = dropEvents;
+    const { position, roomId, forcedType, forcedItem } = dropEvents;
 
     if (forcedItem) {
       // Force drop specific item
@@ -48,6 +48,19 @@ export function DropManager({ }: DropManagerProps) {
       $drops.set([...$drops.get(), newDrop]);
       console.log(`🎁 Forced item drop: ${forcedItem} in room ${roomId}`);
       return;
+    }
+
+    if (forcedType) {
+       // Force drop specific type (health, shield, coin, etc.)
+       const newDrop: Drop = {
+           id: Date.now() + Math.random(),
+           type: forcedType,
+           position,
+           roomId,
+       };
+       $drops.set([...$drops.get(), newDrop]);
+       console.log(`🎁 Forced type drop: ${forcedType} in room ${roomId}`);
+       return;
     }
 
     const dropResult = rollDrop();

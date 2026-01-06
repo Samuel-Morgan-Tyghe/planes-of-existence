@@ -104,17 +104,10 @@ export function EnemySpawner({
       const roomLayout = generateRoomLayout(room, currentFloor, false, floorData.seed);
 
       if (room.type === 'boss') {
-        allNewEnemies.push({
-          id: enemyIdCounterRef.current++,
-          roomId: room.id,
-          definition: ENEMY_DEFINITIONS.weaver,
-          health: ENEMY_DEFINITIONS.weaver.health,
-          position: [roomLayout.worldOffset[0], 0.5, roomLayout.worldOffset[2]],
-          isDead: false,
-          spawnTime: Date.now(),
-        });
+        // Don't spawn boss enemies here - they'll be spawned when player enters boss room
+        return;
       } else {
-        const enemyTypes = Object.values(ENEMY_DEFINITIONS).filter(e => e.id !== 'boss');
+        const enemyTypes = Object.values(ENEMY_DEFINITIONS).filter(e => e.id !== 'boss' && e.id !== 'weaver');
         room.enemySpawnPoints.forEach(point => {
           const [gridX, gridY] = point;
           const worldPos = gridToWorld(gridX, gridY, roomLayout.worldOffset);
@@ -198,6 +191,39 @@ export function EnemySpawner({
       $clearedRooms.set(newClearedRooms);
     }
   }, [currentRoomId, enemies, currentFloor, floorData]);
+
+  // Spawn boss when entering boss room
+  useEffect(() => {
+    if (!floorData) return;
+    
+    const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
+    if (!currentRoom || currentRoom.type !== 'boss') return;
+    
+    // Check if boss already exists for this room
+    const bossExists = enemies.some(e => e.roomId === currentRoomId && e.definition.id === 'weaver');
+    if (bossExists) return;
+    
+    // Check if room was already cleared
+    const roomKey = `${currentFloor}-${currentRoomId}`;
+    if (clearedRoomsRef.current.has(roomKey)) return;
+    
+    console.log(`👹 Spawning boss in room ${currentRoomId}`);
+    const roomLayout = generateRoomLayout(currentRoom, currentFloor, false, floorData.seed);
+    
+    const bossEnemy: EnemyState = {
+      id: enemyIdCounterRef.current++,
+      roomId: currentRoomId,
+      definition: ENEMY_DEFINITIONS.weaver,
+      health: ENEMY_DEFINITIONS.weaver.health,
+      position: [roomLayout.worldOffset[0], 0.5, roomLayout.worldOffset[2]],
+      isDead: false,
+      spawnTime: Date.now(),
+    };
+    
+    $enemies.set([...$enemies.get(), bossEnemy]);
+    $enemiesAlive.set($enemies.get().length);
+    $roomCleared.set(false);
+  }, [currentRoomId, floorData, currentFloor, enemies]);
 
   const handleEnemyDeath = (enemyId: number) => {
     const currentEnemies = $enemies.get();

@@ -59,6 +59,9 @@ export function restartRun() {
   // Unpause if paused
   $isPaused.set(false);
   
+  // Reset all breakable state
+  resetRocks();
+  
   // Trigger scene regeneration by incrementing restart trigger
   // Components that depend on this will regenerate (level, enemies, loot)
   $restartTrigger.set($restartTrigger.get() + 1);
