@@ -3,7 +3,9 @@ import { CuboidCollider, RigidBody, useRapier } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
 import { $enemyPositions } from '../../stores/game';
+import { breakCrate, spawnLoot } from '../../stores/loot';
 import type { ProjectileData } from '../../types/game';
+import { addEffect } from '../Effects/EffectsManager';
 
 interface ProjectileProps {
   data: ProjectileData;
@@ -119,8 +121,12 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       type="dynamic"
       sensor
       userData={{ isPlayerProjectile: true }}
+      // Ensure we detect everything including Fixed bodies
+      // activeCollisionTypes={ActiveCollisionTypes.DEFAULT | ActiveCollisionTypes.FIXED} // This might be needed if defaults changed
       onIntersectionEnter={({ other }) => {
         const userData = other.rigidBodyObject?.userData;
+        console.log('Project hit:', userData);
+        
         
         if (userData?.isEnemy && !hitRef.current) {
           hitRef.current = true;
@@ -130,15 +136,31 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
           // Push the bomb!
           const bombRigidBody = other.rigidBody;
           if (bombRigidBody) {
-            const pushForce = data.damage * 2; // Scale push force by damage
+            const pushForce = data.damage * 2;
             const impulse = directionRef.current.clone().multiplyScalar(pushForce);
             bombRigidBody.applyImpulse(impulse, true);
-            console.log('🎯 Projectile hit bomb! Pushing with force:', pushForce);
           }
           onDestroy();
         } else if (userData?.isEnemyProjectile) {
-            console.log('⚔️ Projectiles collided!');
+            addEffect({ type: 'impact', position: [other.rigidBody?.translation().x || 0, other.rigidBody?.translation().y || 0, other.rigidBody?.translation().z || 0], color: '#ffff00' });
             onDestroy();
+        } else if (userData?.isBreakable) {
+            breakCrate(userData.crateId); 
+            const t = other.rigidBody?.translation();
+            if (t) spawnLoot([t.x, t.y + 0.5, t.z]);
+            addEffect({ type: 'impact', position: [t?.x || 0, t?.y || 0, t?.z || 0], color: '#8B4513' });
+            onDestroy();
+        } else if (userData?.isWall || userData?.isFloor || !userData) {
+           // Hit wall, floor, or untagged geometry (Rock?)
+           // If it's not a sensor, we stop.
+           // Check if it's a sensor via userData or collider method if available
+           const isSensor = (other.collider as any)?.isSensor?.() || userData?.isSensor;
+           
+           if (!isSensor) {
+               const t = rigidBodyRef.current?.translation();
+               if (t) addEffect({ type: 'impact', position: [t.x, t.y, t.z], color: '#ffffff' });
+               onDestroy();
+           }
         }
       }}
       gravityScale={0}

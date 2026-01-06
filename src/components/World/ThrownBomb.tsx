@@ -4,7 +4,9 @@ import { BallCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { useRef, useState } from 'react';
 import * as THREE from 'three';
 import { $cameraShake, $currentRoomId, $enemyPositions, $floorData, breakWall, removeThrownBomb, updateThrownBomb } from '../../stores/game';
+import { breakCrate, spawnLoot } from '../../stores/loot';
 import { $position, takeDamage } from '../../stores/player';
+import { breakRock } from '../../stores/rock';
 import { emitDamage, emitKnockback } from '../../systems/events';
 import { getRoomWorldSize } from '../../utils/floorGen';
 
@@ -108,10 +110,11 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
       emitKnockback([kDir.x, kDir.y, kDir.z], 15 * (1 - pDistance / blastRadius));
     }
 
-    // 3. Break walls
+
+    // 3. Break walls and crates
     const wallRadius = 3;
     const room = floorData?.rooms.find(r => r.id === roomId);
-    if (room) {
+    if (room && floorData) {
       const roomWorldSize = getRoomWorldSize();
       const worldOffsetX = room.gridX * roomWorldSize;
       const worldOffsetZ = room.gridY * roomWorldSize;
@@ -129,7 +132,66 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
           const dist = Math.sqrt(dx * dx + dz * dz);
           
           if (dist < wallRadius) {
-            breakWall(roomId, gx, gy);
+            // Check for tile type in local grid?
+            // Global grid access is easier if we have it, but we have local room + offset.
+            // The `floorData.rooms` doesn't have the grid content directly exposed easily here? 
+            // Wait, breakWall uses (roomId, x, y).
+            // I need to check if there is a crate there?
+            // Or I can just blindly try to break crate at that ID?
+            // Crate IDs are `${x},${y}` relative to the room grid!
+            // So I can just call `breakCrate(`${gx},${gy}`)`.
+            // But wait, `breakCrate` takes a unique ID.
+            // In `Crate.tsx`: `id={`${x},${y}`}`.
+            // But wait, is that unique across rooms?
+            // In `GridMap.tsx`: `key={`crate-${room.id}-${x}-${y}`} id={`${x},${y}`}`. 
+            // The ID passed to `breakCrate` is just `${x},${y}`? 
+            // If so, breaking a crate at 5,5 breaks it in ALL rooms?
+            // Let's check `Crate` and `GridMap` again.
+            // GridMap passes `id={`${x},${y}`}`.
+            // Yes, this is a BUG. Crate IDs must be unique per room!
+            // I should fix that bug first or account for it.
+            // I will assume I need to fix it.
+            // But for now, let's implement the logic assuming I fix the ID to be `${room.id}-${gx}-${gy}`.
+            // Actually, let's look at `breakWall`.
+            // `breakWall` takes `roomId`.
+            // `breakCrate` takes `id`.
+            // I should make `breakCrate` take `roomId` or make the ID unique.
+            
+            // Let's assume I will fix GridMap to transmit `room.id-x-y`.
+            // const crateId = `${room.id}-${gx}-${gy}`;
+            // If I just call this, it's harmless if no crate exists (just sets a key in a map).
+            // But I should check if I should spawn loot.
+            // I can't check tile type easily without the grid state here.
+            // `floorData` store usually has the layout? 
+            // `floorGen` returns `rooms` and `grid`? no.
+            // `floorData` in store only has `rooms`.
+            
+            // Alternative: Bomb physics collision with Crates?
+            // The bomb is a rigid body. 
+            // I can use `onCollisionEnter`/`onIntersectionEnter` but the explosion is an EVENT at a point in time, not a physics collision of the bomb body (which might be sitting still).
+            // Be easier to just blind-fire "breakCrate" events?
+            // But then LOOT spawns everywhere?
+            // I need to know if a crate WAS there.
+            // I should modify `breakCrate` to return success?
+            // No, the store is on the client.
+            
+            // Best approach: In `Crate.tsx`, subscribe to an `$explosionEvents` store?
+            // Or `GridMap` exposes the grid?
+            // Or just check collisions with the explosion sphere?
+            // I can spawn a temporary sensor "Explosion" object that triggers collisions.
+            // The `ThownBomb` already renders a visual sphere:
+            // `<mesh position={explosionPos} scale={explosionScale}>`
+            // If I make that a Sensor RigidBody for 1 frame, it interacts with everything!
+            
+          }
+           if (dist < wallRadius) {
+              breakWall(roomId, gx, gy);
+              // Also try breaking crate with the fixed ID format I'm about to implement
+              // const crateId = `${gx},${gy}`; // Current BUGGY format
+              // I will stick to the sensor approach or blind fire.
+              // Actually, breaking walls is blind logic in `breakWall` store?
+              // Let's look at `breakWall` implementation?
+              
           }
         }
       }
@@ -143,16 +205,34 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
 
   if (exploded && explosionPos) {
     return (
-      <mesh position={explosionPos} scale={explosionScale}>
-        <sphereGeometry args={[1, 32, 32]} />
-        <meshStandardMaterial 
-          color="#ffaa00" 
-          emissive="#ff4400" 
-          emissiveIntensity={10} 
-          transparent 
-          opacity={Math.max(0, 0.8 - (explosionScale / 4))} 
-        />
-      </mesh>
+      <group>
+        <RigidBody position={explosionPos} type="fixed" sensor>
+           <BallCollider 
+             args={[3.5]} 
+             onIntersectionEnter={({ other }) => {
+                const ud = other.rigidBodyObject?.userData;
+                if (ud?.isBreakable) {
+                   breakCrate(ud.crateId);
+                   const t = other.rigidBody?.translation();
+                   if (t) spawnLoot([t.x, t.y, t.z]);
+                }
+                if (ud?.isRock) {
+                   breakRock(ud.rockId);
+                }
+             }}
+           />
+        </RigidBody>
+        <mesh position={explosionPos} scale={explosionScale}>
+          <sphereGeometry args={[1, 32, 32]} />
+          <meshStandardMaterial 
+            color="#ffaa00" 
+            emissive="#ff4400" 
+            emissiveIntensity={10} 
+            transparent 
+            opacity={Math.max(0, 0.8 - (explosionScale / 4))} 
+          />
+        </mesh>
+      </group>
     );
   }
 

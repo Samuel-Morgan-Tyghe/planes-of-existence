@@ -1,4 +1,4 @@
-export type TileType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type TileType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 // 0 = Floor (walkable)
 // 1 = Wall (obstacle)
 // 2 = Enemy spawn
@@ -7,6 +7,9 @@ export type TileType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 // 5 = Door (open, connects rooms)
 // 6 = Locked door (requires key)
 // 7 = Environmental Hazard (Spikes)
+// 8 = Pitfall (hole in the ground)
+// 9 = Rock (obstacle)
+// 10 = Crate (breakable)
 
 export type GridMap = TileType[][];
 

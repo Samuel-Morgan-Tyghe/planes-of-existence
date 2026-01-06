@@ -235,7 +235,7 @@ export function generateRoomLayout(
 
   if (roomType === 0) {
     // Square room
-    const roomSize = 14;
+    const roomSize = Math.random() * 12 + 8; // More spacious (was 14)
     const startX = Math.floor((ROOM_SIZE - roomSize) / 2);
     const startY = Math.floor((ROOM_SIZE - roomSize) / 2);
     for (let y = startY; y < startY + roomSize; y++) {
@@ -278,6 +278,84 @@ export function generateRoomLayout(
     grid[7][12] = 1;
     grid[12][7] = 1;
     grid[12][12] = 1;
+  }
+
+
+
+  // Determine Rock Pattern
+  const patternType = rng.nextInt(0, 4); // 0: Random, 1: Ring, 2: Corners, 3: Cluster
+  const rockCount = rng.nextInt(6, 12); // Doubled checks
+
+  const centerX = Math.floor(ROOM_SIZE / 2);
+  const centerY = Math.floor(ROOM_SIZE / 2);
+
+  const placeRock = (px: number, py: number) => {
+      if (px > 1 && px < ROOM_SIZE - 2 && py > 1 && py < ROOM_SIZE - 2) {
+          if (grid[py][px] === 0 && (px !== centerX || py !== centerY)) {
+              grid[py][px] = 9; // Rock
+          }
+      }
+  };
+
+  if (patternType === 0) {
+      // Random Scatter (High Density)
+      for (let i = 0; i < rockCount; i++) {
+        let x, y;
+        let attempts = 0;
+        do {
+          x = rng.nextInt(2, ROOM_SIZE - 3);
+          y = rng.nextInt(2, ROOM_SIZE - 3);
+          attempts++;
+        } while (grid[y][x] !== 0 && attempts < 10);
+        placeRock(x, y);
+      }
+  } else if (patternType === 1) {
+      // Ring Pattern
+      const radius = rng.nextInt(3, 5);
+      const steps = 8;
+      for (let i = 0; i < steps; i++) {
+          const angle = (i / steps) * Math.PI * 2;
+          const x = Math.round(centerX + Math.cos(angle) * radius);
+          const y = Math.round(centerY + Math.sin(angle) * radius);
+          placeRock(x, y);
+      }
+  } else if (patternType === 2) {
+      // Corners of inner room
+      const offset = 4;
+      placeRock(centerX - offset, centerY - offset);
+      placeRock(centerX + offset, centerY - offset);
+      placeRock(centerX - offset, centerY + offset);
+      placeRock(centerX + offset, centerY + offset);
+      // Add a few random ones too
+       for (let i = 0; i < 4; i++) {
+           placeRock(rng.nextInt(3, ROOM_SIZE-4), rng.nextInt(3, ROOM_SIZE-4));
+       }
+  } else {
+      // Central Cluster/Cross
+      placeRock(centerX + 2, centerY);
+      placeRock(centerX - 2, centerY);
+      placeRock(centerX, centerY + 2);
+      placeRock(centerX, centerY - 2);
+      placeRock(centerX + 2, centerY + 2);
+      placeRock(centerX - 2, centerY - 2);
+      placeRock(centerX + 2, centerY - 2);
+      placeRock(centerX - 2, centerY + 2);
+  }
+
+  // Place breakable crates
+  const crateCount = rng.nextInt(1, 3);
+  for (let i = 0; i < crateCount; i++) {
+    let x, y;
+    let attempts = 0;
+    do {
+      x = rng.nextInt(2, ROOM_SIZE - 3);
+      y = rng.nextInt(2, ROOM_SIZE - 3);
+      attempts++;
+    } while ((grid[y][x] !== 0 || (x === Math.floor(ROOM_SIZE/2) && y === Math.floor(ROOM_SIZE/2))) && attempts < 20);
+
+    if (grid[y][x] === 0) {
+      grid[y][x] = 10; // Crate
+    }
   }
 
   // Add doors - clear walls in a 3-wide corridor from door to center

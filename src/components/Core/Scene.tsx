@@ -8,6 +8,7 @@ import { EffectsManager } from '../Effects/EffectsManager';
 import { EnemySpawner } from '../Enemies/EnemySpawner';
 import { ProjectileManager } from '../Enemies/ProjectileManager';
 import { Player } from '../Player/Player';
+import { PlayerShadow } from '../Player/PlayerShadow';
 import { WeaponSystem } from '../Player/WeaponSystem';
 import { DropManager } from '../World/DropManager';
 import { GridMap } from '../World/GridMap';
@@ -61,6 +62,7 @@ export function Scene() {
       <PlaneSwitcher />
       <GridMap key={`grid-${restartTrigger}`} />
       <Player key={`player-${restartTrigger}`} />
+      <PlayerShadow />
       
       <ErrorBoundary>
         <WeaponSystem key={`weapon-${restartTrigger}`} />

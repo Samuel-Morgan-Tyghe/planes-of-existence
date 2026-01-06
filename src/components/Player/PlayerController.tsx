@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody } from '@react-three/rapier';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { $plane } from '../../stores/game';
 import { $isTeleporting } from '../../stores/player';
@@ -117,13 +117,11 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     }
 
     const velocity = rb.linvel();
-    let x = 0;
-    let z = 0;
     // Momentum Settings
-    const MAX_SPEED = 8;
-    const ACCELERATION = 60; // How fast we reach max speed
-    const FRICTION = 40;     // How fast we stop
-    const AIR_FRICTION = 10; // Less drag in air
+    const MAX_SPEED = 12;     // Doubled from 8
+    const ACCELERATION = 60; // Doubled from 60 - Fast ramp up
+    const FRICTION = 40;      // Increased from 40 - Stop relatively quickly
+    const AIR_FRICTION = 10;  // Increased from 10
 
     const delta = 1/60; // Approx fixed time step
     
@@ -178,12 +176,24 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     // Apply Acceleration / Friction
     const mass = rb.mass();
     const isGrounded = Math.abs(velocity.y) < 0.1;
+    const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+    
+    // Dynamic Acceleration: Slow to start (Momentum), snap to turn
+    // If we are moving fast (> 20% max speed) and trying to move, we can turn instantly (high accel)
+    const isMovingFast = currentSpeed > MAX_SPEED * 0.2;
+    const isTryingToMove = Math.abs(targetVX) > 0 || Math.abs(targetVZ) > 0;
+    
+    // Base Accel (Ramp up from stop) = 60 (approx 0.5s to max)
+    // Snap Accel (Turning) = 400 (Instant feel)
+    const SNAP_ACCEL = 400;
+    
+    let accelForce = ACCELERATION;
+    if (isGrounded && isMovingFast && isTryingToMove) {
+        accelForce = SNAP_ACCEL;
+    } else if (!isGrounded) {
+        accelForce = ACCELERATION * 0.5;
+    }
 
-    // Calculate difference between current and target
-    const diffX = targetVX - velocity.x;
-    const diffZ = targetVZ - velocity.z;
-
-    let accelForce = isGrounded ? ACCELERATION : (ACCELERATION * 0.5);
     const frictionForce = isGrounded ? FRICTION : AIR_FRICTION;
 
     // If we are strictly trying to stop (no input), use friction
@@ -194,6 +204,10 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     // Apply forces
     let impulseX = 0;
     let impulseZ = 0;
+
+    // Calculate difference between current and target
+    const diffX = targetVX - velocity.x;
+    const diffZ = targetVZ - velocity.z;
 
     // X Axis
     if (Math.abs(diffX) > 0.01) {
@@ -212,6 +226,16 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     
     if (Math.abs(impulseX) > 0.001 || Math.abs(impulseZ) > 0.001) {
       rb.applyImpulse({ x: impulseX, y: 0, z: impulseZ }, true);
+    }
+    
+    // Safety Clamp: Prevent infinite speed accumulation (reported bug)
+    // We only clamp horizontal speed
+    const currentVel = rb.linvel();
+    const horizontalSpeed = Math.sqrt(currentVel.x * currentVel.x + currentVel.z * currentVel.z);
+    
+    if (horizontalSpeed > MAX_SPEED * 1.1) { // Allow 10% overspeed for physics bounce/impulses
+        const scale = (MAX_SPEED * 1.1) / horizontalSpeed;
+        rb.setLinvel({ x: currentVel.x * scale, y: currentVel.y, z: currentVel.z * scale }, true);
     }
   });
 

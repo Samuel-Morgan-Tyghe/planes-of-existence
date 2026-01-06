@@ -5,9 +5,12 @@ import { $brokenWalls, $currentFloor, $currentRoomId, $floorData, $roomCleared, 
 import { $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
+import { Crate } from './Crate';
 import { Door } from './Door';
+import { LootManager } from './LootManager';
 import { Pitfall } from './Pitfall';
 import { Portal } from './Portal';
+import { Rock } from './Rock';
 import { Spikes } from './Spikes';
 import { Wall } from './Wall';
 
@@ -328,6 +331,14 @@ export function GridMap() {
                 } else if (tile === 8) {
                   // Pit (Falling Hazard)
                   return <Pitfall key={`pit-${room.id}-${x}-${y}`} position={worldPos} />;
+                } else if (tile === 9) {
+                    // Rock
+                    const height = 0.5 + Math.abs(Math.sin(x * y * 123.45)) * 1.5;
+                    const rockId = `${room.id}-rock-${x}-${y}`;
+                    return <Rock key={`rock-${room.id}-${x}-${y}`} position={worldPos} height={height} id={rockId} />;
+                } else if (tile === 10) {
+                    // Crate
+                    return <Crate key={`crate-${room.id}-${x}-${y}`} id={`${room.id}-${x}-${y}`} position={worldPos} />;
                 } else if (tile === 4 && roomCleared && isCurrentRoom) {
                   return (
                     <Portal
@@ -373,6 +384,8 @@ export function GridMap() {
           />
         );
       })}
+      
+      <LootManager />
     </>
   );
 }

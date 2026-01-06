@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { HitEffect } from './HitEffect';
+import { ImpactEffect } from './ImpactEffect';
 
 interface Effect {
   id: number;
-  type: 'hit';
+  type: 'hit' | 'impact';
   position: [number, number, number];
   color: string;
 }
@@ -40,6 +41,15 @@ export function EffectsManager() {
         if (effect.type === 'hit') {
           return (
             <HitEffect
+              key={effect.id}
+              position={effect.position}
+              color={effect.color}
+              onComplete={() => handleEffectComplete(effect.id)}
+            />
+          );
+        } else if (effect.type === 'impact') {
+          return (
+            <ImpactEffect
               key={effect.id}
               position={effect.position}
               color={effect.color}
