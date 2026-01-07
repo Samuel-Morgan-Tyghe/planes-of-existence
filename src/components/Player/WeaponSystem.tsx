@@ -207,7 +207,7 @@ export function WeaponSystem() {
 
     const playerVel = $velocity.get();
     console.log('💣 Throwing bomb in direction:', direction, 'standstill:', isStandstill, 'with momentum:', playerVel);
-    useBomb(spawnPos, direction, playerVel);
+    useBomb(spawnPos, direction, playerVel, isStandstill);
   };
 
   const handleHit = useCallback((damage: number, enemyId?: number) => {

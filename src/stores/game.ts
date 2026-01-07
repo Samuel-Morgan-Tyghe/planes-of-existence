@@ -151,19 +151,26 @@ export const spawnThrownBomb = (position: [number, number, number], direction: [
   return id;
 };
 
-export const useBomb = (position: [number, number, number], direction: [number, number, number], playerVelocity?: [number, number, number]) => {
+export const useBomb = (position: [number, number, number], direction: [number, number, number], playerVelocity?: [number, number, number], standstill?: boolean) => {
   const inventory = $inventory.get();
   const bombCount = inventory['bomb'] || 0;
 
   if (bombCount > 0) {
     $inventory.setKey('bomb', bombCount - 1);
     
-    const throwForce = 10;
-    const initialVelocity: [number, number, number] = [
-      direction[0] * throwForce + (playerVelocity?.[0] || 0),
-      3 + (playerVelocity?.[1] || 0),
-      direction[2] * throwForce + (playerVelocity?.[2] || 0)
-    ];
+    let initialVelocity: [number, number, number];
+    
+    if (standstill) {
+      // Drop bomb with no force, just gravity
+      initialVelocity = [0, 0, 0];
+    } else {
+      const throwForce = 10;
+      initialVelocity = [
+        direction[0] * throwForce + (playerVelocity?.[0] || 0),
+        3 + (playerVelocity?.[1] || 0),
+        direction[2] * throwForce + (playerVelocity?.[2] || 0)
+      ];
+    }
 
     spawnThrownBomb(position, direction, initialVelocity);
     return true;
