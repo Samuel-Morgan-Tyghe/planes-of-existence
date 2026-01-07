@@ -222,9 +222,6 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
     const isTryingToMove = Math.abs(targetVX) > 0 || Math.abs(targetVZ) > 0;
     
-    // Re-read velocity after jump to ensure movement code doesn't override it
-    const currentVelocity = rb.linvel();
-    
     // Reset jump count when grounded
     if (isGrounded && jumpCountRef.current > 0) {
       jumpCountRef.current = 0;
@@ -239,30 +236,15 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     
     if (isGrounded) {
       if (isTryingToMove) {
-        if (currentSpeed > 1.0) {
-          // 🚀 SNAPPY MOVE: Instant direction change with no momentum loss
-          const inputDirX = targetVX / MAX_SPEED;
-          const inputDirZ = targetVZ / MAX_SPEED;
-          
-          // Speed maintains its current magnitude but instantly snaps to the new direction
-          const newSpeed = Math.min(MAX_SPEED, currentSpeed + ACCELERATION * 0.5 * delta);
-          
-          rb.setLinvel({
-            x: inputDirX * newSpeed,
-            y: currentVelocity.y, // Use current velocity to preserve jump
-            z: inputDirZ * newSpeed
-          }, true);
-        } else {
-          // 🐌 STARTING: Use weighted acceleration to reach initial speed
-          const accelStep = ACCELERATION * delta * mass; 
-          rb.applyImpulse({
-            x: THREE.MathUtils.clamp(targetVX * mass - velocity.x * mass, -accelStep, accelStep),
-            y: 0,
-            z: THREE.MathUtils.clamp(targetVZ * mass - velocity.z * mass, -accelStep, accelStep)
-          }, true);
-        }
+        // Simple acceleration towards target velocity
+        const accelStep = ACCELERATION * delta * mass;
+        rb.applyImpulse({
+          x: THREE.MathUtils.clamp(targetVX * mass - velocity.x * mass, -accelStep, accelStep),
+          y: 0,
+          z: THREE.MathUtils.clamp(targetVZ * mass - velocity.z * mass, -accelStep, accelStep)
+        }, true);
       } else {
-        // 🛑 FAST STOP: Strong snap to standstill
+        // Stop when not moving
         const stopForce = STOP_FRICTION * delta * mass;
         rb.applyImpulse({
           x: THREE.MathUtils.clamp(-velocity.x * mass, -stopForce, stopForce),
@@ -271,22 +253,22 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
         }, true);
       }
     } else {
-      // ☁️ AIR CONTROL: Direct air steering
+      // Air control
       const airControlForce = 30 * delta * mass;
-       rb.applyImpulse({
+      rb.applyImpulse({
         x: THREE.MathUtils.clamp(targetVX * mass - velocity.x * mass, -airControlForce, airControlForce),
         y: 0,
         z: THREE.MathUtils.clamp(targetVZ * mass - velocity.z * mass, -airControlForce, airControlForce)
       }, true);
     }
     
-    // Hard speed clamp to prevent accumulated overspeed
+    // Simple speed clamp
     const finalVel = rb.linvel();
     const finalSpeed = Math.sqrt(finalVel.x * finalVel.x + finalVel.z * finalVel.z);
     
-    if (finalSpeed > MAX_SPEED * 1.2) { 
-        const scale = (MAX_SPEED * 1.2) / finalSpeed;
-        rb.setLinvel({ x: finalVel.x * scale, y: finalVel.y, z: finalVel.z * scale }, true);
+    if (finalSpeed > MAX_SPEED * 1.1) {
+      const scale = (MAX_SPEED * 1.1) / finalSpeed;
+      rb.setLinvel({ x: finalVel.x * scale, y: finalVel.y, z: finalVel.z * scale }, true);
     }
   });
 

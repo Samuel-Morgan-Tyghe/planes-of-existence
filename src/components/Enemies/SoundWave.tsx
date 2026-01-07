@@ -111,6 +111,17 @@ export function SoundWave({
       }}
     >
       <BallCollider args={[0.5 * size]} />
+      {/* Visual representation */}
+      <mesh castShadow>
+        <sphereGeometry args={[0.5 * size, 8, 8]} />
+        <meshStandardMaterial 
+          color="#00ffff" 
+          emissive="#00ffff"
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.6}
+        />
+      </mesh>
     </RigidBody>
   );
 }
