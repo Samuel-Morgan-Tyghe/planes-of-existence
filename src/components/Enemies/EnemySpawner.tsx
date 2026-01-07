@@ -166,10 +166,13 @@ export function EnemySpawner({
     const bossInRoom = $bossEnemy.get()?.roomId === currentRoomId;
     const bossAlive = $bossAlive.get();
     
-    // Room is cleared only if no regular enemies AND no boss (or boss is dead)
-    const isCleared = roomEnemies.length === 0 && (!bossInRoom || !bossAlive);
+    // Check if this is a boss room
+    const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
+    const isBossRoom = currentRoom?.type === 'boss';
     
-    console.log(`🔍 EnemySpawner Effect | Room: ${currentRoomId} | Total: ${enemies.length} | InRoom: ${roomEnemies.length} | Boss: ${bossInRoom ? (bossAlive ? 'alive' : 'dead') : 'none'} | isCleared: ${isCleared}`);
+    // Room is cleared only if no regular enemies AND no boss (or boss is dead)
+    // IMPORTANT: Don't auto-clear boss rooms until boss has spawned and been defeated
+    const isCleared = roomEnemies.length === 0 && (!bossInRoom || !bossAlive) && (!isBossRoom || bossInRoom);
     
     $roomCleared.set(isCleared);
     
@@ -200,38 +203,34 @@ export function EnemySpawner({
 
   // Spawn boss when entering boss room
   useEffect(() => {
-    if (!floorData) {
-      console.log('⚠️ Boss spawn check: No floor data');
-      return;
-    }
+    if (!floorData) return;
+
     
     const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
-    console.log(`🔍 Boss spawn check: Room ${currentRoomId}, type: ${currentRoom?.type}`);
-    
     if (!currentRoom || currentRoom.type !== 'boss') return;
     
     // Check if boss already exists
     const bossExists = $bossEnemy.get() !== null && $bossEnemy.get()?.roomId === currentRoomId;
-    if (bossExists) {
-      console.log(`👹 Boss already exists in room ${currentRoomId}`);
-      return;
-    }
+    if (bossExists) return;
+    
     
     // Check if room was already cleared
     const roomKey = `${currentFloor}-${currentRoomId}`;
-    if (clearedRoomsRef.current.has(roomKey)) {
-      console.log(`✅ Boss room ${currentRoomId} already cleared`);
-      return;
-    }
+    if (clearedRoomsRef.current.has(roomKey)) return;
     
-    console.log(`👹 Spawning boss in room ${currentRoomId}`);
+    
     const roomLayout = generateRoomLayout(currentRoom, currentFloor, false, floorData.seed);
+    
+    // Select random boss
+    const bossKeys = Object.keys(BOSS_DEFINITIONS);
+    const randomBossKey = bossKeys[Math.floor(Math.random() * bossKeys.length)];
+    const bossDef = BOSS_DEFINITIONS[randomBossKey as keyof typeof BOSS_DEFINITIONS];
     
     const bossEnemy: EnemyState = {
       id: enemyIdCounterRef.current++,
       roomId: currentRoomId,
-      definition: BOSS_DEFINITIONS.weaver,
-      health: BOSS_DEFINITIONS.weaver.health,
+      definition: bossDef,
+      health: bossDef.health,
       position: [roomLayout.worldOffset[0], 0.5, roomLayout.worldOffset[2]],
       isDead: false,
       spawnTime: Date.now(),
@@ -273,7 +272,23 @@ export function EnemySpawner({
   };
 
   const handleEnemyDamage = useCallback((enemyId: number, rawDamage: number) => {
-    // console.log(`💥 Enemy ${enemyId} taking ${rawDamage} damage`);
+    // Check if this is the boss
+    const boss = $bossEnemy.get();
+    if (boss && boss.id === enemyId) {
+      const newHealth = Math.max(0, boss.health - rawDamage);
+      console.log(`💥 Boss ${enemyId} taking ${rawDamage} damage: ${boss.health} -> ${newHealth}`);
+      $bossEnemy.set({
+        ...boss,
+        health: newHealth,
+        isDead: newHealth <= 0,
+      });
+      if (newHealth <= 0) {
+        $bossAlive.set(false);
+      }
+      return;
+    }
+    
+    // Regular enemy damage
     const currentEnemies = $enemies.get();
     const updatedEnemies = currentEnemies.map((e) => {
       if (e.id === enemyId) {

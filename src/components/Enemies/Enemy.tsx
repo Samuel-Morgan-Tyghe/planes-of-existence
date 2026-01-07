@@ -362,9 +362,9 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     }
 
     setDistanceToPlayer(distanceToPlayer); 
-    
-    // Weaver Boss Logic
-    if (enemy.definition.id === 'weaver') {
+    // Boss Logic - Handle all boss types
+    const isBoss = ['weaver', 'corrupter', 'echo_queen', 'chess_queen', 'bomber_king', 'mega_snake', 'summoner'].includes(enemy.definition.id);
+    if (isBoss && enemy.definition.id === 'weaver') {
       const { velocity: bossVel, projectiles, newBossState, colorOverride, sizeOverride } = updateWeaverBoss(
         enemy,
         playerPos,
@@ -408,6 +408,20 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
       }
 
+      return; // Skip default AI
+    }
+    
+    // Other bosses - use basic movement for now
+    // TODO: Integrate boss-specific behaviors from bossDispatcher
+    if (isBoss) {
+      // Basic movement toward player
+      updateMovement(rb, distanceToPlayer, playerPos, enemyVec, enemy.definition.speed);
+      
+      // Rotate to face player
+      if (meshRef.current) {
+        meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
+      }
+      
       return; // Skip default AI
     }
 
