@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef } from 'react';
 import { Vector3 } from 'three';
-import { $plane, $stats, debugRerollEnemies, useBomb } from '../../stores/game';
+import { $plane, $playerYaw, $stats, debugRerollEnemies, useBomb } from '../../stores/game';
 import { $position, $projectiles, $velocity, addProjectiles, removeProjectile } from '../../stores/player';
 import { fireWeapon } from '../../systems/combat';
 import { emitDamage } from '../../systems/events';
@@ -147,12 +147,30 @@ export function WeaponSystem() {
     if (wasd.has('d')) moveDir.x += 1;
 
     let finalDir = new Vector3().copy(lastMoveDirRef.current);
+    let isStandstill = false;
 
     if (plane === 'FPS') {
        // In FPS, ALWAYS throw where looking
        const forward = new Vector3();
        camera.getWorldDirection(forward);
        finalDir.copy(forward);
+    } else if (plane === 'ISO') {
+      // In ISO mode, throw in the direction the player is facing
+      const playerYaw = $playerYaw.get();
+      finalDir.set(Math.sin(playerYaw), 0, -Math.cos(playerYaw));
+      
+      // If player hasn't moved yet and yaw is 0, check for input
+      if (playerYaw === 0 && moveDir.lengthSq() === 0) {
+        const arrows = arrowKeysRef.current;
+        if (arrows.has('ArrowUp')) finalDir.set(0, 0, -1);
+        else if (arrows.has('ArrowDown')) finalDir.set(0, 0, 1);
+        else if (arrows.has('ArrowLeft')) finalDir.set(-1, 0, 0);
+        else if (arrows.has('ArrowRight')) finalDir.set(1, 0, 0);
+        else {
+          // Completely standstill, drop at feet
+          isStandstill = true;
+        }
+      }
     } else if (moveDir.lengthSq() > 0) {
       finalDir.copy(moveDir).normalize();
       lastMoveDirRef.current.copy(finalDir);
@@ -167,22 +185,28 @@ export function WeaponSystem() {
       
       if (shootingDir.lengthSq() > 0) {
         finalDir.copy(shootingDir).normalize();
-
-    }
+      }
     }
 
     const direction: [number, number, number] = [finalDir.x, finalDir.y, finalDir.z];
 
-    // Spawn closer to player to allow collision, but slightly offset
-    const offset = new Vector3(...direction).multiplyScalar(1.2);
-    const spawnPos: [number, number, number] = [
-      currentPos[0] + offset.x,
-      currentPos[1] + 1.2, // Chest height
-      currentPos[2] + offset.z
-    ];
+    // Spawn position
+    let spawnPos: [number, number, number];
+    if (isStandstill) {
+      // Drop at player's feet with minimal offset
+      spawnPos = [currentPos[0], currentPos[1] + 0.5, currentPos[2]];
+    } else {
+      // Spawn closer to player to allow collision, but slightly offset
+      const offset = new Vector3(...direction).multiplyScalar(1.2);
+      spawnPos = [
+        currentPos[0] + offset.x,
+        currentPos[1] + 1.2, // Chest height
+        currentPos[2] + offset.z
+      ];
+    }
 
     const playerVel = $velocity.get();
-    console.log('💣 Throwing bomb in direction:', direction, 'with momentum:', playerVel);
+    console.log('💣 Throwing bomb in direction:', direction, 'standstill:', isStandstill, 'with momentum:', playerVel);
     useBomb(spawnPos, direction, playerVel);
   };
 

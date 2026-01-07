@@ -193,6 +193,26 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
         const len = Math.sqrt(nx * nx + nz * nz);
         targetVX = (nx / len) * MAX_SPEED;
         targetVZ = (nz / len) * MAX_SPEED;
+        
+        // Rotate player to face movement direction in ISO mode
+        if (plane === 'ISO') {
+          // Snap to cardinal directions only (N, S, E, W)
+          let angle = 0;
+          
+          // Determine which cardinal direction is closest
+          if (Math.abs(nx) > Math.abs(nz)) {
+            // East or West
+            angle = nx > 0 ? Math.PI / 2 : -Math.PI / 2; // East : West
+          } else {
+            // North or South
+            angle = nz > 0 ? Math.PI : 0; // South : North
+          }
+          
+          const q = new THREE.Quaternion();
+          q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+          rb.setRotation(q, true);
+          $playerYaw.set(angle);
+        }
       }
     }
 
