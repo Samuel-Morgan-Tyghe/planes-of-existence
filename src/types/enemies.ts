@@ -394,6 +394,20 @@ export const BOSS_DEFINITIONS: Record<string, EnemyDefinition> = {
     attackType: 'melee', // Leaves bomb trail
     attackRange: 0,
   },
+  
+  summoner: {
+    id: 'summoner',
+    name: 'The Summoner',
+    health: 1400,
+    damage: 8,
+    speed: 0.5, // Slow movement
+    size: 3.0,
+    color: '#9370DB', // MediumPurple
+    dropChance: 1.0,
+    experience: 2600,
+    attackType: 'ranged', // Spawns minions
+    attackRange: 20,
+  },
 };
 
 export interface EnemyState {

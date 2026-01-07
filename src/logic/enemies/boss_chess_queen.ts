@@ -21,7 +21,7 @@ const chessQueenStates = new Map<number, ChessQueenState>();
 export function updateChessQueen(
   enemy: EnemyState,
   playerPosition: [number, number, number],
-  delta: number
+  _delta: number
 ): { velocity?: [number, number, number] } {
   const now = Date.now();
   

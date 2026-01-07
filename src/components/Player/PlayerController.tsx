@@ -219,7 +219,6 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     // Apply Acceleration / Friction
     const mass = rb.mass();
     const isGrounded = Math.abs(velocity.y) < 0.2; // Slightly more lenient grounding
-    const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
     const isTryingToMove = Math.abs(targetVX) > 0 || Math.abs(targetVZ) > 0;
     
     // Reset jump count when grounded

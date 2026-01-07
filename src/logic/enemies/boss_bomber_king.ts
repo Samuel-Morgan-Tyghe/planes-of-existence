@@ -19,8 +19,8 @@ const bomberKingStates = new Map<number, BomberKingState>();
 
 export function updateBomberKing(
   enemy: EnemyState,
-  playerPosition: [number, number, number],
-  delta: number
+  _playerPosition: [number, number, number],
+  _delta: number
 ): { velocity?: [number, number, number] } {
   const now = Date.now();
   

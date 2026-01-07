@@ -16,7 +16,7 @@ const echoQueenStates = new Map<number, EchoQueenState>();
 
 export function updateEchoQueen(
   enemy: EnemyState,
-  playerPosition: [number, number, number],
+  _playerPosition: [number, number, number],
   delta: number
 ): { projectiles?: any[] } {
   const now = Date.now();

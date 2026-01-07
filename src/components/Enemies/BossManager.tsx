@@ -14,7 +14,7 @@ export function BossManager() {
   const currentFloor = useStore($currentFloor);
   const playerPosition = useStore($position);
 
-  const handleBossDeath = useCallback((enemyId: number) => {
+  const handleBossDeath = useCallback((_enemyId: number) => {
     console.log('👹 Boss defeated!');
     $bossEnemy.set(null);
     $bossAlive.set(false);
@@ -26,7 +26,7 @@ export function BossManager() {
     }
   }, []);
 
-  const handleBossPositionUpdate = useCallback((enemyId: number, position: [number, number, number]) => {
+  const handleBossPositionUpdate = useCallback((_enemyId: number, _position: [number, number, number]) => {
     // Boss position tracking if needed for projectiles
     // Could add to a separate $bossPosition atom if needed
   }, []);

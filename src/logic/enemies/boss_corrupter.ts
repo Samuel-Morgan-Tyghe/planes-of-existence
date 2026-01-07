@@ -1,4 +1,3 @@
-import { emitCorruption } from '../../systems/events';
 import type { EnemyState } from '../../types/enemies';
 
 /**
@@ -19,8 +18,8 @@ const corrupterStates = new Map<number, CorrupterState>();
 
 export function updateCorrupter(
   enemy: EnemyState,
-  playerPosition: [number, number, number],
-  delta: number
+  _playerPosition: [number, number, number],
+  _delta: number
 ): { projectiles?: any[] } {
   const now = Date.now();
   
@@ -48,8 +47,9 @@ export function updateCorrupter(
       const distance = 5 + Math.random() * 5;
       const x = enemy.position[0] + Math.cos(angle) * distance;
       const z = enemy.position[2] + Math.sin(angle) * distance;
-      
-      emitCorruption([x, enemy.position[1], z], 3.0); // 3 second duration
+      // TODO: Spawn corruption trail at this position
+      // This would create a damaging area on the ground
+      console.log(`Spawning corruption at [${x}, ${enemy.position[1]}, ${z}]`);
     }
     
     state.corruptionCount += waveSize;

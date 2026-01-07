@@ -27,7 +27,7 @@ const megaSnakeStates = new Map<number, MegaSnakeState>();
 export function updateMegaSnake(
   enemy: EnemyState,
   playerPosition: [number, number, number],
-  delta: number
+  _delta: number
 ): { velocity?: [number, number, number] } {
   const now = Date.now();
   
