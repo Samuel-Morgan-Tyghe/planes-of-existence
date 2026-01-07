@@ -5,7 +5,6 @@ import { $pixels } from '../../stores/meta';
 import { $health, $position } from '../../stores/player';
 import { restartRun } from '../../stores/restart';
 import { debugState } from '../../utils/debug';
-import { Compass } from './HUD/Compass';
 import { HealthBar } from './HUD/HealthBar';
 import { InventoryPanel } from './HUD/InventoryPanel';
 import { StatsPanel } from './HUD/StatsPanel';
@@ -183,8 +182,7 @@ export function HUD() {
         )}
       </div>
 
-      {/* Mini-map */}
-      <Compass />
+      {/* Mini-map with direction arrow */}
       <MiniMap />
 
       {/* Pixels (Currency) */}

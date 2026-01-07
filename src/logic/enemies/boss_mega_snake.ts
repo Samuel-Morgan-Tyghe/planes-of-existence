@@ -9,7 +9,7 @@ import type { EnemyState } from '../../types/enemies';
  * - Has segments that can split off
  */
 
-interface SnakeSegment {
+export interface SnakeSegment {
   position: [number, number, number];
   timestamp: number;
 }
@@ -28,7 +28,7 @@ export function updateMegaSnake(
   enemy: EnemyState,
   playerPosition: [number, number, number],
   _delta: number
-): { velocity?: [number, number, number] } {
+): { velocity?: [number, number, number]; segments?: SnakeSegment[] } {
   const now = Date.now();
   
   // Initialize state if needed
@@ -117,14 +117,15 @@ export function updateMegaSnake(
     }
   }
   
-  // Return velocity for snake movement
+  // Return velocity for snake movement and segments for rendering
   const speed = enemy.definition.speed;
   return {
     velocity: [
       state.moveDirection[0] * speed,
       0,
       state.moveDirection[2] * speed
-    ]
+    ],
+    segments: state.segments
   };
 }
 

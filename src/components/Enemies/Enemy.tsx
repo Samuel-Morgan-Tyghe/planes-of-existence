@@ -1,8 +1,14 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
+import { updateBomberKing } from '../../logic/enemies/boss_bomber_king';
+import { updateChessQueen } from '../../logic/enemies/boss_chess_queen';
+import { updateCorrupter } from '../../logic/enemies/boss_corrupter';
+import { updateEchoQueen } from '../../logic/enemies/boss_echo_queen';
+import { updateMegaSnake } from '../../logic/enemies/boss_mega_snake';
+import { updateSummoner } from '../../logic/enemies/boss_summoner';
 import { updateWeaverBoss, type WeaverBossState } from '../../logic/enemies/boss_weaver';
 import { updateCorrupterAI } from '../../logic/enemies/corrupter';
 import { calculateEnemyVelocity } from '../../logic/enemies/movement';
@@ -17,12 +23,6 @@ import type { EnemyState } from '../../types/enemies';
 import { ITEM_DEFINITIONS } from '../../types/items';
 import type { TrailType } from '../../types/trails';
 import { HitEffect } from '../Effects/HitEffect';
-import { updateBomberKing } from '../../logic/enemies/boss_bomber_king';
-import { updateChessQueen } from '../../logic/enemies/boss_chess_queen';
-import { updateCorrupter } from '../../logic/enemies/boss_corrupter';
-import { updateEchoQueen } from '../../logic/enemies/boss_echo_queen';
-import { updateMegaSnake } from '../../logic/enemies/boss_mega_snake';
-import { updateSummoner } from '../../logic/enemies/boss_summoner';
 
 interface EnemyProps {
   enemy: EnemyState;
@@ -421,9 +421,15 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     if (isBoss) {
       const playerPosArray: [number, number, number] = [playerPos.x, playerPos.y, playerPos.z];
       
+      // Create updated enemy object with current position (not spawn position)
+      const currentEnemy = {
+        ...enemy,
+        position: currentPositionRef.current
+      };
+      
       switch (enemy.definition.id) {
         case 'corrupter': {
-          const result = updateCorrupter(enemy, playerPosArray, delta);
+          const result = updateCorrupter(currentEnemy, playerPosArray, delta);
           if (result.projectiles) {
             result.projectiles.forEach((p: any) => addEnemyProjectile(p));
           }
@@ -433,7 +439,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         }
         
         case 'echo_queen': {
-          const result = updateEchoQueen(enemy, playerPosArray, delta);
+          const result = updateEchoQueen(currentEnemy, playerPosArray, delta);
           if (result.projectiles) {
             result.projectiles.forEach((p: any) => addEnemyProjectile(p));
           }
@@ -443,7 +449,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         }
         
         case 'chess_queen': {
-          const result = updateChessQueen(enemy, playerPosArray, delta);
+          const result = updateChessQueen(currentEnemy, playerPosArray, delta);
           if (result.velocity) {
             rb.setLinvel({ x: result.velocity[0], y: 0, z: result.velocity[2] }, true);
           }
@@ -451,7 +457,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         }
         
         case 'bomber_king': {
-          const result = updateBomberKing(enemy, playerPosArray, delta);
+          const result = updateBomberKing(currentEnemy, playerPosArray, delta);
           if (result.velocity) {
             rb.setLinvel({ x: result.velocity[0], y: 0, z: result.velocity[2] }, true);
           }
@@ -459,7 +465,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         }
         
         case 'mega_snake': {
-          const result = updateMegaSnake(enemy, playerPosArray, delta);
+          const result = updateMegaSnake(currentEnemy, playerPosArray, delta);
           if (result.velocity) {
             rb.setLinvel({ x: result.velocity[0], y: 0, z: result.velocity[2] }, true);
           }
@@ -467,7 +473,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         }
         
         case 'summoner': {
-          const result = updateSummoner(enemy, playerPosArray, delta);
+          const result = updateSummoner(currentEnemy, playerPosArray, delta);
           if (result.projectiles) {
             result.projectiles.forEach((p: any) => addEnemyProjectile(p));
           }
@@ -566,8 +572,18 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       ccd={true}
       onIntersectionEnter={(e) => handleIntersection(e.other)}
     >
-      <CuboidCollider args={[enemy.definition.size / 2, enemy.definition.size / 2, enemy.definition.size / 2]} sensor />
-      <CuboidCollider args={[enemy.definition.size / 2, enemy.definition.size / 2, enemy.definition.size / 2]} />
+      {/* Colliders - bosses get slightly larger hitboxes to match their visual size */}
+      {(() => {
+        const isBoss = ['weaver', 'corrupter', 'echo_queen', 'chess_queen', 'bomber_king', 'mega_snake', 'summoner'].includes(enemy.definition.id);
+        const sizeMultiplier = isBoss ? 1.2 : 1.0;
+        const colliderSize = (enemy.definition.size * sizeMultiplier) / 2;
+        return (
+          <>
+            <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} sensor />
+            <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} />
+          </>
+        );
+      })()}
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[enemy.definition.size, enemy.definition.size, enemy.definition.size]} />
         <meshStandardMaterial
@@ -646,4 +662,27 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     </>
   );
 }
+
+// Memoize Enemy component to prevent unnecessary re-renders
+// Return true if props are equal (skip re-render), false if different (do re-render)
+export default React.memo(Enemy, (prevProps, nextProps) => {
+  // Re-render if any of these changed
+  if (prevProps.enemy.id !== nextProps.enemy.id) return false;
+  if (prevProps.enemy.health !== nextProps.enemy.health) return false;
+  if (prevProps.enemy.isDead !== nextProps.enemy.isDead) return false;
+  if (prevProps.active !== nextProps.active) return false;
+  
+  // Skip expensive player position check if enemy is dead
+  if (nextProps.enemy.isDead) return true;
+  
+  // Check player position for active enemies
+  if (
+    prevProps.playerPosition[0] !== nextProps.playerPosition[0] ||
+    prevProps.playerPosition[1] !== nextProps.playerPosition[1] ||
+    prevProps.playerPosition[2] !== nextProps.playerPosition[2]
+  ) return false;
+  
+  // Props are equal, skip re-render
+  return true;
+});
 

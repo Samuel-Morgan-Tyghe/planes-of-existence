@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import { useCallback } from 'react';
 import { $bossAlive, $bossEnemy, $currentFloor, $currentRoomId, $enemiesAlive, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
-import { Enemy } from './Enemy';
+import Enemy from './Enemy';
 
 /**
  * BossManager - Separate component for managing boss enemy rendering

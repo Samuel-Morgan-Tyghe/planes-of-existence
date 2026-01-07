@@ -1,10 +1,12 @@
 import { useStore } from '@nanostores/react';
-import { $currentRoomId, $floorData, $visitedRooms } from '../../stores/game';
+import React from 'react';
+import { $currentRoomId, $floorData, $playerYaw, $visitedRooms } from '../../stores/game';
 
-export function MiniMap() {
+function MiniMapComponent() {
   const floorData = useStore($floorData);
   const currentRoomId = useStore($currentRoomId);
   const visitedRooms = useStore($visitedRooms);
+  const playerYaw = useStore($playerYaw);
 
   if (!floorData) return null;
 
@@ -19,6 +21,9 @@ export function MiniMap() {
 
   const cellSize = 20;
   const padding = 10;
+  
+  // Convert yaw to degrees for arrow rotation
+  const arrowRotation = (playerYaw * 180) / Math.PI;
 
   return (
     <div
@@ -47,31 +52,22 @@ export function MiniMap() {
           if (!room) return <div key={`${x}-${y}`} style={{ width: cellSize, height: cellSize }} />;
 
           let symbol = '';
-          let color = '#444';
-          let borderColor = '#666';
+          let color = '#222';
+          let borderColor = '#888';
 
-          if (isVisited || true) { // Showing all rooms as requested
-            color = '#222';
-            borderColor = '#888';
-            
-            if (room.type === 'start') symbol = 'S';
-            if (room.type === 'treasure') {
-              symbol = '★';
-              borderColor = '#ff00ff';
-            }
-            if (room.type === 'boss') {
-              symbol = '💀';
-              borderColor = '#ff0000';
-            }
-            
-            if (isCurrent) {
-              color = '#004400';
-              borderColor = '#00ff00';
-            }
-
-            if (!isVisited) {
-              opacity: 0.5;
-            }
+          if (room.type === 'start') symbol = 'S';
+          if (room.type === 'treasure') {
+            symbol = '★';
+            borderColor = '#ff00ff';
+          }
+          if (room.type === 'boss') {
+            symbol = '💀';
+            borderColor = '#ff0000';
+          }
+          
+          if (isCurrent) {
+            color = '#004400';
+            borderColor = '#00ff00';
           }
 
           return (
@@ -89,9 +85,25 @@ export function MiniMap() {
                 color: borderColor,
                 opacity: isVisited ? 1 : 0.4,
                 boxShadow: isCurrent ? '0 0 8px #00ff00' : 'none',
+                position: 'relative',
               }}
             >
               {symbol}
+              {/* Player direction arrow on current room */}
+              {isCurrent && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '4px solid transparent',
+                    borderRight: '4px solid transparent',
+                    borderBottom: '8px solid #ffff00',
+                    transform: `rotate(${arrowRotation}deg)`,
+                    transformOrigin: 'center',
+                  }}
+                />
+              )}
             </div>
           );
         })
@@ -99,3 +111,5 @@ export function MiniMap() {
     </div>
   );
 }
+
+export const MiniMap = React.memo(MiniMapComponent);

@@ -10,7 +10,7 @@ import type { EnemyState } from '../../types/enemies';
 import { BOSS_DEFINITIONS, ENEMY_DEFINITIONS } from '../../types/enemies';
 import { ITEM_DEFINITIONS } from '../../types/items';
 import { generateRoomLayout, gridToWorld } from '../../utils/floorGen';
-import { Enemy } from './Enemy';
+import Enemy from './Enemy';
 
 export function EnemySpawner({
   onEnemyKilled,

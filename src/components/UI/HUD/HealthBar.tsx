@@ -1,7 +1,8 @@
 import { useStore } from '@nanostores/react';
+import React from 'react';
 import { $health, $maxHealth, $maxShield, $shield } from '../../../stores/player';
 
-export function HealthBar() {
+function HealthBarComponent() {
   const health = useStore($health);
   const maxHealth = useStore($maxHealth);
   const shield = useStore($shield);
@@ -64,3 +65,5 @@ export function HealthBar() {
     </div>
   );
 }
+
+export const HealthBar = React.memo(HealthBarComponent);
