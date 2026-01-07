@@ -60,6 +60,10 @@ export const $enemiesAlive = atom<number>(0);
 export const $enemies = atom<EnemyState[]>([]); // Store enemy state globally
 export const $enemyPositions = atom<Record<number, [number, number, number]>>({}); // Real-time positions for projectiles
 
+// Boss enemy state (separate from regular enemies)
+export const $bossEnemy = atom<EnemyState | null>(null);
+export const $bossAlive = atom<boolean>(false);
+
 // Room cleared status (all enemies defeated)
 export const $roomCleared = atom<boolean>(false);
 

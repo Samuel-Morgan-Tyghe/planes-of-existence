@@ -1,5 +1,5 @@
 import { atom } from 'nanostores';
-import { $clearedRooms, $currentFloor, $currentRoomId, $inventory, $isPaused, $stats, $visitedRooms, switchPlane } from './game';
+import { $bossAlive, $bossEnemy, $clearedRooms, $currentFloor, $currentRoomId, $inventory, $isPaused, $stats, $visitedRooms, switchPlane } from './game';
 import { $bossDefeated, $enemiesRemaining } from './gameState';
 import { $maxHealth, $position, setHealth } from './player';
 import { resetRocks } from './rock';
@@ -57,6 +57,10 @@ export function restartRun() {
   $clearedRooms.set(new Set()); // Reset cleared rooms
   $enemiesRemaining.set(0);
   $bossDefeated.set(false);
+  
+  // Reset boss state
+  $bossEnemy.set(null);
+  $bossAlive.set(false);
   
   // Unpause if paused
   $isPaused.set(false);

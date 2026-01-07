@@ -5,6 +5,7 @@ import { $restartTrigger } from '../../stores/restart';
 import { CameraManager } from '../Cameras/CameraManager';
 import { PlaneSwitcher } from '../Cameras/PlaneSwitcher';
 import { EffectsManager } from '../Effects/EffectsManager';
+import { BossManager } from '../Enemies/BossManager';
 import { EnemySpawner } from '../Enemies/EnemySpawner';
 import { ProjectileManager } from '../Enemies/ProjectileManager';
 import { Player } from '../Player/Player';
@@ -70,6 +71,7 @@ export function Scene() {
       </ErrorBoundary>
 
       <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
+      <BossManager key={`boss-${restartTrigger}`} />
       <ProjectileManager />
       <DropManager key={`drops-${restartTrigger}`} />
       <EffectsManager />

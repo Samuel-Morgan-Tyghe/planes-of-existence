@@ -146,21 +146,6 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     experience: 500,
     attackType: 'melee',
   },
-  weaver: {
-    id: 'weaver',
-    name: 'The Glitch Weaver',
-    health: 1200, // Mega tank
-    damage: 15, // Damage per projectile
-    speed: 1.0, 
-    size: 4.0, // Large presence
-    color: '#8A2BE2', // BlueViolet
-    dropChance: 1.0,
-    experience: 2000,
-    attackType: 'ranged',
-    attackRange: 30,
-    projectileSpeed: 10,
-    fireRate: 1200, // Slower base pattern repeat
-  },
   growth_health: {
     id: 'growth_health',
     name: 'Growth Buy (Health)',
@@ -315,6 +300,99 @@ export const ENEMY_DEFINITIONS: Record<string, EnemyDefinition> = {
     dropChance: 0.6,
     experience: 50,
     attackType: 'melee', // Moves towards player
+  },
+};
+
+// Boss Definitions - Separate from regular enemies
+export const BOSS_DEFINITIONS: Record<string, EnemyDefinition> = {
+  weaver: {
+    id: 'weaver',
+    name: 'The Glitch Weaver',
+    health: 1200,
+    damage: 15,
+    speed: 1.0, 
+    size: 4.0,
+    color: '#8A2BE2', // BlueViolet
+    dropChance: 1.0,
+    experience: 2000,
+    attackType: 'ranged',
+    attackRange: 30,
+    projectileSpeed: 10,
+    fireRate: 1200,
+  },
+  
+  corrupter: {
+    id: 'corrupter',
+    name: 'The Corrupter',
+    health: 1500,
+    damage: 12,
+    speed: 0.0, // Stays still
+    size: 3.5,
+    color: '#4B0082', // Indigo
+    dropChance: 1.0,
+    experience: 2500,
+    attackType: 'ranged',
+    attackRange: 35,
+    projectileSpeed: 8,
+    fireRate: 800, // Fires patterns
+  },
+  
+  echo_queen: {
+    id: 'echo_queen',
+    name: 'Echo Queen',
+    health: 1000,
+    damage: 10,
+    speed: 1.5,
+    size: 3.0,
+    color: '#00CED1', // DarkTurquoise
+    dropChance: 1.0,
+    experience: 2200,
+    attackType: 'ranged',
+    attackRange: 30,
+    projectileSpeed: 12,
+    fireRate: 1000, // Rotating echo waves
+  },
+  
+  chess_queen: {
+    id: 'chess_queen',
+    name: 'The Chess Queen',
+    health: 1300,
+    damage: 20,
+    speed: 2.0, // Fast movement
+    size: 3.5,
+    color: '#FFD700', // Gold
+    dropChance: 1.0,
+    experience: 2800,
+    attackType: 'melee', // Uses movement patterns
+    attackRange: 0,
+  },
+  
+  bomber_king: {
+    id: 'bomber_king',
+    name: 'Bomber King',
+    health: 1100,
+    damage: 25, // Bomb damage
+    speed: 4.0, // Super fast
+    size: 2.5,
+    color: '#FF4500', // OrangeRed
+    dropChance: 1.0,
+    experience: 2400,
+    attackType: 'ranged', // Throws bombs
+    attackRange: 15,
+  },
+  
+  mega_snake: {
+    id: 'mega_snake',
+    name: 'Mega Snake',
+    health: 1600,
+    damage: 15,
+    speed: 1.8,
+    size: 5.0, // Large snake
+    color: '#228B22', // ForestGreen
+    dropChance: 1.0,
+    experience: 3000,
+    attackType: 'melee', // Leaves bomb trail
+    attackRange: 0,
   },
 };
 
