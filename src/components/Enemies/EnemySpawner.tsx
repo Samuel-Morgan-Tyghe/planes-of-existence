@@ -171,8 +171,8 @@ export function EnemySpawner({
     const isBossRoom = currentRoom?.type === 'boss';
     
     // Room is cleared only if no regular enemies AND no boss (or boss is dead)
-    // IMPORTANT: Don't auto-clear boss rooms until boss has spawned and been defeated
-    const isCleared = roomEnemies.length === 0 && (!bossInRoom || !bossAlive) && (!isBossRoom || bossInRoom);
+    // IMPORTANT: For boss rooms, clear when boss has been defeated (bossAlive = false)
+    const isCleared = roomEnemies.length === 0 && (!bossInRoom || !bossAlive);
     
     $roomCleared.set(isCleared);
     
