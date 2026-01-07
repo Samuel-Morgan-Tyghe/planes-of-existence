@@ -17,6 +17,12 @@ import type { EnemyState } from '../../types/enemies';
 import { ITEM_DEFINITIONS } from '../../types/items';
 import type { TrailType } from '../../types/trails';
 import { HitEffect } from '../Effects/HitEffect';
+import { updateBomberKing } from '../../logic/enemies/boss_bomber_king';
+import { updateChessQueen } from '../../logic/enemies/boss_chess_queen';
+import { updateCorrupter } from '../../logic/enemies/boss_corrupter';
+import { updateEchoQueen } from '../../logic/enemies/boss_echo_queen';
+import { updateMegaSnake } from '../../logic/enemies/boss_mega_snake';
+import { updateSummoner } from '../../logic/enemies/boss_summoner';
 
 interface EnemyProps {
   enemy: EnemyState;
@@ -411,11 +417,69 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       return; // Skip default AI
     }
     
-    // Other bosses - use basic movement for now
-    // TODO: Integrate boss-specific behaviors from bossDispatcher
+    // Other bosses - call their specific behavior functions
     if (isBoss) {
-      // Basic movement toward player
-      updateMovement(rb, distanceToPlayer, playerPos, enemyVec, enemy.definition.speed);
+      const playerPosArray: [number, number, number] = [playerPos.x, playerPos.y, playerPos.z];
+      
+      switch (enemy.definition.id) {
+        case 'corrupter': {
+          const result = updateCorrupter(enemy, playerPosArray, delta);
+          if (result.projectiles) {
+            result.projectiles.forEach((p: any) => addEnemyProjectile(p));
+          }
+          // Corrupter stays still
+          rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          break;
+        }
+        
+        case 'echo_queen': {
+          const result = updateEchoQueen(enemy, playerPosArray, delta);
+          if (result.projectiles) {
+            result.projectiles.forEach((p: any) => addEnemyProjectile(p));
+          }
+          // Echo Queen moves toward player
+          updateMovement(rb, distanceToPlayer, playerPos, enemyVec, enemy.definition.speed);
+          break;
+        }
+        
+        case 'chess_queen': {
+          const result = updateChessQueen(enemy, playerPosArray, delta);
+          if (result.velocity) {
+            rb.setLinvel({ x: result.velocity[0], y: 0, z: result.velocity[2] }, true);
+          }
+          break;
+        }
+        
+        case 'bomber_king': {
+          const result = updateBomberKing(enemy, playerPosArray, delta);
+          if (result.velocity) {
+            rb.setLinvel({ x: result.velocity[0], y: 0, z: result.velocity[2] }, true);
+          }
+          break;
+        }
+        
+        case 'mega_snake': {
+          const result = updateMegaSnake(enemy, playerPosArray, delta);
+          if (result.velocity) {
+            rb.setLinvel({ x: result.velocity[0], y: 0, z: result.velocity[2] }, true);
+          }
+          break;
+        }
+        
+        case 'summoner': {
+          const result = updateSummoner(enemy, playerPosArray, delta);
+          if (result.projectiles) {
+            result.projectiles.forEach((p: any) => addEnemyProjectile(p));
+          }
+          if (result.summonEnemies) {
+            // TODO: Handle enemy summoning
+            console.log(`Summoner wants to spawn ${result.summonEnemies.length} enemies`);
+          }
+          // Summoner moves slowly
+          updateMovement(rb, distanceToPlayer, playerPos, enemyVec, enemy.definition.speed);
+          break;
+        }
+      }
       
       // Rotate to face player
       if (meshRef.current) {
