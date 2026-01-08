@@ -12,6 +12,9 @@ export const $drops = atom<Drop[]>([]);
 export const $plane = atom<PlaneType>('ISO');
 export const $playerYaw = atom<number>(0);
 
+// Hovered item for UI preview
+export const $hoveredItem = atom<string | null>(null);
+
 // Player stats (artistic attributes)
 export const $stats = map<PlayerStats>({
   sharpness: 0.5,

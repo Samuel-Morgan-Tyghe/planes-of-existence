@@ -98,14 +98,17 @@ export function updateSummoner(
     const distance = Math.sqrt(dx * dx + dz * dz);
     
     if (distance > 0.1 && distance < 25) {
+      const dy = (playerPosition[1] + 1.0) - (enemy.position[1] + 1.5); // Aim at player center from slightly higher origin
+      const dist3d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
       const direction: [number, number, number] = [
-        dx / distance,
-        0,
-        dz / distance
+        dx / dist3d,
+        dy / dist3d,
+        dz / dist3d
       ];
       
       projectiles.push({
-        origin: [enemy.position[0], enemy.position[1] + 1, enemy.position[2]],
+        origin: [enemy.position[0], enemy.position[1] + 1.5, enemy.position[2]], // Fire from "eye" height
         direction,
         speed: 10,
         damage: enemy.definition.damage,

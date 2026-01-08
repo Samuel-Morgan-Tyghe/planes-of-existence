@@ -63,14 +63,14 @@ export function updateEchoQueen(
         
         const direction: [number, number, number] = [
           Math.cos(angle),
-          0.5, // Upward arc
+          0.8, // Higher upward arc
           Math.sin(angle)
         ];
         
         projectiles.push({
           origin: [enemy.position[0], enemy.position[1] + 1, enemy.position[2]],
           direction,
-          speed: 12,
+          speed: 8, // Slower speed for more visible arc
           damage: enemy.definition.damage,
           color: '#00CED1',
           size: 1.2,

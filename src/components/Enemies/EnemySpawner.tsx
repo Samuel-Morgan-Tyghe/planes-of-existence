@@ -25,9 +25,12 @@ export function EnemySpawner({
   const currentFloor = useStore($currentFloor);
   const currentRoomId = useStore($currentRoomId);
   const floorData = useStore($floorData);
+  const bossAlive = useStore($bossAlive); // Subscribe to bossAlive changes
   const enemyIdCounterRef = useRef(0);
   // Track which rooms have been cleared (enemies defeated)
   const clearedRoomsRef = useRef<Set<string>>(new Set());
+  // Track if boss has been spawned in the current room
+  const hasBossSpawnedRef = useRef(false);
 
   // Function to spawn enemies at a position
   const spawnEnemiesAt = useCallback((position: [number, number, number], count: number) => {
@@ -62,6 +65,7 @@ export function EnemySpawner({
   useEffect(() => {
     clearedRoomsRef.current = new Set();
     enemyIdCounterRef.current = 0; // Reset ID counter for new floor
+    hasBossSpawnedRef.current = false;
     console.log('🔄 Cleared rooms reset');
   }, [restartTrigger, currentFloor]);
 
@@ -71,7 +75,7 @@ export function EnemySpawner({
       if (e.key === 'k' || e.key === 'K') {
         console.log('💀 DEBUG: Killing all enemies in current room');
         const currentEnemies = $enemies.get();
-        
+
         const otherRoomEnemies = currentEnemies.filter(e => e.roomId !== currentRoomId);
         $enemies.set(otherRoomEnemies);
         $enemiesAlive.set(otherRoomEnemies.length);
@@ -136,7 +140,7 @@ export function EnemySpawner({
 
     $enemies.set(allNewEnemies);
     $enemiesAlive.set(allNewEnemies.length);
-    
+
     // Initialize position tracking for projectiles
     const initialPositions: Record<number, [number, number, number]> = {};
     allNewEnemies.forEach(e => {
@@ -154,28 +158,55 @@ export function EnemySpawner({
 
   }, [restartTrigger, currentFloor, floorData]);
 
+  // Reset boss spawn tracker when changing rooms
+  useEffect(() => {
+    hasBossSpawnedRef.current = false;
+  }, [currentRoomId]);
+
   // Handle room changes for roomCleared state
   // Handle room changes for roomCleared state
   useEffect(() => {
     if (!floorData) return;
-    
+
     const roomEnemies = enemies.filter(e => e.roomId === currentRoomId && !e.isDead);
     const roomKey = `${currentFloor}-${currentRoomId}`;
-    
+
     // Check if boss is alive in this room
-    const bossInRoom = $bossEnemy.get()?.roomId === currentRoomId;
-    const bossAlive = $bossAlive.get();
-    
+    // Note: bossAlive is now from useStore, so this effect will re-run when it changes
+
     // Check if this is a boss room
     const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
     const isBossRoom = currentRoom?.type === 'boss';
-    
-    // Room is cleared only if no regular enemies AND no boss (or boss is dead)
-    // IMPORTANT: For boss rooms, clear when boss has been defeated (bossAlive = false)
-    const isCleared = roomEnemies.length === 0 && (!bossInRoom || !bossAlive);
-    
+
+    // Room is cleared only if:
+    // 1. No regular enemies alive in the room
+    // 2. If it's a boss room:
+    //    - Boss must have spawned (hasBossSpawnedRef=true)
+    //    - Boss must be defeated (bossAlive=false)
+    //    - OR the room was already cleared previously (re-entry)
+
+    let isCleared = false;
+
+    if (isBossRoom) {
+      if (clearedRoomsRef.current.has(roomKey)) {
+        // Already cleared previously
+        isCleared = roomEnemies.length === 0;
+      } else {
+        // Not cleared yet.
+        // Needs boss to have spawned AND be dead.
+        // If boss has NOT spawned (false), isCleared = false.
+        // If boss IS alive (true), isCleared = false.
+        // If boss spawned (true) AND !alive, isCleared = true.
+        isCleared = hasBossSpawnedRef.current && !bossAlive && roomEnemies.length === 0;
+      }
+    } else {
+      // Regular room clears when no enemies
+      isCleared = roomEnemies.length === 0;
+    }
+
     $roomCleared.set(isCleared);
-    
+
+
     if (isCleared && !clearedRoomsRef.current.has(roomKey)) {
       console.log(`✨ Room ${currentRoomId} cleared for the first time!`);
       clearedRoomsRef.current.add(roomKey);
@@ -199,33 +230,33 @@ export function EnemySpawner({
       newClearedRooms.delete(currentRoomId);
       $clearedRooms.set(newClearedRooms);
     }
-  }, [currentRoomId, enemies, currentFloor, floorData]);
+  }, [currentRoomId, enemies, currentFloor, floorData, bossAlive]);
 
   // Spawn boss when entering boss room
   useEffect(() => {
     if (!floorData) return;
 
-    
+
     const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
     if (!currentRoom || currentRoom.type !== 'boss') return;
-    
+
     // Check if boss already exists
     const bossExists = $bossEnemy.get() !== null && $bossEnemy.get()?.roomId === currentRoomId;
     if (bossExists) return;
-    
-    
+
+
     // Check if room was already cleared
     const roomKey = `${currentFloor}-${currentRoomId}`;
     if (clearedRoomsRef.current.has(roomKey)) return;
-    
-    
+
+
     const roomLayout = generateRoomLayout(currentRoom, currentFloor, false, floorData.seed);
-    
+
     // Select random boss
     const bossKeys = Object.keys(BOSS_DEFINITIONS);
     const randomBossKey = bossKeys[Math.floor(Math.random() * bossKeys.length)];
     const bossDef = BOSS_DEFINITIONS[randomBossKey as keyof typeof BOSS_DEFINITIONS];
-    
+
     const bossEnemy: EnemyState = {
       id: enemyIdCounterRef.current++,
       roomId: currentRoomId,
@@ -235,10 +266,11 @@ export function EnemySpawner({
       isDead: false,
       spawnTime: Date.now(),
     };
-    
+
     // Set boss in dedicated boss state
     $bossEnemy.set(bossEnemy);
     $bossAlive.set(true);
+    hasBossSpawnedRef.current = true;
     $roomCleared.set(false);
   }, [currentRoomId, floorData, currentFloor]);
 
@@ -287,7 +319,7 @@ export function EnemySpawner({
       }
       return;
     }
-    
+
     // Regular enemy damage
     const currentEnemies = $enemies.get();
     const updatedEnemies = currentEnemies.map((e) => {
@@ -296,16 +328,16 @@ export function EnemySpawner({
 
         // Apply Growth Bug defense multiplier
         if (e.definition.id.startsWith('growth_') && e.spawnTime) {
-           const timeAlive = (Date.now() - e.spawnTime) / 1000;
-           const { healthMultiplier } = calculateGrowthStats(
-             e.definition.id,
-             timeAlive, 
-             e.definition.size,
-             e.definition.speed,
-             e.definition.damage
-           );
-           appliedDamage = rawDamage / healthMultiplier;
-           console.log(`🛡️ Growth Bug Mitigation: ${rawDamage} -> ${appliedDamage.toFixed(2)} (x${healthMultiplier.toFixed(1)})`);
+          const timeAlive = (Date.now() - e.spawnTime) / 1000;
+          const { healthMultiplier } = calculateGrowthStats(
+            e.definition.id,
+            timeAlive,
+            e.definition.size,
+            e.definition.speed,
+            e.definition.damage
+          );
+          appliedDamage = rawDamage / healthMultiplier;
+          console.log(`🛡️ Growth Bug Mitigation: ${rawDamage} -> ${appliedDamage.toFixed(2)} (x${healthMultiplier.toFixed(1)})`);
         }
 
         const newHealth = Math.max(0, e.health - appliedDamage);
@@ -328,7 +360,7 @@ export function EnemySpawner({
       if (e.id === targetId) {
         // Buff Stats
         const newHealth = e.definition.health * 2; // Heal to double max health
-        
+
         // Mutate definition for this instance (shallow copy to avoid affecting others)
         // Note: In a real ECS we'd have components, but here we hack the definition or state
         // To make it persistent without deep rework, we'll store overrides in a new property if we had one,
@@ -390,21 +422,21 @@ export function EnemySpawner({
     // Update global for projectiles - ONLY include enemies in current room
     const currentEnemies = $enemies.get();
     const positions: Record<number, [number, number, number]> = {};
-    
+
     enemyPositionsRef.current.forEach((pos, id) => {
       const enemy = currentEnemies.find(e => e.id === id);
       if (enemy && enemy.roomId === currentRoomId && !enemy.isDead) {
         positions[id] = pos;
       }
     });
-    
+
     $enemyPositions.set(positions);
   }, [currentRoomId]);
 
   return (
     <>
       {enemies.map((enemy) => {
-        const isActive = enemy.roomId === currentRoomId;        
+        const isActive = enemy.roomId === currentRoomId;
         return (
           <Enemy
             key={`${currentFloor}-${enemy.id}`}

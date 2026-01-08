@@ -36,20 +36,16 @@ export function rollDrop(): DropRollResult | null {
  */
 export function rollRoomClearLoot(roomType: string): DropRollResult | null {
   if (roomType === 'treasure') {
+    // Updated with new themed items
     const itemIds = [
-      'fiber_optic_cable', 'router_extender', 'ping_timeout_override', 'sniper_exe',
-      'turbo_button', 'v_sync_off', 'script_kiddy', 'ddos_attack',
-      'big_data', 'bloatware', 'hitbox_dilation', 'zip_folder',
-      'root_access', 'malware_injection', 'overclocked_gpu', 'critical_error',
-      'ssd_upgrade', 'antenna_5g', 'lag_switch', 'mouse_acceleration',
-      // Artistic Items
-      'unsharp_mask', 'gaussian_blur', 'edge_detection', 'bokeh_filter',
-      'digital_vibrance', 'deep_fried', 'noir_filter', 'color_invert', 'sepia_tone',
-      'oled_black', 'washed_out', 'threshold', 'gamma_correction',
-      'lens_flare', 'dark_mode', 'flashbang', 'night_sight',
-      'texture_pack_4k', 'downsampler_8bit', 'dlss_performance', 'dead_pixel_artistic', 'polygon_decimator',
-      // New Artistic Items (based on the instruction's context, assuming these were intended)
-      'pixelation', 'vignette', 'bloom', 'noise', 'scanline'
+      'gladiators_heart', 'berserker_drive', 'executioner_chip',
+      'railgun_accelerator', 'sniper_scope', 'guerrilla_tactics',
+      'void_prism', 'arcane_battery', 'chaos_engine',
+      'titan_plating', 'reactive_shield',
+      'assassin_dagger', 'smoke_bomb',
+      'noir_detective', 'neon_demon', 'retro_glitch',
+      'dead_pixel', 'rgb_split', 'double_jump',
+      'dull_prism', 'cosine_calibrator', 'vector_field'
     ];
     const randomId = itemIds[Math.floor(Math.random() * itemIds.length)];
     return { type: 'item', itemId: randomId };

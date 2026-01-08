@@ -1,48 +1,20 @@
+import { generateBossRoom } from '../logic/rooms/models/boss';
+import { generateNormalRoom } from '../logic/rooms/models/normal';
+import { generateTreasureRoom } from '../logic/rooms/models/treasure';
+import { getRoomGenerator, registerRoomGenerator } from '../logic/rooms/registry';
 import type { FloorData, GridMap, Room, RoomLayoutData } from '../types/room';
+import { SeededRandom } from './random'; // Import extracted Random
 
 const ROOM_SIZE = 30; // Each room is 30x30 tiles
 const ROOM_WORLD_SIZE = 60; // Each room is 60 units in world space
 
-/**
- * Seeded random number generator (Mulberry32)
- * Provides deterministic random numbers based on a seed.
- */
-export class SeededRandom {
-  private seed: number;
+// Register default generators
+registerRoomGenerator('boss', generateBossRoom);
+registerRoomGenerator('treasure', generateTreasureRoom);
+registerRoomGenerator('normal', generateNormalRoom);
+registerRoomGenerator('start', generateNormalRoom); // Use normal layout for start room
 
-  constructor(seed: number) {
-    this.seed = seed;
-  }
-
-  /**
-   * Returns a random number between 0 (inclusive) and 1 (exclusive).
-   */
-  next(): number {
-    let t = (this.seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  }
-
-  /**
-   * Returns a random integer between min (inclusive) and max (inclusive).
-   */
-  nextInt(min: number, max: number): number {
-    return Math.floor(this.next() * (max - min + 1)) + min;
-  }
-
-  /**
-   * Shuffles an array in place using Fisher-Yates algorithm.
-   */
-  shuffle<T>(array: T[]): T[] {
-    const result = [...array];
-    for (let i = result.length - 1; i > 0; i--) {
-      const j = Math.floor(this.next() * (i + 1));
-      [result[i], result[j]] = [result[j], result[i]];
-    }
-    return result;
-  }
-}
+export { SeededRandom }; // Re-export for compatibility
 
 /**
  * Generate a floor with multiple connected rooms.
@@ -229,79 +201,16 @@ export function generateRoomLayout(
     .fill(null)
     .map(() => Array(ROOM_SIZE).fill(1)); // Start with all walls
 
-  // Create room interior (leave walls on edges for doors)
-  // Room shape is deterministic based on room ID
-  const roomType = room.id % 4;
-
-  if (room.type === 'boss') {
-    // Boss Arena: Large open square
-    for (let y = 1; y < ROOM_SIZE - 1; y++) {
-      for (let x = 1; x < ROOM_SIZE - 1; x++) {
-        grid[y][x] = 0;
-      }
-    }
-    // Add 4 large decorative/strategic pillars
-    const centerX = Math.floor(ROOM_SIZE / 2);
-    const centerY = Math.floor(ROOM_SIZE / 2);
-    const pOffset = Math.floor(ROOM_SIZE / 5);
-    
-    [centerX - pOffset, centerX + pOffset].forEach(cx => {
-      [centerY - pOffset, centerY + pOffset].forEach(cy => {
-        // 2x2 pillar
-        grid[cy][cx] = 9;
-        grid[cy+1][cx] = 9;
-        grid[cy][cx+1] = 9;
-        grid[cy+1][cx+1] = 9;
-      });
-    });
-  } else if (room.type === 'treasure') {
-     // Treasure Room: Octagon/Clipped Corners
-     for (let y = 3; y < ROOM_SIZE - 3; y++) {
-       for (let x = 3; x < ROOM_SIZE - 3; x++) {
-         const distToCenter = Math.sqrt(Math.pow(x - (ROOM_SIZE/2), 2) + Math.pow(y - (ROOM_SIZE/2), 2));
-         if (distToCenter < 7) grid[y][x] = 0;
-       }
-     }
-  } else if (roomType === 0) {
-    // Square room
-    const roomSize = rng.nextInt(10, 16); 
-    const startX = Math.floor((ROOM_SIZE - roomSize) / 2);
-    const startY = Math.floor((ROOM_SIZE - roomSize) / 2);
-    for (let y = startY; y < startY + roomSize; y++) {
-      for (let x = startX; x < startX + roomSize; x++) {
-        grid[y][x] = 0;
-      }
-    }
-  } else if (roomType === 1) {
-    // L-shaped room (Refined)
-    for (let y = 3; y < 17; y++) {
-      for (let x = 3; x < 12; x++) grid[y][x] = 0;
-    }
-    for (let y = 10; y < 17; y++) {
-      for (let x = 12; x < 17; x++) grid[y][x] = 0;
-    }
-  } else if (roomType === 2) {
-    // Cross-shaped room (Refined)
-    for (let y = 2; y < 18; y++) {
-      for (let x = 7; x < 13; x++) grid[y][x] = 0;
-    }
-    for (let y = 7; y < 13; y++) {
-      for (let x = 2; x < 18; x++) grid[y][x] = 0;
-    }
+  // Use Strategy Pattern to generate room interior
+  const generator = getRoomGenerator(room.type);
+  if (generator) {
+    generator(rng, room, grid);
   } else {
-    // Spacious room with pillars
-    for (let y = 2; y < 18; y++) {
-      for (let x = 2; x < 18; x++) {
-        grid[y][x] = 0;
-      }
-    }
-    grid[6][6] = 1;
-    grid[6][13] = 1;
-    grid[13][6] = 1;
-    grid[13][13] = 1;
+    // Fallback if no generator found
+    console.warn(`No generator found for room type: ${room.type}, using normal`);
+    const fallback = getRoomGenerator('normal');
+    fallback?.(rng, room, grid);
   }
-
-
 
   // Determine Rock Pattern
   const patternType = rng.nextInt(0, 4); // 0: Random, 1: Ring, 2: Corners, 3: Cluster

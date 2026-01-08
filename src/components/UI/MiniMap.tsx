@@ -21,9 +21,20 @@ function MiniMapComponent() {
 
   const cellSize = 20;
   const padding = 10;
-  
+
   // Convert yaw to degrees for arrow rotation
   const arrowRotation = (playerYaw * 180) / Math.PI;
+
+  const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
+  const gap = 4;
+
+  // Calculate arrow position based on grid coordinates + gaps + padding
+  // gridX is 0-indexed relative to minX here
+  const relX = currentRoom ? (currentRoom.gridX - minX) : 0;
+  const relY = currentRoom ? (currentRoom.gridY - minY) : 0;
+
+  const arrowX = padding + relX * (cellSize + gap) + cellSize / 2;
+  const arrowY = padding + relY * (cellSize + gap) + cellSize / 2;
 
   return (
     <div
@@ -37,10 +48,29 @@ function MiniMapComponent() {
         display: 'grid',
         gridTemplateColumns: `repeat(${width}, ${cellSize}px)`,
         gridTemplateRows: `repeat(${height}, ${cellSize}px)`,
-        gap: '4px',
+        gap: `${gap}px`,
         zIndex: 1000,
       }}
     >
+      {currentRoom && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${arrowX}px`,
+            top: `${arrowY}px`,
+            width: 0,
+            height: 0,
+            borderLeft: '4px solid transparent',
+            borderRight: '4px solid transparent',
+            borderBottom: '8px solid #ffff00',
+            transform: `translate(-50%, -50%) rotate(${arrowRotation}deg)`,
+            transformOrigin: 'center bottom',
+            zIndex: 20, // Above cells
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
       {Array.from({ length: height }).map((_, y) => (
         Array.from({ length: width }).map((_, x) => {
           const gridX = x + minX;
@@ -64,7 +94,7 @@ function MiniMapComponent() {
             symbol = '💀';
             borderColor = '#ff0000';
           }
-          
+
           if (isCurrent) {
             color = '#004400';
             borderColor = '#00ff00';
@@ -89,21 +119,6 @@ function MiniMapComponent() {
               }}
             >
               {symbol}
-              {/* Player direction arrow on current room */}
-              {isCurrent && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    width: 0,
-                    height: 0,
-                    borderLeft: '4px solid transparent',
-                    borderRight: '4px solid transparent',
-                    borderBottom: '8px solid #ffff00',
-                    transform: `rotate(${arrowRotation}deg)`,
-                    transformOrigin: 'center',
-                  }}
-                />
-              )}
             </div>
           );
         })

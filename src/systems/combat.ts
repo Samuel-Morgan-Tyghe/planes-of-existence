@@ -86,6 +86,7 @@ export function createBaseProjectile(
     size: stats.projectileSize,
     pierce: stats.pierce,
     trueDamage: damageInfo.isTrueDamage,
+    knockback: stats.knockback,
   };
 }
 
@@ -109,22 +110,39 @@ export function fireWeapon(_origin: [number, number, number], direction: [number
     let dir = [...direction] as [number, number, number];
 
     // Modify direction based on plane and item effects
+    const spreadMultiplier = hasRGBSplit ? 0.05 : 0.2; // Tighter spread for RGB
+    
     if (plane === '2D') {
       // Horizontal spread for 2D
       if (modifiedProjectile.count > 1) {
-        const spread = (i - (modifiedProjectile.count - 1) / 2) * 0.2;
+        const spread = (i - (modifiedProjectile.count - 1) / 2) * spreadMultiplier;
         dir = [direction[0] + spread, direction[1], direction[2]];
       }
     } else if (plane === 'ISO') {
-      // Circular spread for ISO
-      if (modifiedProjectile.count > 1) {
+      // For ISO, if RGB split, we want line/cone spread not full circle 360 unless massive count
+      if (hasRGBSplit) {
+         const spread = (i - (modifiedProjectile.count - 1) / 2) * spreadMultiplier;
+         // Spread perpendicular to direction?
+         // Simplest: just use same logic as 2D (offset X/Z)
+         // Actually, let's rotate the vector slightly
+         const angleOffset = spread;
+         const cos = Math.cos(angleOffset);
+         const sin = Math.sin(angleOffset);
+         // Rotate around Y
+         dir = [
+            direction[0] * cos - direction[2] * sin,
+            direction[1],
+            direction[0] * sin + direction[2] * cos
+         ];
+      } else if (modifiedProjectile.count > 1) {
+        // Standard multi-shot circular spread
         const angle = (i / modifiedProjectile.count) * Math.PI * 2;
         dir = [Math.cos(angle), direction[1], Math.sin(angle)];
       }
     } else if (plane === 'FPS') {
       // Vertical spread for FPS
       if (modifiedProjectile.count > 1) {
-        const spread = (i - (modifiedProjectile.count - 1) / 2) * 0.1;
+        const spread = (i - (modifiedProjectile.count - 1) / 2) * (hasRGBSplit ? 0.02 : 0.1);
         dir = [direction[0], direction[1] + spread, direction[2]];
       }
     }

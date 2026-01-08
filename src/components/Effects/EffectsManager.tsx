@@ -7,6 +7,8 @@ interface Effect {
   type: 'hit' | 'impact';
   position: [number, number, number];
   color: string;
+  size?: number;
+  duration?: number;
 }
 
 let effectIdCounter = 0;
@@ -53,6 +55,7 @@ export function EffectsManager() {
               key={effect.id}
               position={effect.position}
               color={effect.color}
+              size={effect.size}
               onComplete={() => handleEffectComplete(effect.id)}
             />
           );

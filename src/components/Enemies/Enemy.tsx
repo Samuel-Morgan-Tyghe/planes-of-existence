@@ -14,7 +14,7 @@ import { updateCorrupterAI } from '../../logic/enemies/corrupter';
 import { calculateEnemyVelocity } from '../../logic/enemies/movement';
 import { calculateEnemyAttackPattern } from '../../logic/enemyPatterns';
 import { calculateGrowthStats } from '../../logic/growthLogic';
-import { $enemies, $enemyPositions, enemyUseBomb, spawnThrownBomb } from '../../stores/game';
+import { $enemies, $enemyPositions, enemyUseBomb, spawnEnemy, spawnThrownBomb } from '../../stores/game';
 import { $isInvulnerable, takeDamage } from '../../stores/player';
 import { addEnemyProjectile } from '../../stores/projectiles';
 import { $trails, addTrail } from '../../stores/trails';
@@ -78,7 +78,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   useEffect(() => {
     if (enemy.isDead && !isDeadRef.current) {
       isDeadRef.current = true;
-      
+
       // Reactive Bug: Explode on death
       if (enemy.definition.id === 'reactive_bug') {
         const explosionPos: [number, number, number] = [
@@ -87,9 +87,9 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           currentPositionRef.current[2]
         ];
         console.log(`💥 Spite Bug ${enemy.id} exploding on death!`);
-        spawnThrownBomb(explosionPos, [0, 0, 0], [0, 0, 0], 0.1); 
+        spawnThrownBomb(explosionPos, [0, 0, 0], [0, 0, 0], 0.1);
       }
-      
+
       onDeath(enemy.id);
     }
   }, [enemy.isDead, enemy.id, onDeath]);
@@ -111,7 +111,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       const id = hitEffectIdCounter.current++;
       // Use current position for effect
       const currentPos = currentPositionRef.current;
-      const effectPos: [number, number, number] = [currentPos[0], currentPos[1] + enemy.definition.size/2, currentPos[2]];
+      const effectPos: [number, number, number] = [currentPos[0], currentPos[1] + enemy.definition.size / 2, currentPos[2]];
       setHitEffects(prev => [...prev, { id, position: effectPos }]);
 
       // Reactive Bug: Fire on hit
@@ -119,7 +119,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         const playerPos = new Vector3(...playerPosition);
         const enemyVec = new Vector3(...currentPos);
         const dir = new Vector3().subVectors(playerPos, enemyVec).normalize();
-        
+
         console.log(`🔫 Spite Bug ${enemy.id} reacting to hit!`);
         addEnemyProjectile({
           origin: [currentPos[0] + dir.x * 1.5, currentPos[1] + 1.0, currentPos[2] + dir.z * 1.5],
@@ -139,15 +139,15 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   useFrame(() => {
     if (!active || enemy.isDead || !rigidBodyRef.current) return;
     const now = Date.now();
-    
+
     if (meshRef.current) {
       // Get world position from mesh which is updated by Rapier
       const worldPos = new Vector3();
       meshRef.current.getWorldPosition(worldPos);
-      
+
       const newPos: [number, number, number] = [worldPos.x, worldPos.y, worldPos.z];
       currentPositionRef.current = newPos;
-      
+
       // Update parent spawner with current position for projectile collision
       // Ensure this is called every frame to keep global state fresh
       onPositionUpdate?.(enemy.id, newPos);
@@ -210,20 +210,20 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     // However, the previous logic checked detectionRange (50) inside updateMovement.
     // Let's preserve that check here or rely on the utility?
     // The utility is pure math. State checks should be here.
-    
+
     if (distance > detectionRange) {
-        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        return;
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      return;
     }
 
     const velocity = calculateEnemyVelocity(
-        enemy,
-        targetPos,
-        enemyVec,
-        distance,
-        dynamicSpeed
+      enemy,
+      targetPos,
+      enemyVec,
+      distance,
+      dynamicSpeed
     );
-    
+
     rb.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
   };
 
@@ -257,7 +257,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
                 enemyVec.z + dir[2] * 1.5
               ];
               const vel = rigidBodyRef.current?.linvel() || { x: 0, y: 0, z: 0 };
-              
+
               if (enemy.definition.id === 'bombardier') {
                 const sniperForce = 20;
                 const bombardierVelocity: [number, number, number] = [
@@ -304,7 +304,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         lastAttackTime.current = now;
         setIsAttacking(true);
         setTimeout(() => setIsAttacking(false), 500);
-        
+
         if (meshRef.current) {
           const material = meshRef.current.material as THREE.MeshStandardMaterial;
           const originalColor = material.color.clone();
@@ -339,7 +339,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     const playerPos = new Vector3(...playerPosition);
     const enemyVec = new Vector3(...currentPositionRef.current);
     const distanceToPlayer = enemyVec.distanceTo(playerPos);
-    
+
     // Default target is player
     let targetPos = playerPos;
     let distanceToTarget = distanceToPlayer;
@@ -361,13 +361,13 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         targetPos = result.targetPos;
         distanceToTarget = result.distanceToTarget;
       } else {
-         // No allies found - idle or wander, DO NOT TARGET PLAYER
-         targetPos = enemyVec; 
-         distanceToTarget = 0;
+        // No allies found - idle or wander, DO NOT TARGET PLAYER
+        targetPos = enemyVec;
+        distanceToTarget = 0;
       }
     }
 
-    setDistanceToPlayer(distanceToPlayer); 
+    setDistanceToPlayer(distanceToPlayer);
     // Boss Logic - Handle all boss types
     const isBoss = ['weaver', 'corrupter', 'echo_queen', 'chess_queen', 'bomber_king', 'mega_snake', 'summoner'].includes(enemy.definition.id);
     if (isBoss && enemy.definition.id === 'weaver') {
@@ -396,19 +396,19 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       // Visual Overrides
       if (meshRef.current) {
         if (colorOverride) {
-           const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-           if (!damageFlash) {
-             mat.color.set(colorOverride);
-             mat.emissive.set(colorOverride);
-           }
+          const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+          if (!damageFlash) {
+            mat.color.set(colorOverride);
+            mat.emissive.set(colorOverride);
+          }
         }
         if (sizeOverride) {
-           // Base the scale on the actual current size vs definition size
-           const s = sizeOverride / enemy.definition.size;
-           meshRef.current.scale.set(s, s, s);
+          // Base the scale on the actual current size vs definition size
+          const s = sizeOverride / enemy.definition.size;
+          meshRef.current.scale.set(s, s, s);
         }
       }
-      
+
       // Custom Rotation for Boss
       if (meshRef.current) {
         meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
@@ -416,17 +416,17 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
 
       return; // Skip default AI
     }
-    
+
     // Other bosses - call their specific behavior functions
     if (isBoss) {
       const playerPosArray: [number, number, number] = [playerPos.x, playerPos.y, playerPos.z];
-      
+
       // Create updated enemy object with current position (not spawn position)
       const currentEnemy = {
         ...enemy,
         position: currentPositionRef.current
       };
-      
+
       switch (enemy.definition.id) {
         case 'corrupter': {
           const result = updateCorrupter(currentEnemy, playerPosArray, delta);
@@ -437,7 +437,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
           break;
         }
-        
+
         case 'echo_queen': {
           const result = updateEchoQueen(currentEnemy, playerPosArray, delta);
           if (result.projectiles) {
@@ -447,7 +447,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           updateMovement(rb, distanceToPlayer, playerPos, enemyVec, enemy.definition.speed);
           break;
         }
-        
+
         case 'chess_queen': {
           const result = updateChessQueen(currentEnemy, playerPosArray, delta);
           if (result.velocity) {
@@ -455,7 +455,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           }
           break;
         }
-        
+
         case 'bomber_king': {
           const result = updateBomberKing(currentEnemy, playerPosArray, delta);
           if (result.velocity) {
@@ -463,7 +463,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           }
           break;
         }
-        
+
         case 'mega_snake': {
           const result = updateMegaSnake(currentEnemy, playerPosArray, delta);
           if (result.velocity) {
@@ -471,27 +471,29 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           }
           break;
         }
-        
+
         case 'summoner': {
           const result = updateSummoner(currentEnemy, playerPosArray, delta);
           if (result.projectiles) {
             result.projectiles.forEach((p: any) => addEnemyProjectile(p));
           }
           if (result.summonEnemies) {
-            // TODO: Handle enemy summoning
-            console.log(`Summoner wants to spawn ${result.summonEnemies.length} enemies`);
+            result.summonEnemies.forEach((spawn: any) => {
+              console.log(`Summoner spawning ${spawn.type} at ${spawn.position}`);
+              spawnEnemy(spawn.type, spawn.position);
+            });
           }
           // Summoner moves slowly
           updateMovement(rb, distanceToPlayer, playerPos, enemyVec, enemy.definition.speed);
           break;
         }
       }
-      
+
       // Rotate to face player
       if (meshRef.current) {
         meshRef.current.lookAt(playerPos.x, currentPositionRef.current[1], playerPos.z);
       }
-      
+
       return; // Skip default AI
     }
 
@@ -503,7 +505,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     // Growth Bug Logic
     if (enemy.definition.id.startsWith('growth_')) {
       timeAliveRef.current += delta;
-      
+
       const { scale, speed, damage, healthMultiplier } = calculateGrowthStats(
         enemy.definition.id,
         timeAliveRef.current,
@@ -516,21 +518,21 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       if (meshRef.current) {
         meshRef.current.scale.set(scale, scale, scale);
       }
-      
+
       // Store dynamic stats in refs for use in other closures (movement/attack)
       // Using refs avoids triggering re-renders just for logic updates
       dynamicStatsRef.current = { speed, damage, healthMultiplier: healthMultiplier };
     }
 
     updateMovement(rb, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.speed);
-    
+
     // Only auto-attack if targeting player (or default behavior)
     // Corrupter handles its own "attack" (sacrifice) in the logic above
     // STRICT GUARD: Corrupter NEVER attacks player
     if (enemy.definition.id !== 'corruption') {
-       if (targetPos === playerPos) {
-         updateAttack(now, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.damage);
-       }
+      if (targetPos === playerPos) {
+        updateAttack(now, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.damage);
+      }
     }
   });
 
@@ -561,104 +563,104 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       ))}
 
       {/* Enemy */}
-    <RigidBody
-      ref={rigidBodyRef}
-      colliders={false}
-      mass={1}
-      position={enemy.position}
-      userData={{ isEnemy: true, enemyId: enemy.id, health: enemy.health, damage: enemy.definition.damage, size: enemy.definition.size }}
-      enabledTranslations={[true, true, true]}
-      lockRotations={true}
-      ccd={true}
-      onIntersectionEnter={(e) => handleIntersection(e.other)}
-    >
-      {/* Colliders - bosses get slightly larger hitboxes to match their visual size */}
-      {(() => {
-        const isBoss = ['weaver', 'corrupter', 'echo_queen', 'chess_queen', 'bomber_king', 'mega_snake', 'summoner'].includes(enemy.definition.id);
-        const sizeMultiplier = isBoss ? 1.2 : 1.0;
-        const colliderSize = (enemy.definition.size * sizeMultiplier) / 2;
-        return (
-          <>
-            <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} sensor />
-            <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} />
-          </>
-        );
-      })()}
-      <mesh ref={meshRef} castShadow>
-        <boxGeometry args={[enemy.definition.size, enemy.definition.size, enemy.definition.size]} />
-        <meshStandardMaterial
-          color={damageFlash ? '#ffffff' : enemy.definition.color}
-          emissive={damageFlash ? '#ffffff' : enemy.definition.color}
-          emissiveIntensity={damageFlash ? 5.0 : isAttacking ? 3.0 : 2.0}
-        />
-      </mesh>
-      
-      {/* Enemy indicator - always visible, brighter */}
-      <mesh position={[0, enemy.definition.size / 2 + 0.5, 0]}>
-        <sphereGeometry args={[0.3, 8, 8]} />
-        <meshStandardMaterial
-          color={enemy.definition.color}
-          emissive={enemy.definition.color}
-          emissiveIntensity={isAttacking ? 4.0 : 2.5}
-        />
-      </mesh>
-      {/* Text label warning - ALWAYS visible */}
-      <Html
-        position={[0, enemy.definition.size / 2 + 1.5, 0]}
-        center
-        style={{
-          pointerEvents: 'none',
-          userSelect: 'none',
-          transition: 'all 0.2s',
-        }}
+      <RigidBody
+        ref={rigidBodyRef}
+        colliders={false}
+        mass={1}
+        position={enemy.position}
+        userData={{ isEnemy: true, enemyId: enemy.id, health: enemy.health, damage: enemy.definition.damage, size: enemy.definition.size }}
+        enabledTranslations={[true, true, true]}
+        lockRotations={true}
+        ccd={true}
+        onIntersectionEnter={(e) => handleIntersection(e.other)}
       >
-        <div
-          style={{
-            backgroundColor: distanceToPlayer <= attackRange ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 100, 0, 0.8)',
-            color: '#ffffff',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            fontSize: distanceToPlayer <= attackRange ? '14px' : '12px',
-            fontWeight: 'bold',
-            border: distanceToPlayer <= attackRange ? '2px solid #ff0000' : '1px solid #ff6600',
-            boxShadow: distanceToPlayer <= attackRange ? '0 0 10px rgba(255, 0, 0, 0.8)' : '0 0 5px rgba(255, 100, 0, 0.5)',
-            textAlign: 'center',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <div>{distanceToPlayer <= attackRange ? (isRanged ? '⚠ SHOOTING ⚠' : '⚠ ATTACKING ⚠') : enemy.definition.name}</div>
-          <div style={{ fontSize: '10px', marginTop: '2px' }}>{Math.ceil(enemy.health)}/{enemy.definition.health} HP</div>
-        </div>
-      </Html>
-      {/* Attack warning indicator - BIG pulsing red sphere when attacking */}
-      {/* Attack beam - draw a line from enemy to player when in attack range */}
-      {/* Attack range indicator - ALWAYS SHOW when player is nearby */}
-      {/* Health bar */}
-      <mesh position={[0, enemy.definition.size / 2 + 0.8, 0]}>
-        <boxGeometry args={[0.6, 0.05, 0.05]} />
-        <meshStandardMaterial color="#000000" />
-      </mesh>
-      <mesh position={[-0.3 + (healthPercent / 100) * 0.3, enemy.definition.size / 2 + 0.8, 0.01]}>
-        <boxGeometry args={[(healthPercent / 100) * 0.6, 0.05, 0.05]} />
-        <meshStandardMaterial
-          color={healthPercent > 50 ? '#00ff00' : healthPercent > 25 ? '#ffff00' : '#ff0000'}
-          emissive={healthPercent > 50 ? '#00ff00' : healthPercent > 25 ? '#ffff00' : '#ff0000'}
-          emissiveIntensity={0.5}
-        />
-      </mesh>
-      {/* Held Item Indicator */}
-      {enemy.heldItem && (
-        <mesh position={[0, enemy.definition.size + 0.5, 0]}>
-          <boxGeometry args={[0.3, 0.3, 0.3]} />
+        {/* Colliders - bosses get slightly larger hitboxes to match their visual size */}
+        {(() => {
+          const isBoss = ['weaver', 'corrupter', 'echo_queen', 'chess_queen', 'bomber_king', 'mega_snake', 'summoner'].includes(enemy.definition.id);
+          const sizeMultiplier = isBoss ? 1.2 : 1.0;
+          const colliderSize = (enemy.definition.size * sizeMultiplier) / 2;
+          return (
+            <>
+              <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} sensor />
+              <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} />
+            </>
+          );
+        })()}
+        <mesh ref={meshRef} castShadow>
+          <boxGeometry args={[enemy.definition.size, enemy.definition.size, enemy.definition.size]} />
           <meshStandardMaterial
-            color="#ffd700" // Gold color for item
-            emissive="#ffd700"
-            emissiveIntensity={1.0}
+            color={damageFlash ? '#ffffff' : enemy.definition.color}
+            emissive={damageFlash ? '#ffffff' : enemy.definition.color}
+            emissiveIntensity={damageFlash ? 5.0 : isAttacking ? 3.0 : 2.0}
           />
         </mesh>
-      )}
-    </RigidBody>
+
+        {/* Enemy indicator - always visible, brighter */}
+        <mesh position={[0, enemy.definition.size / 2 + 0.5, 0]}>
+          <sphereGeometry args={[0.3, 8, 8]} />
+          <meshStandardMaterial
+            color={enemy.definition.color}
+            emissive={enemy.definition.color}
+            emissiveIntensity={isAttacking ? 4.0 : 2.5}
+          />
+        </mesh>
+        {/* Text label warning - ALWAYS visible */}
+        <Html
+          position={[0, enemy.definition.size / 2 + 1.5, 0]}
+          center
+          style={{
+            pointerEvents: 'none',
+            userSelect: 'none',
+            transition: 'all 0.2s',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: distanceToPlayer <= attackRange ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 100, 0, 0.8)',
+              color: '#ffffff',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: distanceToPlayer <= attackRange ? '14px' : '12px',
+              fontWeight: 'bold',
+              border: distanceToPlayer <= attackRange ? '2px solid #ff0000' : '1px solid #ff6600',
+              boxShadow: distanceToPlayer <= attackRange ? '0 0 10px rgba(255, 0, 0, 0.8)' : '0 0 5px rgba(255, 100, 0, 0.5)',
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div>{distanceToPlayer <= attackRange ? (isRanged ? '⚠ SHOOTING ⚠' : '⚠ ATTACKING ⚠') : enemy.definition.name}</div>
+            <div style={{ fontSize: '10px', marginTop: '2px' }}>{Math.ceil(enemy.health)}/{enemy.definition.health} HP</div>
+          </div>
+        </Html>
+        {/* Attack warning indicator - BIG pulsing red sphere when attacking */}
+        {/* Attack beam - draw a line from enemy to player when in attack range */}
+        {/* Attack range indicator - ALWAYS SHOW when player is nearby */}
+        {/* Health bar */}
+        <mesh position={[0, enemy.definition.size / 2 + 0.8, 0]}>
+          <boxGeometry args={[0.6, 0.05, 0.05]} />
+          <meshStandardMaterial color="#000000" />
+        </mesh>
+        <mesh position={[-0.3 + (healthPercent / 100) * 0.3, enemy.definition.size / 2 + 0.8, 0.01]}>
+          <boxGeometry args={[(healthPercent / 100) * 0.6, 0.05, 0.05]} />
+          <meshStandardMaterial
+            color={healthPercent > 50 ? '#00ff00' : healthPercent > 25 ? '#ffff00' : '#ff0000'}
+            emissive={healthPercent > 50 ? '#00ff00' : healthPercent > 25 ? '#ffff00' : '#ff0000'}
+            emissiveIntensity={0.5}
+          />
+        </mesh>
+        {/* Held Item Indicator */}
+        {enemy.heldItem && (
+          <mesh position={[0, enemy.definition.size + 0.5, 0]}>
+            <boxGeometry args={[0.3, 0.3, 0.3]} />
+            <meshStandardMaterial
+              color="#ffd700" // Gold color for item
+              emissive="#ffd700"
+              emissiveIntensity={1.0}
+            />
+          </mesh>
+        )}
+      </RigidBody>
     </>
   );
 }
@@ -671,17 +673,17 @@ export default React.memo(Enemy, (prevProps, nextProps) => {
   if (prevProps.enemy.health !== nextProps.enemy.health) return false;
   if (prevProps.enemy.isDead !== nextProps.enemy.isDead) return false;
   if (prevProps.active !== nextProps.active) return false;
-  
+
   // Skip expensive player position check if enemy is dead
   if (nextProps.enemy.isDead) return true;
-  
+
   // Check player position for active enemies
   if (
     prevProps.playerPosition[0] !== nextProps.playerPosition[0] ||
     prevProps.playerPosition[1] !== nextProps.playerPosition[1] ||
     prevProps.playerPosition[2] !== nextProps.playerPosition[2]
   ) return false;
-  
+
   // Props are equal, skip re-render
   return true;
 });

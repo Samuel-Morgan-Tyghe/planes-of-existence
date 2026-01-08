@@ -40,6 +40,13 @@ export interface ProjectileData {
   size?: number; // Scale multiplier
   pierce?: number;
   trueDamage?: boolean;
+  hasGravity?: boolean;
+  isSoundWave?: boolean;
+  knockback?: number;
+  wobble?: number; // Sine wave amplitude
+  tumble?: boolean; // Random rotation
+  shape?: 'sphere' | 'cone' | 'cube';
+  turnSpeed?: number; // Homing turn speed
 }
 
 export interface ThrownBomb {

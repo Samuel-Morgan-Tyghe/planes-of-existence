@@ -7,6 +7,7 @@ import { restartRun } from '../../stores/restart';
 import { debugState } from '../../utils/debug';
 import { HealthBar } from './HUD/HealthBar';
 import { InventoryPanel } from './HUD/InventoryPanel';
+import { ItemPreview } from './HUD/ItemPreview';
 import { StatsPanel } from './HUD/StatsPanel';
 import { MiniMap } from './MiniMap';
 
@@ -261,6 +262,9 @@ export function HUD() {
           Press H for help
         </div>
       </div>
+
+      {/* Item Preview (Hover) */}
+      <ItemPreview />
 
       {/* Crosshair */}
       <div
