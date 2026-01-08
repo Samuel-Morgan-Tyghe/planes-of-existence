@@ -11,7 +11,7 @@ import { $trails } from '../../stores/trails';
 import { $knockbackEvents } from '../../systems/events';
 import { PlayerController } from './PlayerController';
 
-const SPAWN_POSITION: [number, number, number] = [0, 0.5, 0];
+const SPAWN_POSITION: [number, number, number] = [0, 1.0, 0];
 const PLAYER_SPAWN_INVULNERABILITY = 2000; // 2 seconds - reduced for easier testing
 
 export function Player() {
@@ -19,6 +19,9 @@ export function Player() {
   const meshRef = useRef<THREE.Mesh>(null);
   const plane = useStore($plane);
   const stats = useStore($stats);
+  // ...
+  // (Skipping unchanging lines for the tool call brevity if possible, but replace_file_content needs context)
+  // Actually I will target specific blocks.
   const health = useStore($health);
   const restartTrigger = useStore($restartTrigger);
   const currentFloor = useStore($currentFloor);
@@ -43,7 +46,7 @@ export function Player() {
     isInvulnerableRef.current = true;
     setIsInvulnerable(true);
     $isInvulnerable.set(true);
-    
+
     // Clear invulnerability after time
     if (invulnerabilityTimeoutRef.current) {
       clearTimeout(invulnerabilityTimeoutRef.current);
@@ -64,41 +67,41 @@ export function Player() {
   // Reset position and spawn time when restart happens
   useEffect(() => {
     if (!rigidBodyRef.current) return;
-    
+
     const rb = rigidBodyRef.current;
 
-    
+
     // Teleport player back to spawn using the robust physics-synced method
     console.log('🔄 Floor change/Restart detected. Teleporting to spawn via update loop.');
     teleportTargetRef.current = [...SPAWN_POSITION];
     $isTeleporting.set(true);
     teleportFrameLockRef.current = 5; // Lock for 5 frames
-    
+
     // Reset linear and angular velocity immediately as well (backup)
     rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
-    
+
     // Reset death state
     isDeadRef.current = false;
     setIsDead(false);
-    
+
     // Clear any death timeout
     if (deathTimeoutRef.current) {
       clearTimeout(deathTimeoutRef.current);
       deathTimeoutRef.current = null;
     }
-    
+
     // Reset spawn time for invulnerability
     spawnTimeRef.current = Date.now();
     isInvulnerableRef.current = true;
     setIsInvulnerable(true);
     $isInvulnerable.set(true);
-    
+
     // Clear existing timeout
     if (invulnerabilityTimeoutRef.current) {
       clearTimeout(invulnerabilityTimeoutRef.current);
     }
-    
+
     // Clear invulnerability after time
     invulnerabilityTimeoutRef.current = setTimeout(() => {
       isInvulnerableRef.current = false;
@@ -125,13 +128,13 @@ export function Player() {
   useEffect(() => {
     return $knockbackEvents.subscribe((event) => {
       if (!event || !rigidBodyRef.current) return;
-      
+
       console.log('💥 Applying knockback to player:', event);
       const rb = rigidBodyRef.current;
-      rb.applyImpulse({ 
-        x: event.direction[0] * event.force, 
+      rb.applyImpulse({
+        x: event.direction[0] * event.force,
         y: event.force * 0.5, // Small upward pop
-        z: event.direction[2] * event.force 
+        z: event.direction[2] * event.force
       }, true);
     });
   }, []);
@@ -148,18 +151,18 @@ export function Player() {
   useEffect(() => {
     if (health < lastHealthRef.current && !isInvulnerableRef.current) {
       console.log('💔 Player hit! Triggering I-Frames.');
-      
+
       // Visuals
       setDamageFlash(true);
       setDamageIntensity(1.0);
-      
+
       // I-Frames
       setIsInvulnerable(true);
       $isInvulnerable.set(true);
       isInvulnerableRef.current = true;
-      
+
       // Knockback / Shake usually happens via event, but we ensure state is safe
-      
+
       // Clear I-frames after 1s
       setTimeout(() => {
         setDamageFlash(false);
@@ -167,43 +170,43 @@ export function Player() {
         $isInvulnerable.set(false);
         isInvulnerableRef.current = false;
         console.log('🛡️ I-Frames expired.');
-      }, 1000); 
+      }, 1000);
     }
     lastHealthRef.current = health;
   }, [health]);
-  
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleCollision = (other: any) => {
     if (isDead || isInvulnerableRef.current || $isInvulnerable.get()) return;
-    
+
     // Check for Enemy Collision
     if (other.rigidBodyObject?.userData?.isEnemy) {
-       const enemyData = other.rigidBodyObject.userData;
-       const damage = enemyData.damage || 10;
-       
-       console.log('💥 Player collided with Enemy! Taking damage:', damage);
-       takeDamage(damage);
-       
-       // Calculate Knockback (Enemy -> Player)
-       const enemyPos = other.rigidBodyObject.translation();
-       const playerPos = rigidBodyRef.current?.translation();
-       
-       if (enemyPos && playerPos) {
-           const dirX = playerPos.x - enemyPos.x;
-           const dirZ = playerPos.z - enemyPos.z;
-           const length = Math.sqrt(dirX * dirX + dirZ * dirZ) || 1;
-           
-           // Normalize and Scale
-           // Stronger bounce based on resistance (lower resistance = higher bounce? Or linear?)
-           // Logic: Resistance 1.0 = Normal. Resistance 2.0 = Half bounce.
-           const force = 12.0 / stats.knockbackResistance; 
-           
-           rigidBodyRef.current?.applyImpulse({
-               x: (dirX / length) * force,
-               y: 5.0, // Significant pop up
-               z: (dirZ / length) * force
-           }, true);
-       }
+      const enemyData = other.rigidBodyObject.userData;
+      const damage = enemyData.damage || 10;
+
+      console.log('💥 Player collided with Enemy! Taking damage:', damage);
+      takeDamage(damage);
+
+      // Calculate Knockback (Enemy -> Player)
+      const enemyPos = other.rigidBodyObject.translation();
+      const playerPos = rigidBodyRef.current?.translation();
+
+      if (enemyPos && playerPos) {
+        const dirX = playerPos.x - enemyPos.x;
+        const dirZ = playerPos.z - enemyPos.z;
+        const length = Math.sqrt(dirX * dirX + dirZ * dirZ) || 1;
+
+        // Normalize and Scale
+        // Stronger bounce based on resistance (lower resistance = higher bounce? Or linear?)
+        // Logic: Resistance 1.0 = Normal. Resistance 2.0 = Half bounce.
+        const force = 12.0 / stats.knockbackResistance;
+
+        rigidBodyRef.current?.applyImpulse({
+          x: (dirX / length) * force,
+          y: 5.0, // Significant pop up
+          z: (dirZ / length) * force
+        }, true);
+      }
     }
   };
 
@@ -216,14 +219,14 @@ export function Player() {
     if (teleportTargetRef.current) {
       const target = teleportTargetRef.current;
       console.log('✨ Executing Teleport (useFrame) to:', target);
-      
+
       // 1. Snap position
       rb.setTranslation({ x: target[0], y: target[1], z: target[2] }, true);
-      
+
       // 2. Kill all momentum
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
       rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
-      
+
       // 3. Clear signal and mark as done
       teleportTargetRef.current = null;
       $teleportTo.set(null);
@@ -236,7 +239,7 @@ export function Player() {
         $isTeleporting.set(false);
         console.log('🔓 Teleport lock released');
       }
-      
+
       // Keep velocity at zero during lock to prevent "fighting"
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
@@ -251,14 +254,14 @@ export function Player() {
     const trailsObj = $trails.get();
     const activeTrails = Object.values(trailsObj).filter(t => t.roomId === currentRoomId);
     const playerPos = rb.translation();
-    
+
     let isOnPoison = false;
     for (const trail of activeTrails) {
       if (trail.type === 'toxic') {
-        const dist = Math.sqrt((playerPos.x - trail.position[0])**2 + (playerPos.z - trail.position[2])**2);
+        const dist = Math.sqrt((playerPos.x - trail.position[0]) ** 2 + (playerPos.z - trail.position[2]) ** 2);
         if (dist < trail.size) {
-           isOnPoison = true;
-           break;
+          isOnPoison = true;
+          break;
         }
       }
     }
@@ -277,12 +280,12 @@ export function Player() {
       // Mark as dead to prevent multiple restarts
       isDeadRef.current = true;
       setIsDead(true);
-      
+
       // Clear any existing death timeout
       if (deathTimeoutRef.current) {
         clearTimeout(deathTimeoutRef.current);
       }
-      
+
       // Small delay to show death state before restarting
       deathTimeoutRef.current = setTimeout(() => {
         isDeadRef.current = false;
@@ -326,7 +329,7 @@ export function Player() {
         // Allow all movement
         rb.setEnabledTranslations(true, true, true, true);
         // UNLOCK rotations so setRotation works, but we manually zero angvel in Controller
-        rb.lockRotations(false, true); 
+        rb.lockRotations(false, true);
         break;
     }
   }, [plane]);
@@ -344,9 +347,9 @@ export function Player() {
       userData={{ isPlayer: true }}
       onCollisionEnter={(e) => handleCollision(e.other)}
     >
-      <CuboidCollider args={[0.5 * stats.resolution, 0.5 * stats.resolution, 0.5 * stats.resolution]} />
+      <CuboidCollider args={[0.5 * stats.resolution, 1.0 * stats.resolution, 0.5 * stats.resolution]} />
       <mesh ref={meshRef} castShadow>
-        <boxGeometry args={[1, 1, 1]} />
+        <boxGeometry args={[1, 2, 1]} />
         <meshStandardMaterial
           color={isDead ? '#000000' : damageFlash ? '#ff0000' : isInvulnerable ? '#00ffff' : 'orange'}
           emissive={isDead ? '#ff0000' : damageFlash ? '#ff0000' : isInvulnerable ? '#00ffff' : '#000000'}
@@ -384,7 +387,7 @@ export function Player() {
         <PerspectiveCamera
           makeDefault
           fov={75}
-          position={[0, 0.9, 0]} // Eye level (half of 1.8m height)
+          position={[0, 1.8, 0]} // Eye level (90% of 2m height)
           near={0.1}
           far={1000}
         />
@@ -406,51 +409,51 @@ function InvulnerabilityManager() {
   useEffect(() => {
     // Skip the very first run (mount) because Player handles spawn invulnerability
     if (!mountedRef.current) {
-        mountedRef.current = true;
-        return;
+      mountedRef.current = true;
+      return;
     }
 
     console.log('🛡️ InvulnerabilityManager: Room Changed to', currentRoomId);
     trigger();
-    
+
   }, [currentRoomId]);
 
   // Expose trigger method
   const trigger = () => {
     $isInvulnerable.set(true);
-    
+
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    
+
     timeoutRef.current = setTimeout(() => {
       $isInvulnerable.set(false);
     }, 1500);
   };
-  
+
   // Listen for manual triggers (like spawn)?
   // Actually, Player component handles spawn. We just need to SYNC with it.
   // Or current $isInvulnerable store?
-  
+
   // Let's make this component responsible for the VISUAL based on the STORE.
   // And responsible for TRIGGERING based on Room ID.
-  
+
   // Actually, simpler: 
   // 1. This component sets $isInvulnerable on room change.
   // 2. This component renders visual if $isInvulnerable is true.
-  
+
   const isInvulnerable = useStore($isInvulnerable);
-  
+
   return isInvulnerable ? (
-        <mesh>
-          <sphereGeometry args={[1.2, 16, 16]} />
-          <meshStandardMaterial
-            color="#00ffff"
-            emissive="#00ffff"
-            emissiveIntensity={0.5}
-            transparent
-            opacity={0.3}
-            wireframe
-          />
-        </mesh>
+    <mesh>
+      <sphereGeometry args={[1.2, 16, 16]} />
+      <meshStandardMaterial
+        color="#00ffff"
+        emissive="#00ffff"
+        emissiveIntensity={0.5}
+        transparent
+        opacity={0.3}
+        wireframe
+      />
+    </mesh>
   ) : null;
 }
 
@@ -471,17 +474,17 @@ function PlayerPositionTracker({
 
     const rb = rigidBodyRef.current;
     if (rb) {
-        const vel = rb.linvel();
-        $velocity.set([vel.x, vel.y, vel.z]);
+      const vel = rb.linvel();
+      $velocity.set([vel.x, vel.y, vel.z]);
 
-        // Void Safety Net: If player falls through floor, respawn them
-        if (worldPos.y < -10) {
-            console.log('🕳️ Player fell into the void!');
-            takeDamage(20);
-            // Respawn at current X/Z but high up
-            rb.setTranslation({ x: worldPos.x, y: 5.0, z: worldPos.z }, true);
-            rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        }
+      // Void Safety Net: If player falls through floor, respawn them
+      if (worldPos.y < -10) {
+        console.log('🕳️ Player fell into the void!');
+        takeDamage(20);
+        // Respawn at current X/Z but high up
+        rb.setTranslation({ x: worldPos.x, y: 5.0, z: worldPos.z }, true);
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      }
     }
   });
   return null;
