@@ -13,6 +13,8 @@ interface EnemyProjectileProps {
   color: string;
   size: number;
   lifetime?: number;
+  gravityScale?: number;
+  maintainVelocity?: boolean;
   onDestroy: () => void;
 }
 
@@ -28,6 +30,8 @@ export function EnemyProjectile({
   onDestroy,
   size,
   lifetime,
+  gravityScale = 0,
+  maintainVelocity = true,
 }: EnemyProjectileProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const lifetimeRef = useRef(0);
@@ -56,7 +60,7 @@ export function EnemyProjectile({
 
   // Maintain velocity every frame
   useFrame(() => {
-    if (!rigidBodyRef.current || hitRef.current) return;
+    if (!rigidBodyRef.current || hitRef.current || !maintainVelocity) return;
 
     const rb = rigidBodyRef.current;
     const currentVel = rb.linvel();
@@ -83,7 +87,7 @@ export function EnemyProjectile({
       return;
     }
   });
-  
+
   return (
     <RigidBody
       ref={rigidBodyRef}
@@ -93,7 +97,7 @@ export function EnemyProjectile({
       sensor={false} // Physical object for CCD
       linearDamping={0}
       angularDamping={0}
-      gravityScale={0}
+      gravityScale={gravityScale}
       ccd={true} // Continuous Collision Detection
       userData={{ isEnemyProjectile: true, damage }}
       onCollisionEnter={(e) => {
@@ -102,8 +106,8 @@ export function EnemyProjectile({
           // console.log('🧱 EnemyProjectile hit wall');
           onDestroy();
         } else if (userData?.isPlayerProjectile) {
-             console.log('⚔️ Enemy projectile shot down!');
-             onDestroy();
+          console.log('⚔️ Enemy projectile shot down!');
+          onDestroy();
         } else if (userData?.isPlayer) {
           console.log('💥 EnemyProjectile hit player!');
           hitRef.current = true;

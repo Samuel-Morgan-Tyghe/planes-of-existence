@@ -75,8 +75,9 @@ export function updateEchoQueen(
           color: '#00CED1',
           size: 1.2,
           lifetime: 2.5,
-          isSoundWave: true, // Special sound wave type
-          hasGravity: true, // Apply gravity for arcing trajectory
+          type: 'soundwave',
+          gravityScale: 4.0, // High gravity as requested
+          maintainVelocity: false, // Let physics handle trajectory
         });
       }
     }

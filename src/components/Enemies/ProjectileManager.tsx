@@ -8,7 +8,7 @@ export function ProjectileManager() {
 
   // We now render visuals directly in the individual components for reliability.
   // InstancedMesh was causing sync issues where visuals wouldn't appear.
-  
+
   return (
     <>
       {Object.values(projectiles).map((proj) => (
@@ -23,6 +23,8 @@ export function ProjectileManager() {
             color={proj.color}
             size={proj.size || 1.0}
             lifetime={proj.lifetime}
+            gravityScale={proj.gravityScale}
+            maintainVelocity={proj.maintainVelocity}
             onDestroy={() => removeEnemyProjectile(proj.id)}
           />
         ) : (
@@ -36,6 +38,8 @@ export function ProjectileManager() {
             color={proj.color}
             size={proj.size || 1.0}
             lifetime={proj.lifetime}
+            gravityScale={proj.gravityScale}
+            maintainVelocity={proj.maintainVelocity}
             onDestroy={() => removeEnemyProjectile(proj.id)}
           />
         )

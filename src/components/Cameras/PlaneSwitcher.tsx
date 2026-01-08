@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { $plane, switchPlane, togglePause } from '../../stores/game';
 import type { PlaneType } from '../../types/game';
 
-const PLANES: PlaneType[] = ['2D', 'ISO', 'FPS'];
+const PLANES: PlaneType[] = ['ISO', 'FPS'];
+// const PLANES: PlaneType[] = ['2D', 'ISO', 'FPS'];
 
 export function PlaneSwitcher() {
   useEffect(() => {

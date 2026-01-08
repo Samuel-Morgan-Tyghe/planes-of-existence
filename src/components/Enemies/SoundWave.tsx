@@ -13,6 +13,8 @@ interface SoundWaveProps {
   color: string;
   size: number;
   lifetime?: number;
+  gravityScale?: number;
+  maintainVelocity?: boolean;
   onDestroy: () => void;
 }
 
@@ -27,6 +29,8 @@ export function SoundWave({
   onDestroy,
   size,
   lifetime,
+  gravityScale = 0,
+  maintainVelocity = true,
 }: SoundWaveProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const lifetimeRef = useRef(0);
@@ -46,33 +50,35 @@ export function SoundWave({
   // Initialize velocity
   useEffect(() => {
     if (!rigidBodyRef.current) return;
+
+    console.log(`🔊 SoundWave Init: ID=${id}, Gravity=${gravityScale}, MaintainVel=${maintainVelocity}`);
+
     const velocity = directionRef.current.clone().multiplyScalar(speed);
     rigidBodyRef.current.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
-    // console.log('🔊 SoundWave spawned at', origin, 'direction', direction);
   }, [speed]);
 
   // Main update loop
   useFrame((_state, delta) => {
     if (hitRef.current) return;
 
-    if (rigidBodyRef.current) {
+    if (rigidBodyRef.current && maintainVelocity) {
       // Keep speed constant but respect current physics direction (bounce)
       const currentVel = rigidBodyRef.current.linvel();
       const velMag = Math.sqrt(currentVel.x ** 2 + currentVel.y ** 2 + currentVel.z ** 2);
-      
+
       // If moving too slow or speed needs normalization to target speed
       if (Math.abs(velMag - speed) > 0.1 || velMag < 0.1) {
-          // Normalize current velocity vector
-          let dir = new THREE.Vector3(currentVel.x, currentVel.y, currentVel.z);
-          if (velMag < 0.1) {
-              // Fallback to original direction if stopped
-              dir = directionRef.current.clone(); 
-          } else {
-              dir.normalize();
-          }
-          
-          const newVel = dir.multiplyScalar(speed);
-          rigidBodyRef.current.setLinvel({ x: newVel.x, y: newVel.y, z: newVel.z }, true);
+        // Normalize current velocity vector
+        let dir = new THREE.Vector3(currentVel.x, currentVel.y, currentVel.z);
+        if (velMag < 0.1) {
+          // Fallback to original direction if stopped
+          dir = directionRef.current.clone();
+        } else {
+          dir.normalize();
+        }
+
+        const newVel = dir.multiplyScalar(speed);
+        rigidBodyRef.current.setLinvel({ x: newVel.x, y: newVel.y, z: newVel.z }, true);
       }
     }
 
@@ -85,43 +91,44 @@ export function SoundWave({
   });
 
   return (
-    <RigidBody
-      ref={rigidBodyRef}
-      colliders={false}
-      mass={0.1}
-      position={origin}
-      sensor={false}
-      linearDamping={0}
-      angularDamping={0}
-      gravityScale={0}
-      restitution={1.0}
-      friction={0}
-      ccd={true}
-      userData={{ isEnemyProjectile: true, damage, isSoundWave: true }}
-      onCollisionEnter={(e) => {
-        const userData = e.other.rigidBody?.userData as any;
-        if (userData?.isWall) {
-          // Bounce
-        } else if (userData?.isPlayer) {
-          console.log('🔊 SoundWave hit player!');
-          hitRef.current = true;
-          takeDamage(damage);
-          onDestroy();
-        }
-      }}
+    ref = { rigidBodyRef }
+      colliders = { false}
+  mass = { 1.0} // Increased mass for stability
+  canSleep = { false}
+  position = { origin }
+  sensor = { false}
+  linearDamping = { 0}
+  angularDamping = { 0}
+  gravityScale = { gravityScale }
+  restitution = { 1.0}
+  friction = { 0}
+  ccd = { true}
+  userData = {{ isEnemyProjectile: true, damage, isSoundWave: true }
+}
+onCollisionEnter = {(e) => {
+  const userData = e.other.rigidBody?.userData as any;
+  if (userData?.isWall) {
+    // Bounce
+  } else if (userData?.isPlayer) {
+    console.log('🔊 SoundWave hit player!');
+    hitRef.current = true;
+    takeDamage(damage);
+    onDestroy();
+  }
+}}
     >
-      <BallCollider args={[0.5 * size]} />
-      {/* Visual representation */}
-      <mesh castShadow>
-        <sphereGeometry args={[0.5 * size, 8, 8]} />
-        <meshStandardMaterial 
-          color="#00ffff" 
-          emissive="#00ffff"
-          emissiveIntensity={0.5}
-          transparent
-          opacity={0.6}
-        />
-      </mesh>
-    </RigidBody>
+  <BallCollider args={[0.5 * size]} />
+{/* Visual representation */ }
+<mesh castShadow>
+  <sphereGeometry args={[0.5 * size, 8, 8]} />
+  <meshStandardMaterial
+    color="#00ffff"
+    emissive="#00ffff"
+    emissiveIntensity={0.5}
+    transparent
+    opacity={0.6}
+  />
+</mesh>
+    </RigidBody >
   );
 }
