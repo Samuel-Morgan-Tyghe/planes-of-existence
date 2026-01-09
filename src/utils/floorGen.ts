@@ -271,7 +271,73 @@ export function generateRoomLayout(
       placeRock(centerX + 2, centerY + 2);
       placeRock(centerX - 2, centerY - 2);
       placeRock(centerX + 2, centerY - 2);
+      placeRock(centerX + 2, centerY - 2);
       placeRock(centerX - 2, centerY + 2);
+  }
+
+  // Place Pillars (Indestructible cover)
+  const pillarCount = rng.nextInt(1, 4);
+  for (let i = 0; i < pillarCount; i++) {
+        let x, y;
+        let attempts = 0;
+        do {
+          x = rng.nextInt(2, ROOM_SIZE - 3);
+          y = rng.nextInt(2, ROOM_SIZE - 3);
+          attempts++;
+        } while (grid[y][x] !== 0 && attempts < 20);
+
+        if (grid[y][x] === 0) {
+            grid[y][x] = 13; // Pillar
+        }
+  }
+
+  // Place Torches (Light sources)
+  const torchCount = rng.nextInt(1, 3);
+  for (let i = 0; i < torchCount; i++) {
+        let x, y;
+        let attempts = 0;
+        do {
+          x = rng.nextInt(2, ROOM_SIZE - 3);
+          y = rng.nextInt(2, ROOM_SIZE - 3);
+          attempts++;
+        } while (grid[y][x] !== 0 && attempts < 20);
+
+        if (grid[y][x] === 0) {
+            grid[y][x] = 14; // Torch
+        }
+  }
+
+  // Place Grass Patches (Decoration)
+  // Grass doesn't block movement, but we track it as tile 12. 
+  // IMPORTANT: Since grass is walkable, we need to decide if it overwrites 0 or if we render it on top.
+  // The current GridMap renders based on tile ID. If tile is 12, it renders Grass. 
+  // But GridMap MergedFloor logic treats !8 as floor. So 12 will be floor.
+  // RigidBody logic: Wall, Rock, Crate have RigidBody. Grass does not have RigidBody in my implementation?
+  // No, Grass component creates a group. It does NOT have a RigidBody in my implementation above. 
+  // However, GridMap.tsx calculates floor physics based on `isFloor`. `const isFloor = grid[y][x] !== 8;`.
+  // So a tile 12 will generate a floor collider underneath.
+  // But we need to make sure we don't spawn enemies on top of grass if we treat grass as occupied?
+  // Enemy spawn check: `if (grid[y][x] !== 0) continue;`
+  // So if I set tile to 12, enemies won't spawn there. That's fine, maybe preferred.
+  
+  const grassClumps = rng.nextInt(3, 6);
+  for (let i = 0; i < grassClumps; i++) {
+      const cx = rng.nextInt(2, ROOM_SIZE - 3);
+      const cy = rng.nextInt(2, ROOM_SIZE - 3);
+      const size = rng.nextInt(2, 5);
+      
+      for(let j=0; j<size; j++) {
+          const ox = rng.nextInt(-1, 2);
+          const oy = rng.nextInt(-1, 2);
+          const gx = cx + ox;
+          const gy = cy + oy;
+          if (gx > 1 && gx < ROOM_SIZE - 2 && gy > 1 && gy < ROOM_SIZE - 2) {
+              if (grid[gy][gx] === 0) {
+                  // 50% chance to place grass
+                  if (rng.next() > 0.5) grid[gy][gx] = 12;
+              }
+          }
+      }
   }
 
   // Place breakable crates

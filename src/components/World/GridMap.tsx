@@ -7,10 +7,13 @@ import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
 import { Crate } from './Crate';
 import { Door } from './Door';
+import { Grass } from './Grass';
+import { Pillar } from './Pillar';
 import { Pitfall } from './Pitfall';
 import { Portal } from './Portal';
 import { Rock } from './Rock';
 import { Spikes } from './Spikes';
+import { Torch } from './Torch';
 import { Wall } from './Wall';
 
 function MergedFloor({ grid, worldOffset, roomWorldSize, isVisited, isCurrentRoom }: {
@@ -24,14 +27,14 @@ function MergedFloor({ grid, worldOffset, roomWorldSize, isVisited, isCurrentRoo
   const halfRoomSize = roomWorldSize / 2;
 
   const floorPolygons = useMemo(() => {
-    const rectangles: Array<{x: number, y: number, w: number, h: number}> = [];
-    
+    const rectangles: Array<{ x: number, y: number, w: number, h: number }> = [];
+
     // Simple greedy horizontal merging to reduce collider count
     for (let y = 0; y < grid.length; y++) {
       let currentRect: any = null;
       for (let x = 0; x < grid[y].length; x++) {
         // Tile 8 is Pit. We omit floor physics/visuals here.
-        const isFloor = grid[y][x] !== 8; 
+        const isFloor = grid[y][x] !== 8;
         if (isFloor) {
           if (!currentRect) {
             currentRect = { x, y, w: 1, h: 1 };
@@ -52,24 +55,24 @@ function MergedFloor({ grid, worldOffset, roomWorldSize, isVisited, isCurrentRoo
 
   return (
     <group position={worldOffset}>
-       {floorPolygons.map((rect, i) => (
-         <RigidBody 
-           key={`floor-rect-${i}`} 
-           type="fixed" 
-           userData={{ isFloor: true }}
-           position={[
-             -halfRoomSize + rect.x * tileSize + (rect.w * tileSize) / 2,
-             -0.5,
-             -halfRoomSize + rect.y * tileSize + (rect.h * tileSize) / 2
-           ]}
-         >
-           <CuboidCollider args={[(rect.w * tileSize) / 2, 0.5, (rect.h * tileSize) / 2]} />
-           <mesh receiveShadow visible={isVisited}>
-             <boxGeometry args={[rect.w * tileSize, 1, rect.h * tileSize]} />
-             <meshStandardMaterial color={isCurrentRoom ? '#333333' : '#222222'} />
-           </mesh>
-         </RigidBody>
-       ))}
+      {floorPolygons.map((rect, i) => (
+        <RigidBody
+          key={`floor-rect-${i}`}
+          type="fixed"
+          userData={{ isFloor: true }}
+          position={[
+            -halfRoomSize + rect.x * tileSize + (rect.w * tileSize) / 2,
+            -0.5,
+            -halfRoomSize + rect.y * tileSize + (rect.h * tileSize) / 2
+          ]}
+        >
+          <CuboidCollider args={[(rect.w * tileSize) / 2, 0.5, (rect.h * tileSize) / 2]} />
+          <mesh receiveShadow visible={isVisited}>
+            <boxGeometry args={[rect.w * tileSize, 1, rect.h * tileSize]} />
+            <meshStandardMaterial color={isCurrentRoom ? '#333333' : '#222222'} />
+          </mesh>
+        </RigidBody>
+      ))}
     </group>
   );
 }
@@ -158,12 +161,12 @@ export function GridMap() {
       // If moving South (dy=1), we enter from North of new room
       // If moving East (dx=1), we enter from West of new room
       // If moving West (dx=-1), we enter from East of new room
-      
+
       const roomSize = roomWorldSize;
       const halfRoom = roomSize / 2;
       // Offset from center to put player near the door (but inside room)
       // Must be > ACTIVATION_DISTANCE (2.5) to avoid immediate re-trigger
-      const doorOffset = halfRoom - 6.0; 
+      const doorOffset = halfRoom - 6.0;
 
       let offsetX = 0;
       let offsetZ = 0;
@@ -192,7 +195,7 @@ export function GridMap() {
         3.0, // Force safe height above floor
         targetRoom.gridY * roomWorldSize + offsetZ,
       ];
-      
+
       console.log(`🚪 Teleporting Player:`, {
         reason: 'Door Entry',
         fromRoom: currentRoomId,
@@ -211,7 +214,7 @@ export function GridMap() {
   // Collect all unique door connections
   const doorConnections = useMemo(() => {
     if (!floorData) return [];
-    
+
     const connections: Array<{
       id: string;
       roomA: any;
@@ -220,7 +223,7 @@ export function GridMap() {
       directionA: 'north' | 'south' | 'east' | 'west';
       directionB: 'north' | 'south' | 'east' | 'west';
     }> = [];
-    
+
     const seen = new Set<string>();
 
     floorData.rooms.forEach(room => {
@@ -240,14 +243,14 @@ export function GridMap() {
           const id = [room.id, adjacentRoom.id].sort((a, b) => a - b).join('-');
           if (!seen.has(id)) {
             seen.add(id);
-            
+
             const halfSize = roomWorldSize / 2;
             const worldX = room.gridX * roomWorldSize;
             const worldZ = room.gridY * roomWorldSize;
-            
+
             let doorX = worldX;
             let doorZ = worldZ;
-            
+
             if (door.direction === 'north') doorZ -= halfSize;
             else if (door.direction === 'south') doorZ += halfSize;
             else if (door.direction === 'east') doorX += halfSize;
@@ -265,7 +268,7 @@ export function GridMap() {
         }
       });
     });
-    
+
     return connections;
   }, [floorData, roomWorldSize]);
 
@@ -278,7 +281,7 @@ export function GridMap() {
         const isVisited = visitedRooms.has(room.id);
 
         // Optimization: Only render current room and its immediate neighbors
-        const isAdjacent = doorConnections.some(conn => 
+        const isAdjacent = doorConnections.some(conn =>
           (conn.roomA.id === currentRoomId && conn.roomB.id === room.id) ||
           (conn.roomB.id === currentRoomId && conn.roomA.id === room.id)
         );
@@ -287,9 +290,9 @@ export function GridMap() {
         return (
           <group key={room.id}>
             {/* Merged Floor: Real gaps for Pits (8) */}
-            <MergedFloor 
-              grid={layout.grid} 
-              worldOffset={layout.worldOffset} 
+            <MergedFloor
+              grid={layout.grid}
+              worldOffset={layout.worldOffset}
               roomWorldSize={roomWorldSize}
               isVisited={isVisited}
               isCurrentRoom={isCurrentRoom}
@@ -308,9 +311,9 @@ export function GridMap() {
 
             {/* Solid boundary walls - Always render physics */}
             {!room.doors.some(d => d.direction === 'north') && (
-              <RigidBody 
-                type="fixed" 
-                userData={{ isWall: true, indestructible: true }} 
+              <RigidBody
+                type="fixed"
+                userData={{ isWall: true, indestructible: true }}
                 position={[layout.worldOffset[0], 3.5, layout.worldOffset[2] - roomWorldSize / 2]}
               >
                 <CuboidCollider args={[roomWorldSize / 2, 4, 0.5]} />
@@ -321,9 +324,9 @@ export function GridMap() {
               </RigidBody>
             )}
             {!room.doors.some(d => d.direction === 'south') && (
-              <RigidBody 
-                type="fixed" 
-                userData={{ isWall: true, indestructible: true }} 
+              <RigidBody
+                type="fixed"
+                userData={{ isWall: true, indestructible: true }}
                 position={[layout.worldOffset[0], 3.5, layout.worldOffset[2] + roomWorldSize / 2]}
               >
                 <CuboidCollider args={[roomWorldSize / 2, 4, 0.5]} />
@@ -334,9 +337,9 @@ export function GridMap() {
               </RigidBody>
             )}
             {!room.doors.some(d => d.direction === 'east') && (
-              <RigidBody 
-                type="fixed" 
-                userData={{ isWall: true, indestructible: true }} 
+              <RigidBody
+                type="fixed"
+                userData={{ isWall: true, indestructible: true }}
                 position={[layout.worldOffset[0] + roomWorldSize / 2, 3.5, layout.worldOffset[2]]}
               >
                 <CuboidCollider args={[0.5, 4, roomWorldSize / 2]} />
@@ -347,9 +350,9 @@ export function GridMap() {
               </RigidBody>
             )}
             {!room.doors.some(d => d.direction === 'west') && (
-              <RigidBody 
-                type="fixed" 
-                userData={{ isWall: true, indestructible: true }} 
+              <RigidBody
+                type="fixed"
+                userData={{ isWall: true, indestructible: true }}
                 position={[layout.worldOffset[0] - roomWorldSize / 2, 3.5, layout.worldOffset[2]]}
               >
                 <CuboidCollider args={[0.5, 4, roomWorldSize / 2]} />
@@ -368,10 +371,10 @@ export function GridMap() {
                 if (tile === 1) {
                   // Wall - but check if there's a door at this position
                   const hasDoorNearby =
-                    (y > 0 && (layout.grid[y-1][x] === 5 || layout.grid[y-1][x] === 6)) ||
-                    (y < layout.grid.length - 1 && (layout.grid[y+1][x] === 5 || layout.grid[y+1][x] === 6)) ||
-                    (x > 0 && (layout.grid[y][x-1] === 5 || layout.grid[y][x-1] === 6)) ||
-                    (x < layout.grid[0].length - 1 && (layout.grid[y][x+1] === 5 || layout.grid[y][x+1] === 6));
+                    (y > 0 && (layout.grid[y - 1][x] === 5 || layout.grid[y - 1][x] === 6)) ||
+                    (y < layout.grid.length - 1 && (layout.grid[y + 1][x] === 5 || layout.grid[y + 1][x] === 6)) ||
+                    (x > 0 && (layout.grid[y][x - 1] === 5 || layout.grid[y][x - 1] === 6)) ||
+                    (x < layout.grid[0].length - 1 && (layout.grid[y][x + 1] === 5 || layout.grid[y][x + 1] === 6));
 
                   if (hasDoorNearby) return null;
 
@@ -390,14 +393,14 @@ export function GridMap() {
                   // Pit (Falling Hazard)
                   return <Pitfall key={`pit-${room.id}-${x}-${y}`} position={worldPos} />;
                 } else if (tile === 9 || tile === 11) {
-                    // Rock (9: Normal, 11: Secret)
-                    const isSecret = tile === 11;
-                    const height = 0.5 + Math.abs(Math.sin(x * y * 123.45)) * 1.5;
-                    const rockId = `${room.id}-rock-${x}-${y}`;
-                    return <Rock key={`rock-${room.id}-${x}-${y}`} position={worldPos} height={height} id={rockId} type={isSecret ? 'secret' : 'normal'} />;
+                  // Rock (9: Normal, 11: Secret)
+                  const isSecret = tile === 11;
+                  const height = 0.5 + Math.abs(Math.sin(x * y * 123.45)) * 1.5;
+                  const rockId = `${room.id}-rock-${x}-${y}`;
+                  return <Rock key={`rock-${room.id}-${x}-${y}`} position={worldPos} height={height} id={rockId} type={isSecret ? 'secret' : 'normal'} />;
                 } else if (tile === 10) {
-                    // Crate
-                    return <Crate key={`crate-${room.id}-${x}-${y}`} id={`${room.id}-${x}-${y}`} position={worldPos} />;
+                  // Crate
+                  return <Crate key={`crate-${room.id}-${x}-${y}`} id={`${room.id}-${x}-${y}`} position={worldPos} />;
                 } else if (tile === 4 && roomCleared && isCurrentRoom) {
                   return (
                     <Portal
@@ -410,6 +413,15 @@ export function GridMap() {
                       }}
                     />
                   );
+                } else if (tile === 12) {
+                  // Grass
+                  return <Grass key={`grass-${room.id}-${x}-${y}`} position={worldPos} />;
+                } else if (tile === 13) {
+                  // Pillar
+                  return <Pillar key={`pillar-${room.id}-${x}-${y}`} position={worldPos} />;
+                } else if (tile === 14) {
+                  // Torch
+                  return <Torch key={`torch-${room.id}-${x}-${y}`} position={worldPos} />;
                 }
                 return null;
               })
@@ -423,10 +435,10 @@ export function GridMap() {
         const isA = currentRoomId === roomA.id;
         const isB = currentRoomId === roomB.id;
         const isVisited = visitedRooms.has(roomA.id) || visitedRooms.has(roomB.id);
-        
+
         // Door is locked if we are in one of the rooms and it's not cleared
         const isLocked = (isA && !roomCleared) || (isB && !roomCleared);
-        
+
         // Determine target room based on where the player is
         const targetRoomId = isA ? roomB.id : roomA.id;
         const transitionDirection = isA ? directionA : directionB;
