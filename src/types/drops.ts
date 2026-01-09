@@ -89,3 +89,17 @@ export function rollDestructibleLoot(source: 'rock' | 'wall' | 'crate' | 'chest'
 
   return { type: 'item', itemId: pick };
 }
+
+/**
+ * Roll for boss loot (Guaranteed high-tier item)
+ */
+export function rollBossLoot(): DropRollResult {
+  const bossPool = [
+    'rgb_split', 'double_jump', 'titan_plating', 'chaos_engine',
+    'void_prism', 'executioner_chip', 'railgun_accelerator',
+    'berserker_drive', 'gladiators_heart'
+  ];
+  
+  const randomId = bossPool[Math.floor(Math.random() * bossPool.length)];
+  return { type: 'item', itemId: randomId };
+}

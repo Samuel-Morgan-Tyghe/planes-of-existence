@@ -2,6 +2,8 @@ import { useStore } from '@nanostores/react';
 import { useCallback } from 'react';
 import { $bossAlive, $bossEnemy, $currentFloor, $currentRoomId, $enemiesAlive, $enemyPositions, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
+import { emitDrop } from '../../systems/events';
+import { rollBossLoot } from '../../types/drops';
 import Enemy from './Enemy';
 
 /**
@@ -22,6 +24,13 @@ export function BossManager() {
     // Clear boss position from targeting
     if ($enemyPositions.get()[_enemyId]) {
       $enemyPositions.setKey(_enemyId, undefined!);
+    }
+
+    if (bossEnemy) {
+      // Spawn Boss Loot
+      const bossLoot = rollBossLoot();
+      const bossPos = bossEnemy.position;
+      emitDrop(bossPos, bossEnemy.roomId, bossLoot.type, bossLoot.itemId);
     }
 
     // Check if room should be cleared (no regular enemies left)
