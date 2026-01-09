@@ -154,6 +154,12 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       // Ensure this is called every frame to keep global state fresh
       onPositionUpdate?.(enemy.id, newPos);
 
+      // Check if fallen off map
+      if (worldPos.y < -10) {
+        console.log(`💀 Enemy ${enemy.id} fell into the void!`);
+        emitDamage(enemy.id, 99999);
+      }
+
       // Check for Trails
       const activeTrails = Object.values($trails.get()).filter(t => t.roomId === enemy.roomId);
       let isSlowed = false;
