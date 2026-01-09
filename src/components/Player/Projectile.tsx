@@ -195,7 +195,10 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
           if (t) emitDrop([t.x, 0.1, t.z], $currentRoomId.get());
           addEffect({ type: 'impact', position: [t?.x || 0, t?.y || 0, t?.z || 0], color: '#8B4513' });
           onDestroy();
-        } else if (userData?.isWall || userData?.isFloor || !userData) {
+        } else if (userData?.isWall || (!data.hasGravity && !userData)) {
+          // Ignore floor if no gravity (prevent popping on ground spawn)
+          if (userData?.isFloor) return;
+
           const isSensor = (other.collider as any)?.isSensor?.() || userData?.isSensor;
           if (!isSensor) {
             const t = rigidBodyRef.current?.translation();

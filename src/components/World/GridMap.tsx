@@ -7,6 +7,7 @@ import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
 import { Crate } from './Crate';
 import { Door } from './Door';
+import { Flower } from './Flower';
 import { Grass } from './Grass';
 import { Pillar } from './Pillar';
 import { Pitfall } from './Pitfall';
@@ -416,6 +417,15 @@ export function GridMap() {
                 } else if (tile === 12) {
                   // Grass
                   return <Grass key={`grass-${room.id}-${x}-${y}`} position={worldPos} />;
+                } else if (tile === 15) {
+                  // Flower
+                  return <Flower key={`flower-${room.id}-${x}-${y}`} position={worldPos} />;
+                } else if (tile === 16) {
+                  // Mushroom
+                  return <Mushroom key={`shroom-${room.id}-${x}-${y}`} position={worldPos} />;
+                } else if (tile === 17) {
+                  // Pebble
+                  return <Pebble key={`pebble-${room.id}-${x}-${y}`} position={worldPos} />;
                 } else if (tile === 13) {
                   // Pillar
                   return <Pillar key={`pillar-${room.id}-${x}-${y}`} position={worldPos} />;

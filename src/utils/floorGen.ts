@@ -320,8 +320,10 @@ export function generateRoomLayout(
   // Enemy spawn check: `if (grid[y][x] !== 0) continue;`
   // So if I set tile to 12, enemies won't spawn there. That's fine, maybe preferred.
   
+  // Place Grass Patches (Decoration)
   const grassClumps = rng.nextInt(3, 6);
   for (let i = 0; i < grassClumps; i++) {
+        // ... (existing grass loop logic)
       const cx = rng.nextInt(2, ROOM_SIZE - 3);
       const cy = rng.nextInt(2, ROOM_SIZE - 3);
       const size = rng.nextInt(2, 5);
@@ -337,6 +339,56 @@ export function generateRoomLayout(
                   if (rng.next() > 0.5) grid[gy][gx] = 12;
               }
           }
+      }
+  }
+
+  // Place Flowers (Decoration)
+  const flowerClumps = rng.nextInt(2, 5);
+  for (let i = 0; i < flowerClumps; i++) {
+      const cx = rng.nextInt(2, ROOM_SIZE - 3);
+      const cy = rng.nextInt(2, ROOM_SIZE - 3);
+      const size = rng.nextInt(1, 4);
+      
+      for(let j=0; j<size; j++) {
+          const ox = rng.nextInt(-1, 2);
+          const oy = rng.nextInt(-1, 2);
+          const fx = cx + ox;
+          const fy = cy + oy;
+          if (fx > 1 && fx < ROOM_SIZE - 2 && fy > 1 && fy < ROOM_SIZE - 2) {
+              if (grid[fy][fx] === 0) {
+                   grid[fy][fx] = 15; // Flower
+              }
+          }
+      }
+  }
+
+  // Place Mushrooms (Decoration - prefers edges/corners? No, random patches is fine)
+  const mushroomClumps = rng.nextInt(2, 4);
+  for (let i = 0; i < mushroomClumps; i++) {
+      const cx = rng.nextInt(2, ROOM_SIZE - 3);
+      const cy = rng.nextInt(2, ROOM_SIZE - 3);
+      const size = rng.nextInt(2, 5);
+      
+      for(let j=0; j<size; j++) {
+          const ox = rng.nextInt(-1, 2);
+          const oy = rng.nextInt(-1, 2);
+          const mx = cx + ox;
+          const my = cy + oy;
+          if (mx > 1 && mx < ROOM_SIZE - 2 && my > 1 && my < ROOM_SIZE - 2) {
+              if (grid[my][mx] === 0) {
+                   grid[my][mx] = 16; // Mushroom
+              }
+          }
+      }
+  }
+
+  // Place Pebbles (Decoration - scattered)
+  const pebbleCount = rng.nextInt(5, 15);
+  for (let i = 0; i < pebbleCount; i++) {
+      const x = rng.nextInt(2, ROOM_SIZE - 3);
+      const y = rng.nextInt(2, ROOM_SIZE - 3);
+      if (grid[y][x] === 0) {
+          grid[y][x] = 17; // Pebble
       }
   }
 

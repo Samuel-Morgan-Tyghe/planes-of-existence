@@ -1,7 +1,9 @@
 import { useStore } from '@nanostores/react';
 import { PerspectiveCamera } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { CuboidCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { CylinderCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
+
+
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { $currentFloor, $currentRoomId, $plane, $stats } from '../../stores/game';
@@ -347,7 +349,7 @@ export function Player() {
       userData={{ isPlayer: true }}
       onCollisionEnter={(e) => handleCollision(e.other)}
     >
-      <CuboidCollider args={[0.5 * stats.resolution, 1.0 * stats.resolution, 0.5 * stats.resolution]} />
+      <CylinderCollider args={[1.0 * stats.resolution, 0.5 * stats.resolution]} />
       <mesh ref={meshRef} castShadow>
         <boxGeometry args={[1, 2, 1]} />
         <meshStandardMaterial
@@ -355,6 +357,17 @@ export function Player() {
           emissive={isDead ? '#ff0000' : damageFlash ? '#ff0000' : isInvulnerable ? '#00ffff' : '#000000'}
           emissiveIntensity={isDead ? 1.0 : damageFlash ? 0.8 : isInvulnerable ? 0.5 : 0}
         />
+        {/* Eyes for direction */}
+        <group position={[0, 0.5, -0.5]}>
+          <mesh position={[-0.2, 0, 0]}>
+            <boxGeometry args={[0.15, 0.15, 0.1]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+          <mesh position={[0.2, 0, 0]}>
+            <boxGeometry args={[0.15, 0.15, 0.1]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+        </group>
       </mesh>
       {/* Damage indicator - BIG pulsing red sphere around player */}
       {damageIntensity > 0 && (
