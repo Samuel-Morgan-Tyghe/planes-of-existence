@@ -61,7 +61,7 @@ export const $enemiesAlive = atom<number>(0);
 
 // Enemy state for current room
 export const $enemies = atom<EnemyState[]>([]); // Store enemy state globally
-export const $enemyPositions = atom<Record<number, [number, number, number]>>({}); // Real-time positions for projectiles
+export const $enemyPositions = map<Record<number, [number, number, number]>>({}); // Real-time positions for projectiles
 
 // Boss enemy state (separate from regular enemies)
 export const $bossEnemy = atom<EnemyState | null>(null);

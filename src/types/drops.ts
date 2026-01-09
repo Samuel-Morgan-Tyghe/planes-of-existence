@@ -56,3 +56,36 @@ export function rollRoomClearLoot(roomType: string): DropRollResult | null {
   if (lootRoll < 0.7) return { type: 'key' };
   return { type: 'bomb' };
 }
+
+/**
+ * Roll for rare item drops from destructible objects (5% chance)
+ */
+export function rollDestructibleLoot(source: 'rock' | 'wall' | 'crate' | 'chest'): DropRollResult | null {
+  if (Math.random() > 0.05) return null; // 5% chance
+
+  let pool: string[] = [];
+  switch (source) {
+    case 'rock':
+      pool = ['titan_plating', 'dead_pixel', 'dull_prism', 'shield']; // Hard/Heavy
+      break;
+    case 'wall':
+      pool = ['reactive_shield', 'titan_plating', 'vector_field', 'shield']; // Structural
+      break;
+    case 'crate':
+      pool = ['smoke_bomb', 'guerrilla_tactics', 'railgun_accelerator', 'bomb', 'coin']; // Supplies
+      break;
+    case 'chest':
+      pool = ['void_prism', 'chaos_engine', 'arcane_battery', 'double_jump', 'gold_coin']; // Treasure
+      break;
+  }
+  
+  // Some generic drops mixed in the pool or handled by type
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  
+  if (pick === 'shield') return { type: 'shield' };
+  if (pick === 'bomb') return { type: 'bomb' };
+  if (pick === 'coin') return { type: 'coin' };
+  if (pick === 'gold_coin') return { type: 'coin' }; // Placeholder for big coin logic if exists
+
+  return { type: 'item', itemId: pick };
+}

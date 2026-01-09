@@ -25,6 +25,7 @@ export function ProjectileManager() {
             lifetime={proj.lifetime}
             gravityScale={proj.gravityScale}
             maintainVelocity={proj.maintainVelocity}
+            popable={proj.popable}
             onDestroy={() => removeEnemyProjectile(proj.id)}
           />
         ) : (
@@ -40,6 +41,7 @@ export function ProjectileManager() {
             lifetime={proj.lifetime}
             gravityScale={proj.gravityScale}
             maintainVelocity={proj.maintainVelocity}
+            popable={proj.popable}
             onDestroy={() => removeEnemyProjectile(proj.id)}
           />
         )

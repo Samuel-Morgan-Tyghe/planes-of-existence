@@ -15,6 +15,7 @@ interface EnemyProjectileProps {
   lifetime?: number;
   gravityScale?: number;
   maintainVelocity?: boolean;
+  popable?: boolean;
   onDestroy: () => void;
 }
 
@@ -32,6 +33,7 @@ export function EnemyProjectile({
   lifetime,
   gravityScale = 0,
   maintainVelocity = true,
+  popable = true,
 }: EnemyProjectileProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const lifetimeRef = useRef(0);
@@ -106,8 +108,10 @@ export function EnemyProjectile({
           // console.log('🧱 EnemyProjectile hit wall');
           onDestroy();
         } else if (userData?.isPlayerProjectile) {
-          console.log('⚔️ Enemy projectile shot down!');
-          onDestroy();
+          if (popable) {
+            console.log('⚔️ Enemy projectile shot down!');
+            onDestroy();
+          }
         } else if (userData?.isPlayer) {
           console.log('💥 EnemyProjectile hit player!');
           hitRef.current = true;

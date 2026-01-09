@@ -324,7 +324,7 @@ export const BOSS_DEFINITIONS: Record<string, EnemyDefinition> = {
   corrupter: {
     id: 'corrupter',
     name: 'The Corrupter',
-    health: 1500,
+    health: 250,
     damage: 12,
     speed: 0.0, // Stays still
     size: 3.5,

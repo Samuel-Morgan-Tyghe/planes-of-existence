@@ -16,6 +16,7 @@ export interface ProjectileState {
   lifetime?: number;
   gravityScale?: number;
   maintainVelocity?: boolean;
+  popable?: boolean;
 }
 
 export const $enemyProjectiles = atom<Record<number, ProjectileState>>({});

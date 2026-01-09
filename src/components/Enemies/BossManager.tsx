@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { useCallback } from 'react';
-import { $bossAlive, $bossEnemy, $currentFloor, $currentRoomId, $enemiesAlive, $roomCleared } from '../../stores/game';
+import { $bossAlive, $bossEnemy, $currentFloor, $currentRoomId, $enemiesAlive, $enemyPositions, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
 import Enemy from './Enemy';
 
@@ -16,9 +16,14 @@ export function BossManager() {
 
   const handleBossDeath = useCallback((_enemyId: number) => {
     console.log('👹 Boss defeated!');
-    $bossEnemy.set(null);
+    $bossEnemy.set(null); // Clear boss from state
     $bossAlive.set(false);
-    
+
+    // Clear boss position from targeting
+    if ($enemyPositions.get()[_enemyId]) {
+      $enemyPositions.setKey(_enemyId, undefined!);
+    }
+
     // Check if room should be cleared (no regular enemies left)
     if ($enemiesAlive.get() === 0) {
       $roomCleared.set(true);
@@ -26,9 +31,9 @@ export function BossManager() {
     }
   }, []);
 
-  const handleBossPositionUpdate = useCallback((_enemyId: number, _position: [number, number, number]) => {
-    // Boss position tracking if needed for projectiles
-    // Could add to a separate $bossPosition atom if needed
+  const handleBossPositionUpdate = useCallback((enemyId: number, position: [number, number, number]) => {
+    // Determine active room context? Boss is usually relevant.
+    $enemyPositions.setKey(enemyId, position);
   }, []);
 
   if (!bossEnemy) {

@@ -279,6 +279,9 @@ export function EnemySpawner({
     const dyingEnemy = currentEnemies.find((e) => e.id === enemyId);
     if (!dyingEnemy) return;
 
+    // Remove from position tracking
+    $enemyPositions.setKey(enemyId, undefined!);
+
     const enemyPosition = dyingEnemy.position;
     const roomId = dyingEnemy.roomId;
 
@@ -417,21 +420,9 @@ export function EnemySpawner({
   const enemyPositionsRef = useRef<Map<number, [number, number, number]>>(new Map());
 
   const updateEnemyPosition = useCallback((enemyId: number, position: [number, number, number]) => {
-    enemyPositionsRef.current.set(enemyId, position);
-
-    // Update global for projectiles - ONLY include enemies in current room
-    const currentEnemies = $enemies.get();
-    const positions: Record<number, [number, number, number]> = {};
-
-    enemyPositionsRef.current.forEach((pos, id) => {
-      const enemy = currentEnemies.find(e => e.id === id);
-      if (enemy && enemy.roomId === currentRoomId && !enemy.isDead) {
-        positions[id] = pos;
-      }
-    });
-
-    $enemyPositions.set(positions);
-  }, [currentRoomId]);
+    // Just update the specific enemy
+    $enemyPositions.setKey(enemyId, position);
+  }, []);
 
   return (
     <>

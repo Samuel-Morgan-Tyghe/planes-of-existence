@@ -15,6 +15,7 @@ interface SoundWaveProps {
   lifetime?: number;
   gravityScale?: number;
   maintainVelocity?: boolean;
+  popable?: boolean;
   onDestroy: () => void;
 }
 
@@ -31,6 +32,7 @@ export function SoundWave({
   lifetime,
   gravityScale = 0,
   maintainVelocity = true,
+  popable = true,
 }: SoundWaveProps & { id: number }) {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
   const lifetimeRef = useRef(0);
@@ -50,8 +52,6 @@ export function SoundWave({
   // Initialize velocity
   useEffect(() => {
     if (!rigidBodyRef.current) return;
-
-    console.log(`🔊 SoundWave Init: ID=${id}, Gravity=${gravityScale}, MaintainVel=${maintainVelocity}`);
 
     const velocity = directionRef.current.clone().multiplyScalar(speed);
     rigidBodyRef.current.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
@@ -91,44 +91,49 @@ export function SoundWave({
   });
 
   return (
-    ref = { rigidBodyRef }
-      colliders = { false}
-  mass = { 1.0} // Increased mass for stability
-  canSleep = { false}
-  position = { origin }
-  sensor = { false}
-  linearDamping = { 0}
-  angularDamping = { 0}
-  gravityScale = { gravityScale }
-  restitution = { 1.0}
-  friction = { 0}
-  ccd = { true}
-  userData = {{ isEnemyProjectile: true, damage, isSoundWave: true }
-}
-onCollisionEnter = {(e) => {
-  const userData = e.other.rigidBody?.userData as any;
-  if (userData?.isWall) {
-    // Bounce
-  } else if (userData?.isPlayer) {
-    console.log('🔊 SoundWave hit player!');
-    hitRef.current = true;
-    takeDamage(damage);
-    onDestroy();
-  }
-}}
+    <RigidBody
+      ref={rigidBodyRef}
+      colliders={false}
+      mass={1.0} // Increased mass for stability
+      canSleep={false}
+      position={origin}
+      sensor={false}
+      linearDamping={0}
+      angularDamping={0}
+      gravityScale={gravityScale}
+      restitution={1.0}
+      friction={0}
+      ccd={true}
+      userData={{ isEnemyProjectile: true, damage, isSoundWave: true }}
+      onCollisionEnter={(e) => {
+        const userData = e.other.rigidBody?.userData as any;
+        if (userData?.isWall) {
+          // Bounce
+        } else if (userData?.isPlayerProjectile) {
+          if (popable) {
+            console.log('⚔️ SoundWave shot down!');
+            onDestroy();
+          }
+        } else if (userData?.isPlayer) {
+          console.log('🔊 SoundWave hit player!');
+          hitRef.current = true;
+          takeDamage(damage);
+          onDestroy();
+        }
+      }}
     >
-  <BallCollider args={[0.5 * size]} />
-{/* Visual representation */ }
-<mesh castShadow>
-  <sphereGeometry args={[0.5 * size, 8, 8]} />
-  <meshStandardMaterial
-    color="#00ffff"
-    emissive="#00ffff"
-    emissiveIntensity={0.5}
-    transparent
-    opacity={0.6}
-  />
-</mesh>
+      <BallCollider args={[0.5 * size]} />
+      {/* Visual representation */}
+      <mesh castShadow>
+        <sphereGeometry args={[0.5 * size, 8, 8]} />
+        <meshStandardMaterial
+          color="#00ffff"
+          emissive="#00ffff"
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.6}
+        />
+      </mesh>
     </RigidBody >
   );
 }

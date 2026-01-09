@@ -5,9 +5,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { updateBomberKing } from '../../logic/enemies/boss_bomber_king';
 import { updateChessQueen } from '../../logic/enemies/boss_chess_queen';
-import { updateCorrupter } from '../../logic/enemies/boss_corrupter';
+import { absorbMinion, updateCorrupter } from '../../logic/enemies/boss_corrupter';
 import { updateEchoQueen } from '../../logic/enemies/boss_echo_queen';
-import { updateMegaSnake } from '../../logic/enemies/boss_mega_snake';
+import { updateMegaSnake, type SnakeSegment } from '../../logic/enemies/boss_mega_snake';
 import { updateSummoner } from '../../logic/enemies/boss_summoner';
 import { updateWeaverBoss, type WeaverBossState } from '../../logic/enemies/boss_weaver';
 import { updateCorrupterAI } from '../../logic/enemies/corrupter';
@@ -23,6 +23,7 @@ import type { EnemyState } from '../../types/enemies';
 import { ITEM_DEFINITIONS } from '../../types/items';
 import type { TrailType } from '../../types/trails';
 import { HitEffect } from '../Effects/HitEffect';
+import { SnakeBody } from './Bosses/SnakeBody';
 
 interface EnemyProps {
   enemy: EnemyState;
@@ -56,6 +57,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   // ... (inside component)
   const timeAliveRef = useRef(0);
   const dynamicStatsRef = useRef({ speed: enemy.definition.speed, damage: enemy.definition.damage, healthMultiplier: 1.0 });
+  const segmentsRef = useRef<SnakeSegment[]>([]);
   const lastTrailPositionRef = useRef<Vector3 | null>(null);
   const lastPoisonTimeRef = useRef(0);
   const weaverStateRef = useRef<WeaverBossState>({
@@ -352,7 +354,23 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         $enemies.get(),
         $enemyPositions.get(), // Pass live positions
         {
-          emitCorruption: (id) => emitCorruption(id),
+          emitCorruption: (targetId) => {
+            const allEnemies = $enemies.get();
+            const target = allEnemies.find(e => e.id === targetId);
+
+            if (target && target.definition.id === 'corrupter') {
+              // Boss Absorption Logic
+              absorbMinion(targetId);
+              // Heal Boss +250 HP
+              const newEnemies = allEnemies.map(e =>
+                e.id === targetId ? { ...e, health: e.health + 250 } : e
+              );
+              $enemies.set(newEnemies);
+              console.log(`💪 Corrupter Boss ${targetId} healed! +250 HP`);
+            } else {
+              emitCorruption(targetId);
+            }
+          },
           die: () => emitDamage(enemy.id, 9999) // Kill self correctly
         }
       );
@@ -428,12 +446,16 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       };
 
       switch (enemy.definition.id) {
+
         case 'corrupter': {
           const result = updateCorrupter(currentEnemy, playerPosArray, delta);
           if (result.projectiles) {
             result.projectiles.forEach((p: any) => addEnemyProjectile(p));
           }
-          // Corrupter stays still
+          if (result.spawnEnemies) {
+            result.spawnEnemies.forEach((s: any) => spawnEnemy(s.type, s.position));
+          }
+          // Echo Queen moves toward player
           rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
           break;
         }
@@ -468,6 +490,9 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           const result = updateMegaSnake(currentEnemy, playerPosArray, delta);
           if (result.velocity) {
             rb.setLinvel({ x: result.velocity[0], y: 0, z: result.velocity[2] }, true);
+          }
+          if (result.segments) {
+            segmentsRef.current = result.segments;
           }
           break;
         }
@@ -562,6 +587,11 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         />
       ))}
 
+      {/* Snake Body Rendering (Visual Only) */}
+      {enemy.definition.id === 'mega_snake' && (
+        <SnakeBody segmentsRef={segmentsRef} color={enemy.definition.color} size={enemy.definition.size} />
+      )}
+
       {/* Enemy */}
       <RigidBody
         ref={rigidBodyRef}
@@ -581,12 +611,12 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           const colliderSize = (enemy.definition.size * sizeMultiplier) / 2;
           return (
             <>
-              <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} sensor />
-              <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} />
+              <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} position={[0, colliderSize, 0]} sensor />
+              <CuboidCollider args={[colliderSize, colliderSize, colliderSize]} position={[0, colliderSize, 0]} />
             </>
           );
         })()}
-        <mesh ref={meshRef} castShadow>
+        <mesh ref={meshRef} position={[0, enemy.definition.size / 2, 0]} castShadow>
           <boxGeometry args={[enemy.definition.size, enemy.definition.size, enemy.definition.size]} />
           <meshStandardMaterial
             color={damageFlash ? '#ffffff' : enemy.definition.color}
@@ -596,7 +626,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         </mesh>
 
         {/* Enemy indicator - always visible, brighter */}
-        <mesh position={[0, enemy.definition.size / 2 + 0.5, 0]}>
+        <mesh position={[0, enemy.definition.size + 0.5, 0]}>
           <sphereGeometry args={[0.3, 8, 8]} />
           <meshStandardMaterial
             color={enemy.definition.color}
@@ -606,7 +636,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         </mesh>
         {/* Text label warning - ALWAYS visible */}
         <Html
-          position={[0, enemy.definition.size / 2 + 1.5, 0]}
+          position={[0, enemy.definition.size + 1.5, 0]}
           center
           style={{
             pointerEvents: 'none',
@@ -637,11 +667,11 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         {/* Attack beam - draw a line from enemy to player when in attack range */}
         {/* Attack range indicator - ALWAYS SHOW when player is nearby */}
         {/* Health bar */}
-        <mesh position={[0, enemy.definition.size / 2 + 0.8, 0]}>
+        <mesh position={[0, enemy.definition.size + 0.8, 0]}>
           <boxGeometry args={[0.6, 0.05, 0.05]} />
           <meshStandardMaterial color="#000000" />
         </mesh>
-        <mesh position={[-0.3 + (healthPercent / 100) * 0.3, enemy.definition.size / 2 + 0.8, 0.01]}>
+        <mesh position={[-0.3 + (healthPercent / 100) * 0.3, enemy.definition.size + 0.8, 0.01]}>
           <boxGeometry args={[(healthPercent / 100) * 0.6, 0.05, 0.05]} />
           <meshStandardMaterial
             color={healthPercent > 50 ? '#00ff00' : healthPercent > 25 ? '#ffff00' : '#ff0000'}
