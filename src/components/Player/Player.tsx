@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import { PerspectiveCamera } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { CylinderCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { MovingGhost } from './MovingGhost';
 
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -18,7 +19,7 @@ const PLAYER_SPAWN_INVULNERABILITY = 2000; // 2 seconds - reduced for easier tes
 
 export function Player() {
   const rigidBodyRef = useRef<RapierRigidBody>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<THREE.Group>(null);
   const plane = useStore($plane);
   const stats = useStore($stats);
   // ...
@@ -349,26 +350,12 @@ export function Player() {
       userData={{ isPlayer: true }}
       onCollisionEnter={(e) => handleCollision(e.other)}
     >
-      <CylinderCollider args={[1.0 * stats.resolution, 0.5 * stats.resolution]} />
-      <mesh ref={meshRef} castShadow>
-        <boxGeometry args={[1, 2, 1]} />
-        <meshStandardMaterial
-          color={isDead ? '#000000' : damageFlash ? '#ff0000' : isInvulnerable ? '#00ffff' : 'orange'}
-          emissive={isDead ? '#ff0000' : damageFlash ? '#ff0000' : isInvulnerable ? '#00ffff' : '#000000'}
-          emissiveIntensity={isDead ? 1.0 : damageFlash ? 0.8 : isInvulnerable ? 0.5 : 0}
-        />
-        {/* Eyes for direction */}
-        <group position={[0, 0.5, -0.5]}>
-          <mesh position={[-0.2, 0, 0]}>
-            <boxGeometry args={[0.15, 0.15, 0.1]} />
-            <meshStandardMaterial color="black" />
-          </mesh>
-          <mesh position={[0.2, 0, 0]}>
-            <boxGeometry args={[0.15, 0.15, 0.1]} />
-            <meshStandardMaterial color="black" />
-          </mesh>
-        </group>
-      </mesh>
+      <CylinderCollider args={[0.6, 0.4]} />
+      {/* Ghost Character Mesh */}
+      <group ref={meshRef} position={[0, -0.5, 0]}>
+        <MovingGhost position={[0, 0, 0]} isDead={isDead} damageFlash={damageFlash} isInvulnerable={isInvulnerable} />
+      </group>
+
       {/* Damage indicator - BIG pulsing red sphere around player */}
       {damageIntensity > 0 && (
         <>
@@ -475,7 +462,7 @@ function PlayerPositionTracker({
   meshRef,
   rigidBodyRef
 }: {
-  meshRef: React.RefObject<THREE.Mesh>;
+  meshRef: React.RefObject<THREE.Object3D>;
   rigidBodyRef: React.RefObject<RapierRigidBody>;
 }) {
   useFrame(() => {

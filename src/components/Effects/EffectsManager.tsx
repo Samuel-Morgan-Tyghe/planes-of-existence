@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { Decal } from './Decal';
 import { HitEffect } from './HitEffect';
 import { ImpactEffect } from './ImpactEffect';
 
 interface Effect {
   id: number;
-  type: 'hit' | 'impact';
+  type: 'hit' | 'impact' | 'decal';
   position: [number, number, number];
+  rotation?: [number, number, number]; // For decals
   color: string;
   size?: number;
   duration?: number;
@@ -56,6 +58,16 @@ export function EffectsManager() {
               position={effect.position}
               color={effect.color}
               size={effect.size}
+              onComplete={() => handleEffectComplete(effect.id)}
+            />
+          );
+        } else if (effect.type === 'decal') {
+          return (
+            <Decal
+              key={effect.id}
+              position={effect.position}
+              rotation={effect.rotation || [0, 0, 0]}
+              scale={effect.size}
               onComplete={() => handleEffectComplete(effect.id)}
             />
           );

@@ -9,6 +9,7 @@ import { $position, takeDamage } from '../../stores/player';
 import { breakRock } from '../../stores/rock';
 import { emitDamage, emitDrop, emitKnockback } from '../../systems/events';
 import { getRoomWorldSize } from '../../utils/floorGen';
+import { addEffect } from '../Effects/EffectsManager';
 
 interface ThrownBombProps {
   id: number;
@@ -26,7 +27,7 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
   const [explosionScale, setExplosionScale] = useState(0.1);
   const fuseRef = useRef(initialFuse || 3.0);
   const explosionInitiated = useRef(false);
-  
+
   const roomId = useStore($currentRoomId);
   const floorData = useStore($floorData);
 
@@ -49,7 +50,7 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
       const nextFuse = fuseRef.current;
       const freq = nextFuse > 2 ? 2 : nextFuse > 1 ? 5 : nextFuse > 0.5 ? 10 : 20;
       const flash = Math.floor(state.clock.elapsedTime * freq) % 2 === 0;
-      
+
       if (meshRef.current) {
         const mat = meshRef.current.material as THREE.MeshStandardMaterial;
         if (flash) {
@@ -68,9 +69,19 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
   const explode = (bombPos: [number, number, number]) => {
     if (explosionInitiated.current) return;
     explosionInitiated.current = true;
-    
+
     // Update global state
     updateThrownBomb(id, { exploded: true, explosionPos: bombPos });
+
+    // Spawn explosion decal on floor
+    const floorY = 0.51; // Slightly above floor
+    addEffect({
+      type: 'decal',
+      position: [bombPos[0], floorY, bombPos[2]],
+      rotation: [-Math.PI / 2, 0, 0], // Flat on Y axis
+      color: '#220000',
+      size: 5 // Large scorch mark
+    });
 
     console.log('💥 BOOM at', bombPos);
 
@@ -118,19 +129,19 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
       const roomWorldSize = getRoomWorldSize();
       const worldOffsetX = room.gridX * roomWorldSize;
       const worldOffsetZ = room.gridY * roomWorldSize;
-      
+
       const tileSize = 2;
       const halfSize = roomWorldSize / 2;
 
       for (let gy = 0; gy < 20; gy++) {
         for (let gx = 0; gx < 20; gx++) {
-          const tx = worldOffsetX - halfSize + tileSize/2 + gx * tileSize;
-          const tz = worldOffsetZ - halfSize + tileSize/2 + gy * tileSize;
-          
+          const tx = worldOffsetX - halfSize + tileSize / 2 + gx * tileSize;
+          const tz = worldOffsetZ - halfSize + tileSize / 2 + gy * tileSize;
+
           const dx = tx - bombPos[0];
           const dz = tz - bombPos[2];
           const dist = Math.sqrt(dx * dx + dz * dz);
-          
+
           if (dist < wallRadius) {
             // Check for tile type in local grid?
             // Global grid access is easier if we have it, but we have local room + offset.
@@ -156,7 +167,7 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
             // `breakWall` takes `roomId`.
             // `breakCrate` takes `id`.
             // I should make `breakCrate` take `roomId` or make the ID unique.
-            
+
             // Let's assume I will fix GridMap to transmit `room.id-x-y`.
             // const crateId = `${room.id}-${gx}-${gy}`;
             // If I just call this, it's harmless if no crate exists (just sets a key in a map).
@@ -165,7 +176,7 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
             // `floorData` store usually has the layout? 
             // `floorGen` returns `rooms` and `grid`? no.
             // `floorData` in store only has `rooms`.
-            
+
             // Alternative: Bomb physics collision with Crates?
             // The bomb is a rigid body. 
             // I can use `onCollisionEnter`/`onIntersectionEnter` but the explosion is an EVENT at a point in time, not a physics collision of the bomb body (which might be sitting still).
@@ -174,7 +185,7 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
             // I need to know if a crate WAS there.
             // I should modify `breakCrate` to return success?
             // No, the store is on the client.
-            
+
             // Best approach: In `Crate.tsx`, subscribe to an `$explosionEvents` store?
             // Or `GridMap` exposes the grid?
             // Or just check collisions with the explosion sphere?
@@ -182,16 +193,16 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
             // The `ThownBomb` already renders a visual sphere:
             // `<mesh position={explosionPos} scale={explosionScale}>`
             // If I make that a Sensor RigidBody for 1 frame, it interacts with everything!
-            
+
           }
-           if (dist < wallRadius) {
-              breakWall(roomId, gx, gy);
-              // Also try breaking crate with the fixed ID format I'm about to implement
-              // const crateId = `${gx},${gy}`; // Current BUGGY format
-              // I will stick to the sensor approach or blind fire.
-              // Actually, breaking walls is blind logic in `breakWall` store?
-              // Let's look at `breakWall` implementation?
-              
+          if (dist < wallRadius) {
+            breakWall(roomId, gx, gy);
+            // Also try breaking crate with the fixed ID format I'm about to implement
+            // const crateId = `${gx},${gy}`; // Current BUGGY format
+            // I will stick to the sensor approach or blind fire.
+            // Actually, breaking walls is blind logic in `breakWall` store?
+            // Let's look at `breakWall` implementation?
+
           }
         }
       }
@@ -207,38 +218,38 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
     return (
       <group>
         <RigidBody position={explosionPos} type="dynamic" gravityScale={0} sensor>
-           <BallCollider 
-             args={[3.5]} 
-             onIntersectionEnter={({ other }) => {
-                const ud = other.rigidBodyObject?.userData;
-                if (ud?.isBreakable) {
-                   breakCrate(ud.crateId);
-                   const t = other.rigidBody?.translation();
-                   if (t) emitDrop([t.x, 0.1, t.z], roomId);
+          <BallCollider
+            args={[3.5]}
+            onIntersectionEnter={({ other }) => {
+              const ud = other.rigidBodyObject?.userData;
+              if (ud?.isBreakable) {
+                breakCrate(ud.crateId);
+                const t = other.rigidBody?.translation();
+                if (t) emitDrop([t.x, 0.1, t.z], roomId);
+              }
+              if (ud?.isRock) {
+                breakRock(ud.rockId);
+                if (ud.isSecret) {
+                  const t = other.rigidBody?.translation();
+                  if (t) {
+                    // Secret rocks guarantee high-value items (like Isaac's tinted rocks)
+                    emitDrop([t.x, 0.1, t.z], roomId, 'shield');
+                    setTimeout(() => emitDrop([t.x + 0.3, 0.1, t.z + 0.3], roomId, 'health'), 50);
+                    setTimeout(() => emitDrop([t.x - 0.3, 0.1, t.z - 0.3], roomId), 100); // One random drop
+                  }
                 }
-                if (ud?.isRock) {
-                   breakRock(ud.rockId);
-                   if (ud.isSecret) {
-                      const t = other.rigidBody?.translation();
-                      if (t) {
-                         // Secret rocks guarantee high-value items (like Isaac's tinted rocks)
-                         emitDrop([t.x, 0.1, t.z], roomId, 'shield');
-                         setTimeout(() => emitDrop([t.x + 0.3, 0.1, t.z + 0.3], roomId, 'health'), 50);
-                         setTimeout(() => emitDrop([t.x - 0.3, 0.1, t.z - 0.3], roomId), 100); // One random drop
-                      }
-                   }
-                }
-             }}
-           />
+              }
+            }}
+          />
         </RigidBody>
         <mesh position={explosionPos} scale={explosionScale}>
           <sphereGeometry args={[1, 32, 32]} />
-          <meshStandardMaterial 
-            color="#ffaa00" 
-            emissive="#ff4400" 
-            emissiveIntensity={10} 
-            transparent 
-            opacity={Math.max(0, 0.8 - (explosionScale / 4))} 
+          <meshStandardMaterial
+            color="#ffaa00"
+            emissive="#ff4400"
+            emissiveIntensity={10}
+            transparent
+            opacity={Math.max(0, 0.8 - (explosionScale / 4))}
           />
         </mesh>
       </group>

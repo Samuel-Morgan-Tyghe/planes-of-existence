@@ -9,6 +9,8 @@ import { Crate } from './Crate';
 import { Door } from './Door';
 import { Flower } from './Flower';
 import { Grass } from './Grass';
+import { Mushroom } from './Mushroom';
+import { Pebble } from './Pebble';
 import { Pillar } from './Pillar';
 import { Pitfall } from './Pitfall';
 import { Portal } from './Portal';

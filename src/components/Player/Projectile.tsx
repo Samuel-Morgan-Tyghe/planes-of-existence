@@ -84,12 +84,34 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       const hit = world.castRay(ray, maxToi, true);
 
       if (hit && hit.collider) {
+        const rayHit = hit as any; // Bypass TS check for normal/point if missing in types
         const parent = hit.collider.parent();
         const userData = (parent as any)?.userData;
         if (userData?.isPlayer || userData?.isFloor || userData?.isSensor) {
           // continue 
         } else if (!hit.collider.isSensor()) {
-          if (userData?.isWall) { onDestroy(); return; }
+          if (userData?.isWall) {
+            // Spawn Decal
+            const normal = rayHit.normal || { x: 0, y: 1, z: 0 };
+            // Calculate rotation from normal (align Y up to normal)
+            const dummy = new THREE.Object3D();
+            dummy.lookAt(normal.x, normal.y, normal.z);
+
+            const n = new THREE.Vector3(normal.x, normal.y, normal.z);
+            const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+            const e = new THREE.Euler().setFromQuaternion(q);
+
+            addEffect({
+              type: 'decal',
+              position: [rayHit.point.x + normal.x * 0.05, rayHit.point.y + normal.y * 0.05, rayHit.point.z + normal.z * 0.05],
+              rotation: [e.x, e.y, e.z],
+              color: '#000000',
+              size: scale * 1.5
+            });
+
+            onDestroy();
+            return;
+          }
         }
       }
     }
@@ -202,7 +224,22 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
           const isSensor = (other.collider as any)?.isSensor?.() || userData?.isSensor;
           if (!isSensor) {
             const t = rigidBodyRef.current?.translation();
-            if (t) addEffect({ type: 'impact', position: [t.x, t.y, t.z], color: '#ffffff' });
+            if (t) {
+              addEffect({ type: 'impact', position: [t.x, t.y, t.z], color: '#ffffff' });
+
+              // Approximate normal is opposite of velocity
+              const n = directionRef.current.clone().negate().normalize();
+              const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+              const e = new THREE.Euler().setFromQuaternion(q);
+
+              addEffect({
+                type: 'decal',
+                position: [t.x - directionRef.current.x * 0.2, t.y - directionRef.current.y * 0.2, t.z - directionRef.current.z * 0.2],
+                rotation: [e.x, e.y, e.z],
+                color: '#000000',
+                size: scale * 1.5
+              });
+            }
             onDestroy();
           }
         }
