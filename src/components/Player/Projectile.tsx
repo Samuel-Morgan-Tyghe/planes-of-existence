@@ -1,3 +1,4 @@
+import { Trail } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RigidBody, useRapier } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
@@ -245,16 +246,23 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
         }
       }}
     >
-      <mesh ref={meshRef} castShadow scale={[scale, scale, scale]} rotation={shape === 'cone' ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
-        {shape === 'cone' && <coneGeometry args={[0.2, 0.8, 16]} />}
-        {shape === 'cube' && <boxGeometry args={[0.4, 0.4, 0.4]} />}
-        {shape === 'sphere' && <sphereGeometry args={[0.2, 16, 16]} />}
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={2}
-        />
-      </mesh>
+      <Trail
+        width={0.4 * scale}
+        length={4}
+        color={color}
+        attenuation={(t) => t * t}
+      >
+        <mesh ref={meshRef} castShadow scale={[scale, scale, scale]} rotation={shape === 'cone' ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
+          {shape === 'cone' && <coneGeometry args={[0.2, 0.8, 16]} />}
+          {shape === 'cube' && <boxGeometry args={[0.4, 0.4, 0.4]} />}
+          {shape === 'sphere' && <sphereGeometry args={[0.2, 16, 16]} />}
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={2}
+          />
+        </mesh>
+      </Trail>
       <CuboidCollider args={[0.2 * scale, 0.2 * scale, (shape === 'cone' ? 0.4 : 0.2) * scale]} />
     </RigidBody>
   );

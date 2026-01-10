@@ -51,9 +51,16 @@ export function updateEchoQueen(
   if (now - state.lastAttackTime > attackInterval) {
     state.waveCount++;
     
+    // Difficulty Scaling: Start at 10% intensity and ramp to 100% as health drops
+    const difficulty = 0.1 + (0.9 * (1 - healthPercent));
+
     // Create a wave of sound projectiles in a rotating pattern
-    const projectilesPerWave = 6;
+    const baseProjectilesPerWave = 6;
+    const projectilesPerWave = Math.max(1, Math.round(baseProjectilesPerWave * difficulty));
     
+    // Log intent for debugging
+    // console.log(`Queen Attack: HP ${Math.round(healthPercent*100)}% -> Difficulty ${difficulty.toFixed(2)} -> ${projectilesPerWave} proj/wave`);
+
     for (let wave = 0; wave < numWaves; wave++) {
       const waveAngle = state.rotationAngle + (wave * Math.PI * 2) / numWaves;
       

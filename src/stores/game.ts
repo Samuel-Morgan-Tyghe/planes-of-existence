@@ -68,7 +68,15 @@ export const $bossEnemy = atom<EnemyState | null>(null);
 export const $bossAlive = atom<boolean>(false);
 
 // Room cleared status (all enemies defeated)
+// Room cleared status (all enemies defeated)
 export const $roomCleared = atom<boolean>(false);
+
+// Shake Intensity (0-1)
+export const $shakeIntensity = atom<number>(0);
+
+export const addShake = (amount: number) => {
+  $shakeIntensity.set(Math.min($shakeIntensity.get() + amount, 1.0));
+};
 
 // Pause state
 export const $isPaused = atom<boolean>(false);
@@ -87,6 +95,16 @@ export const $thrownBombs = map<Record<number, ThrownBomb>>({});
 
 // Broken walls: roomId -> Set of "x,y" coordinates
 export const $brokenWalls = map<Record<number, Set<string>>>({});
+
+// Purchased Shop Items: Set of unique item IDs (roomId-x-y)
+export const $purchasedShopItems = atom<Set<string>>(new Set());
+
+export const recordPurchase = (id: string) => {
+  const current = $purchasedShopItems.get();
+  const next = new Set(current);
+  next.add(id);
+  $purchasedShopItems.set(next);
+};
 
 // Actions
 export const switchPlane = (plane: PlaneType) => {

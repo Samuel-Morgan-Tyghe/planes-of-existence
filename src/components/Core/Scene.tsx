@@ -4,6 +4,7 @@ import { clearEnemyProjectiles } from '../../stores/projectiles';
 import { $restartTrigger } from '../../stores/restart';
 import { CameraManager } from '../Cameras/CameraManager';
 import { PlaneSwitcher } from '../Cameras/PlaneSwitcher';
+import { CameraShake } from '../Effects/CameraShake';
 import { EffectsManager } from '../Effects/EffectsManager';
 import { BossManager } from '../Enemies/BossManager';
 import { EnemySpawner } from '../Enemies/EnemySpawner';
@@ -43,21 +44,22 @@ import { Physics } from '@react-three/rapier';
 export function Scene() {
   const restartTrigger = useStore($restartTrigger);
 
-  const handleSpawnRequest = useCallback(() => {}, []);
+  const handleSpawnRequest = useCallback(() => { }, []);
 
   useEffect(() => {
     return () => {
-        clearEnemyProjectiles();
+      clearEnemyProjectiles();
     };
   }, []);
 
   return (
     <Physics gravity={[0, -9.81, 0]} debug={false}>
+      <CameraShake />
       <ambientLight intensity={0.5} />
-      <directionalLight 
-        position={[10, 10, 5]} 
-        intensity={1} 
-        castShadow 
+      <directionalLight
+        position={[10, 10, 5]}
+        intensity={1}
+        castShadow
         shadow-mapSize={[2048, 2048]}
       />
       <CameraManager />
@@ -65,7 +67,7 @@ export function Scene() {
       <GridMap key={`grid-${restartTrigger}`} />
       <Player key={`player-${restartTrigger}`} />
       <PlayerShadow />
-      
+
       <ErrorBoundary>
         <WeaponSystem key={`weapon-${restartTrigger}`} />
       </ErrorBoundary>

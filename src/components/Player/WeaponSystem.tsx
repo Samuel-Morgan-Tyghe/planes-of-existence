@@ -1,11 +1,13 @@
 import { useStore } from '@nanostores/react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { Vector3 } from 'three';
-import { $plane, $playerYaw, $stats, debugRerollEnemies, useBomb } from '../../stores/game';
-import { $position, $projectiles, $velocity, addProjectiles, removeProjectile } from '../../stores/player';
+import { $enemyPositions, $plane, $playerYaw, $stats, debugRerollEnemies, useBomb } from '../../stores/game';
+import { $position, $projectiles, $recoilTrigger, $velocity, addProjectiles, removeProjectile } from '../../stores/player';
 import { fireWeapon } from '../../systems/combat';
 import { emitDamage } from '../../systems/events';
+import { addEffect } from '../Effects/EffectsManager';
 import { Projectile } from './Projectile';
 
 export function WeaponSystem() {
@@ -72,7 +74,7 @@ export function WeaponSystem() {
     };
   }, []);
 
-  useFrame(() => {
+  useFrame((state) => {
     let shouldFire = false;
     let direction: [number, number, number] | null = null;
 
@@ -85,14 +87,35 @@ export function WeaponSystem() {
         shouldFire = true;
         direction = [forward.x, forward.y, forward.z];
       } else if (arrowKeysRef.current.size > 0) {
-        // Allow directional shooting with arrows in FPS too? Maybe weird, let's stick to forward
-        // If they press Left/Right/Down arrow, maybe shoot relative to camera?
-        // For now, let's just make sure "Attempting to shoot" works.
         shouldFire = true;
         direction = [forward.x, forward.y, forward.z];
       }
     } else {
-      if (arrowKeysRef.current.size > 0) {
+      // ISO Mode
+      if (isMouseDownRef.current) {
+        shouldFire = true;
+
+        // Raycast from mouse to floor to get direction
+        state.raycaster.setFromCamera(state.pointer, camera);
+        const target = new Vector3();
+        // Intersect with floor plane at y=0.5 (approx player height)
+        const plane = new THREE.Plane(new Vector3(0, 1, 0), -0.5);
+        state.raycaster.ray.intersectPlane(plane, target);
+
+        if (target) {
+          const currentPos = $position.get();
+          const diff = new Vector3(target.x - currentPos[0], 0, target.z - currentPos[2]);
+
+          // Snap to cardinal directions
+          if (Math.abs(diff.x) > Math.abs(diff.z)) {
+            direction = [Math.sign(diff.x), 0, 0];
+          } else {
+            direction = [0, 0, Math.sign(diff.z)];
+          }
+        }
+      }
+
+      if (!shouldFire && arrowKeysRef.current.size > 0) {
         shouldFire = true;
         if (arrowKeysRef.current.has('ArrowUp')) direction = [0, 0, -1];
         else if (arrowKeysRef.current.has('ArrowDown')) direction = [0, 0, 1];
@@ -131,6 +154,20 @@ export function WeaponSystem() {
 
     if (newProjectiles.length > 0) {
       addProjectiles(newProjectiles);
+      $recoilTrigger.set($recoilTrigger.get() + 1);
+
+      // Muzzle Flash
+      if (lightRef.current) {
+        lightRef.current.intensity = 5.0;
+      }
+    }
+  });
+
+  const lightRef = useRef<THREE.PointLight>(null);
+
+  useFrame((_, delta) => {
+    if (lightRef.current && lightRef.current.intensity > 0) {
+      lightRef.current.intensity = THREE.MathUtils.lerp(lightRef.current.intensity, 0, delta * 20);
     }
   });
 
@@ -213,6 +250,17 @@ export function WeaponSystem() {
   const handleHit = useCallback((damage: number, enemyId?: number) => {
     if (enemyId !== undefined) {
       emitDamage(enemyId, damage);
+
+      // Spawn floating text
+      const enemyPos = $enemyPositions.get()[enemyId];
+      if (enemyPos) {
+        addEffect({
+          type: 'text',
+          text: Math.round(damage).toString(),
+          position: [enemyPos[0], enemyPos[1] + 1.0, enemyPos[2]],
+          color: '#ffaa00'
+        });
+      }
     }
   }, []);
 
@@ -227,6 +275,7 @@ export function WeaponSystem() {
           onHit={handleHit}
         />
       ))}
+      <pointLight ref={lightRef} color="#ffffaa" distance={5} decay={2} />
     </>
   );
 }

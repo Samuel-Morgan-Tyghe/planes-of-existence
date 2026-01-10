@@ -1,4 +1,4 @@
-export type TileType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
+export type TileType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
 // 0 = Floor (walkable)
 // 1 = Wall (obstacle)
 // 2 = Enemy spawn
@@ -13,6 +13,7 @@ export type TileType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13
 // 15 = Flower (decorative)
 // 16 = Mushroom (decorative)
 // 17 = Pebble (decorative)
+// 18 = Shop Item Spawn
 
 export type GridMap = TileType[][];
 
@@ -20,7 +21,7 @@ export interface Room {
   id: number;
   gridX: number; // Position in room grid
   gridY: number;
-  type: 'start' | 'normal' | 'exit' | 'boss' | 'treasure';
+  type: 'start' | 'normal' | 'exit' | 'boss' | 'treasure' | 'shop';
   doors: { direction: 'north' | 'south' | 'east' | 'west'; locked: boolean }[];
   distanceFromStart: number; // For pathfinding
   enemySpawnPoints: [number, number][]; // Grid positions for enemy spawns (calculated at floor generation)

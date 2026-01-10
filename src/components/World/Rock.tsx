@@ -30,17 +30,17 @@ export function Rock({ position, height, id, type = 'normal' }: RockProps) {
       partsArray.push({
         position: [0, 0, 0],
         rotation: [Math.random() * 0.2 - 0.1, Math.random() * Math.PI, Math.random() * 0.2 - 0.1], // Slight tilt
-        scale: [0.6 + Math.random() * 0.3, hScale, 0.6 + Math.random() * 0.3] // Narrower
+        scale: [1.2 + Math.random() * 0.6, hScale, 1.2 + Math.random() * 0.6] // Wider
       });
       // Base cubes
       const numBase = 3 + Math.floor(Math.random() * 4);
       for (let i = 0; i < numBase; i++) {
         const angle = (i / numBase) * Math.PI * 2 + (Math.random() * 0.5);
-        const radius = 0.3 + Math.random() * 0.2;
+        const radius = 0.6 + Math.random() * 0.4;
         partsArray.push({
           position: [Math.cos(angle) * radius, -hScale * 0.45, Math.sin(angle) * radius],
           rotation: [Math.random() * 0.3, Math.random() * Math.PI, Math.random() * 0.3],
-          scale: [0.3 + Math.random() * 0.2, 0.4 + Math.random() * 0.3, 0.3 + Math.random() * 0.2]
+          scale: [0.6 + Math.random() * 0.4, 0.8 + Math.random() * 0.6, 0.6 + Math.random() * 0.4]
         });
       }
     } else {
@@ -48,17 +48,17 @@ export function Rock({ position, height, id, type = 'normal' }: RockProps) {
       partsArray.push({
         position: [0, 0, 0],
         rotation: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
-        scale: [0.6 + Math.random() * 0.3, hScale, 0.6 + Math.random() * 0.3]
+        scale: [1.2 + Math.random() * 0.6, hScale, 1.2 + Math.random() * 0.6]
       });
       // Base chunks
       const numBase = 4 + Math.floor(Math.random() * 3);
       for (let i = 0; i < numBase; i++) {
         const angle = (i / numBase) * Math.PI * 2 + (Math.random() * 0.5);
-        const radius = 0.3 + Math.random() * 0.3;
+        const radius = 0.6 + Math.random() * 0.6;
         partsArray.push({
           position: [Math.cos(angle) * radius, -hScale * 0.4, Math.sin(angle) * radius],
           rotation: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
-          scale: [0.3 + Math.random() * 0.3, 0.5 + Math.random() * 0.4, 0.3 + Math.random() * 0.3]
+          scale: [0.6 + Math.random() * 0.6, 1.0 + Math.random() * 0.8, 0.6 + Math.random() * 0.6]
         });
       }
     }
@@ -90,7 +90,7 @@ export function Rock({ position, height, id, type = 'normal' }: RockProps) {
         }
       }}
     >
-      <CuboidCollider args={[0.5, height * 0.75, 0.5]} position={[0, height * 0.75, 0]} />
+      <CuboidCollider args={[0.9, height * 0.75, 0.9]} position={[0, height * 0.75, 0]} />
       {/* Visual Mesh Cluster */}
       <group position={[0, height * 0.75, 0]}>
         {parts.map((part, i) => (

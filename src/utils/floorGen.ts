@@ -8,11 +8,14 @@ import { SeededRandom } from './random'; // Import extracted Random
 const ROOM_SIZE = 30; // Each room is 30x30 tiles
 const ROOM_WORLD_SIZE = 60; // Each room is 60 units in world space
 
+import { generateShopRoom } from '../logic/rooms/models/shop';
+
 // Register default generators
 registerRoomGenerator('boss', generateBossRoom);
 registerRoomGenerator('treasure', generateTreasureRoom);
 registerRoomGenerator('normal', generateNormalRoom);
 registerRoomGenerator('start', generateNormalRoom); // Use normal layout for start room
+registerRoomGenerator('shop', generateShopRoom);
 
 export { SeededRandom }; // Re-export for compatibility
 
@@ -25,8 +28,8 @@ export function generateFloor(floorNumber: number, seed: number = 12345): FloorD
   const floorSeed = seed + (floorNumber * 99999);
   const rng = new SeededRandom(floorSeed);
 
-  // Random number of rooms (4-10)
-  const roomCount = rng.nextInt(4, 10);
+  // Random number of rooms (6-10) to ensure enough space for specials
+  const roomCount = rng.nextInt(6, 12);
 
   const rooms: Room[] = [];
   const roomGrid = new Map<string, number>(); // "x,y" -> roomId
@@ -148,17 +151,35 @@ export function generateFloor(floorNumber: number, seed: number = 12345): FloorD
   furthestRoom.type = 'boss';
 
   // Designate one room as a treasure room (not start or boss)
-  const potentialTreasureRooms = rooms.filter(r => r.type === 'normal' && r.id !== 0);
-  if (potentialTreasureRooms.length > 0) {
-    const treasureRoom = potentialTreasureRooms[rng.nextInt(0, potentialTreasureRooms.length - 1)];
+  const potentialSpecialRooms = rooms.filter(r => r.type === 'normal' && r.id !== 0);
+  
+  // Need at least 2 special rooms ideally (Treasure + Shop)
+  // If we have potential rooms, try to assign them
+  if (potentialSpecialRooms.length > 0) {
+    // 1. Treasure Room
+    const treasureIndex = rng.nextInt(0, potentialSpecialRooms.length - 1);
+    const treasureRoom = potentialSpecialRooms[treasureIndex];
     treasureRoom.type = 'treasure';
+    
+    // Remove from potential list for Shop
+    potentialSpecialRooms.splice(treasureIndex, 1);
+  }
+
+  if (potentialSpecialRooms.length > 0) {
+    // 2. Shop Room
+    const shopIndex = rng.nextInt(0, potentialSpecialRooms.length - 1);
+    const shopRoom = potentialSpecialRooms[shopIndex];
+    shopRoom.type = 'shop';
+    console.log(`🏪 Shop assigned to Room ${shopRoom.id} at [${shopRoom.gridX}, ${shopRoom.gridY}]`);
+  } else {
+    console.warn('⚠️ Could not find a room for Shop!');
   }
 
   // Initialize enemy spawn data
   // We do this by generating the layout for each room to ensure valid spawn points
   for (const room of rooms) {
     // Determine enemy count based on floor and room type
-    if (room.type === 'start' || room.type === 'treasure') {
+    if (room.type === 'start' || room.type === 'treasure' || room.type === 'shop') {
       room.enemyCount = 0;
     } else {
       room.enemyCount = Math.min(12, 4 + Math.floor(floorNumber * 1.2));

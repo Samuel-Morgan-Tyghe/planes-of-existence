@@ -32,7 +32,7 @@ export function Door({ position, direction, locked, playerPosition, onEnter, vis
 
     // Debug every ~1s (assuming 60fps)
     if (Math.random() < 0.01 && distance < 10) {
-       console.log(`[Door Debug] Dir: ${direction}, Locked: ${locked}, Dist: ${distance.toFixed(2)}, Near: ${nowNear}`);
+      console.log(`[Door Debug] Dir: ${direction}, Locked: ${locked}, Dist: ${distance.toFixed(2)}, Near: ${nowNear}`);
     }
 
     if (!wasNear && nowNear && !locked) {
@@ -51,9 +51,9 @@ export function Door({ position, direction, locked, playerPosition, onEnter, vis
   return (
     <group position={position} visible={visible}>
       {/* 1. Permanent Sensor for Teleportation */}
-      <RigidBody 
-        type="fixed" 
-        sensor 
+      <RigidBody
+        type="fixed"
+        sensor
         userData={{ isSensor: true }}
         onIntersectionEnter={() => {
           if (!locked) {
@@ -62,8 +62,8 @@ export function Door({ position, direction, locked, playerPosition, onEnter, vis
           }
         }}
       >
-        {/* Slightly larger sensor to ensure detection */}
-        <CuboidCollider args={[1.5, 2, 0.5]} rotation={rotation} />
+        {/* Slightly larger sensor to ensure detection - covers full 3-tile corridor (6.0 width) */}
+        <CuboidCollider args={[3.5, 2, 0.5]} rotation={rotation} />
       </RigidBody>
 
       {/* 2. Conditional Physical Barrier when Locked */}
@@ -81,7 +81,7 @@ export function Door({ position, direction, locked, playerPosition, onEnter, vis
           emissive={color}
           emissiveIntensity={isNear ? 2.0 * pulseIntensity : 1.0}
           transparent
-          opacity={locked ? 0.7 : 0.2} 
+          opacity={locked ? 0.7 : 0.2}
         />
       </mesh>
 

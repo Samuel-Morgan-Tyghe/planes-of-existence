@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Decal } from './Decal';
+import { FloatingText } from './FloatingText';
 import { HitEffect } from './HitEffect';
 import { ImpactEffect } from './ImpactEffect';
 
 interface Effect {
   id: number;
-  type: 'hit' | 'impact' | 'decal';
+  type: 'hit' | 'impact' | 'decal' | 'text';
   position: [number, number, number];
   rotation?: [number, number, number]; // For decals
+  text?: string; // For text
   color: string;
   size?: number;
   duration?: number;
@@ -68,6 +70,16 @@ export function EffectsManager() {
               position={effect.position}
               rotation={effect.rotation || [0, 0, 0]}
               scale={effect.size}
+              onComplete={() => handleEffectComplete(effect.id)}
+            />
+          );
+        } else if (effect.type === 'text') {
+          return (
+            <FloatingText
+              key={effect.id}
+              position={effect.position}
+              text={effect.text || ''}
+              color={effect.color}
               onComplete={() => handleEffectComplete(effect.id)}
             />
           );

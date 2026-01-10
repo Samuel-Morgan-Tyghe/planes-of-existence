@@ -15,6 +15,7 @@ import { Pillar } from './Pillar';
 import { Pitfall } from './Pitfall';
 import { Portal } from './Portal';
 import { Rock } from './Rock';
+import { ShopItem } from './ShopItem';
 import { Spikes } from './Spikes';
 import { Torch } from './Torch';
 import { Wall } from './Wall';
@@ -169,7 +170,8 @@ export function GridMap() {
       const halfRoom = roomSize / 2;
       // Offset from center to put player near the door (but inside room)
       // Must be > ACTIVATION_DISTANCE (2.5) to avoid immediate re-trigger
-      const doorOffset = halfRoom - 6.0;
+      // Increased to 12.0 to prevent accidental re-entry loops or sensor overlaps
+      const doorOffset = halfRoom - 12.0;
 
       let offsetX = 0;
       let offsetZ = 0;
@@ -434,6 +436,9 @@ export function GridMap() {
                 } else if (tile === 14) {
                   // Torch
                   return <Torch key={`torch-${room.id}-${x}-${y}`} position={worldPos} />;
+                } else if (tile === 18) {
+                  // Shop Item
+                  return <ShopItem key={`shopitem-${room.id}-${x}-${y}`} id={`${room.id}-${x}-${y}`} position={[worldPos[0], worldPos[1] + 0.5, worldPos[2]]} />;
                 }
                 return null;
               })

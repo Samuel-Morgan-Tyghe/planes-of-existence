@@ -21,22 +21,22 @@ export function Spikes({ position }: SpikesProps) {
       const x = Math.sin(seed + n) * 10000;
       return x - Math.floor(x);
     };
-    
+
     return {
       rotation: rand(1) * Math.PI * 2,
       scale: 0.8 + rand(2) * 0.6, // 0.8 to 1.4 scale
       subSpikes: [
-        { rot: [rand(3)*0.4, 0, rand(4)*0.4] as [number, number, number], pos: [0.25, 0.15, 0.25] },
-        { rot: [-rand(5)*0.4, 0, -rand(6)*0.4] as [number, number, number], pos: [-0.25, 0.15, -0.25] },
-        { rot: [-rand(7)*0.4, 0, rand(8)*0.4] as [number, number, number], pos: [0.25, 0.1, -0.25] },
-        { rot: [rand(9)*0.4, 0, -rand(10)*0.4] as [number, number, number], pos: [-0.25, 0.1, 0.25] },
+        { rot: [rand(3) * 0.4, 0, rand(4) * 0.4] as [number, number, number], pos: [0.25, 0.15, 0.25] },
+        { rot: [-rand(5) * 0.4, 0, -rand(6) * 0.4] as [number, number, number], pos: [-0.25, 0.15, -0.25] },
+        { rot: [-rand(7) * 0.4, 0, rand(8) * 0.4] as [number, number, number], pos: [0.25, 0.1, -0.25] },
+        { rot: [rand(9) * 0.4, 0, -rand(10) * 0.4] as [number, number, number], pos: [-0.25, 0.1, 0.25] },
       ]
     };
   }, [position]);
 
   const handleCollision = (target: any) => {
     const now = Date.now();
-    
+
     if (now - lastDamageTimeRef.current < DAMAGE_COOLDOWN) return;
 
     // Robust check for userData, handling different Rapier versions/structures
@@ -66,7 +66,7 @@ export function Spikes({ position }: SpikesProps) {
     <group position={[position[0], position[1], position[2]]}>
       {/* Physics Sensor */}
       <RigidBody type="fixed" sensor onIntersectionEnter={(e) => handleCollision(e.other)}>
-        <CuboidCollider args={[0.4, 0.2, 0.4]} />
+        <CuboidCollider args={[0.95, 0.2, 0.95]} />
       </RigidBody>
 
       {/* Spikes Visuals - Randomized */}
@@ -78,13 +78,13 @@ export function Spikes({ position }: SpikesProps) {
         </mesh>
         {/* Smaller surrounding spikes */}
         {visualConfig.subSpikes.map((cfg, i) => (
-           <mesh key={i} position={cfg.pos as [number, number, number]} rotation={cfg.rot}>
+          <mesh key={i} position={cfg.pos as [number, number, number]} rotation={cfg.rot}>
             <coneGeometry args={[0.1, 0.4, 4]} />
             <meshStandardMaterial color={i < 2 ? "#cc0000" : "#666666"} />
           </mesh>
         ))}
       </group>
-      
+
       {/* Base */}
       <mesh position={[0, 0.01, 0]} receiveShadow>
         <boxGeometry args={[0.9, 0.05, 0.9]} />
