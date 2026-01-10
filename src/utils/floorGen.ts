@@ -175,6 +175,23 @@ export function generateFloor(floorNumber: number, seed: number = 12345): FloorD
     console.warn('⚠️ Could not find a room for Shop!');
   }
 
+  // 3. Distribute Tinted Rocks (0-3 per floor)
+  // Initialize counts
+  rooms.forEach(r => r.tintedRockCount = 0);
+  
+  const totalTintedRocks = rng.nextInt(0, 3); // 0 to 3
+  const rockCandidates = rooms.filter(r => r.type !== 'start' && r.type !== 'boss'); // Any non-start/boss room can have them
+  
+  // Distribute randomly
+  for (let i = 0; i < totalTintedRocks; i++) {
+    if (rockCandidates.length > 0) {
+      const roomIndex = rng.nextInt(0, rockCandidates.length - 1);
+      const targetRoom = rockCandidates[roomIndex];
+      targetRoom.tintedRockCount = (targetRoom.tintedRockCount || 0) + 1;
+    }
+  }
+  console.log(`💎 Distributed ${totalTintedRocks} tinted rocks across floor.`);
+
   // Initialize enemy spawn data
   // We do this by generating the layout for each room to ensure valid spawn points
   for (const room of rooms) {
@@ -240,12 +257,13 @@ export function generateRoomLayout(
   const centerX = Math.floor(ROOM_SIZE / 2);
   const centerY = Math.floor(ROOM_SIZE / 2);
 
+  const placedRocks: [number, number][] = [];
+
   const placeRock = (px: number, py: number) => {
       if (px > 1 && px < ROOM_SIZE - 2 && py > 1 && py < ROOM_SIZE - 2) {
           if (grid[py][px] === 0 && (px !== centerX || py !== centerY)) {
-              // 15% chance for a Secret Rock (Tile 11)
-              const isSecret = rng.next() < 0.15;
-              grid[py][px] = isSecret ? 11 : 9; 
+              grid[py][px] = 9; // Place Normal Rock
+              placedRocks.push([px, py]);
           }
       }
   };
@@ -294,6 +312,21 @@ export function generateRoomLayout(
       placeRock(centerX + 2, centerY - 2);
       placeRock(centerX + 2, centerY - 2);
       placeRock(centerX - 2, centerY + 2);
+  }
+
+  // Upgrade rocks to Tinted Rocks based on room budget
+  if (room.tintedRockCount && room.tintedRockCount > 0 && placedRocks.length > 0) {
+      // Shuffle candidates (Fisher-Yates via rng not available? `rng.shuffle` exists!)
+      // Wait, `rng.shuffle` returns a new array or shuffles in place?
+      // `floorGen.ts` line 71: `rng.shuffle(directions)`.
+      // Let's assume it works.
+      const candidates = rng.shuffle([...placedRocks]);
+      const count = Math.min(room.tintedRockCount, candidates.length);
+      
+      for(let i=0; i<count; i++) {
+          const [rx, ry] = candidates[i];
+          grid[ry][rx] = 11; // Upgrade to Tinted Rock
+      }
   }
 
   // Place Pillars (Indestructible cover)

@@ -2,10 +2,10 @@
 import { useStore } from '@nanostores/react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useMemo } from 'react';
+import { rollDestructibleLoot } from '../../logic/loot';
 import { $currentRoomId } from '../../stores/game';
 import { $brokenRocks, breakRock } from '../../stores/rock';
 import { emitDrop } from '../../systems/events';
-import { rollDestructibleLoot } from '../../types/drops';
 
 interface RockProps {
   position: [number, number, number];
@@ -79,10 +79,9 @@ export function Rock({ position, height, id, type = 'normal' }: RockProps) {
       userData={{ isRock: true, rockId: id, isSecret }}
       onCollisionEnter={(e) => {
         const userData = e.other.rigidBody?.userData as any;
-        if (userData?.isEnemy) {
+        if (userData?.isBoss) {
           breakRock(id);
 
-          // Chance to drop loot (5%)
           const drop = rollDestructibleLoot('rock');
           if (drop) {
             emitDrop(position, $currentRoomId.get(), drop.type, drop.itemId);

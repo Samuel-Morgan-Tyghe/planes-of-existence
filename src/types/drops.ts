@@ -5,6 +5,8 @@ export interface Drop {
   type: DropType;
   position: [number, number, number];
   roomId: number;
+  value?: number; // For coins
+  chestType?: 'gray' | 'gold';
 }
 
 export interface DropRollResult {
@@ -12,94 +14,8 @@ export interface DropRollResult {
   spawnCount?: number; // For enemy spawns
   chestVariety?: number; // For chests (how many items)
   itemId?: string; // For items
+  value?: number; // For coins
+  chestType?: 'gray' | 'gold';
 }
 
-/**
- * Roll for a drop from an enemy death
- */
-export function rollDrop(): DropRollResult | null {
-  const roll = Math.random();
 
-  if (roll < 0.05) return { type: 'health' }; 
-  if (roll < 0.20) return { type: 'shield' }; // 15% Chance for Shield!
-  if (roll < 0.30) return { type: 'coin' };
-  if (roll < 0.35) return { type: 'key' };
-  if (roll < 0.40) return { type: 'bomb' };
-  if (roll < 0.27) return { type: 'chest', chestVariety: 1 };
-  if (roll < 0.30) return { type: 'enemy_spawn', spawnCount: 1 };
-
-  return null;
-}
-
-/**
- * Roll for room clear loot
- */
-export function rollRoomClearLoot(roomType: string): DropRollResult | null {
-  if (roomType === 'treasure') {
-    // Updated with new themed items
-    const itemIds = [
-      'gladiators_heart', 'berserker_drive', 'executioner_chip',
-      'railgun_accelerator', 'sniper_scope', 'guerrilla_tactics',
-      'void_prism', 'arcane_battery', 'chaos_engine',
-      'titan_plating', 'reactive_shield',
-      'assassin_dagger', 'smoke_bomb',
-      'noir_detective', 'neon_demon', 'retro_glitch',
-      'dead_pixel', 'rgb_split', 'double_jump',
-      'dull_prism', 'cosine_calibrator', 'vector_field'
-    ];
-    const randomId = itemIds[Math.floor(Math.random() * itemIds.length)];
-    return { type: 'item', itemId: randomId };
-  }
-
-  const lootRoll = Math.random();
-  if (lootRoll < 0.4) return { type: 'chest', chestVariety: Math.floor(Math.random() * 3) + 1 };
-  if (lootRoll < 0.7) return { type: 'key' };
-  return { type: 'bomb' };
-}
-
-/**
- * Roll for rare item drops from destructible objects (5% chance)
- */
-export function rollDestructibleLoot(source: 'rock' | 'wall' | 'crate' | 'chest'): DropRollResult | null {
-  if (Math.random() > 0.05) return null; // 5% chance
-
-  let pool: string[] = [];
-  switch (source) {
-    case 'rock':
-      pool = ['titan_plating', 'dead_pixel', 'dull_prism', 'shield']; // Hard/Heavy
-      break;
-    case 'wall':
-      pool = ['reactive_shield', 'titan_plating', 'vector_field', 'shield']; // Structural
-      break;
-    case 'crate':
-      pool = ['smoke_bomb', 'guerrilla_tactics', 'railgun_accelerator', 'bomb', 'coin']; // Supplies
-      break;
-    case 'chest':
-      pool = ['void_prism', 'chaos_engine', 'arcane_battery', 'double_jump', 'gold_coin']; // Treasure
-      break;
-  }
-  
-  // Some generic drops mixed in the pool or handled by type
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  
-  if (pick === 'shield') return { type: 'shield' };
-  if (pick === 'bomb') return { type: 'bomb' };
-  if (pick === 'coin') return { type: 'coin' };
-  if (pick === 'gold_coin') return { type: 'coin' }; // Placeholder for big coin logic if exists
-
-  return { type: 'item', itemId: pick };
-}
-
-/**
- * Roll for boss loot (Guaranteed high-tier item)
- */
-export function rollBossLoot(): DropRollResult {
-  const bossPool = [
-    'rgb_split', 'double_jump', 'titan_plating', 'chaos_engine',
-    'void_prism', 'executioner_chip', 'railgun_accelerator',
-    'berserker_drive', 'gladiators_heart'
-  ];
-  
-  const randomId = bossPool[Math.floor(Math.random() * bossPool.length)];
-  return { type: 'item', itemId: randomId };
-}

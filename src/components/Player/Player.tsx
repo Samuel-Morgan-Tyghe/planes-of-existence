@@ -78,9 +78,11 @@ export function Player() {
     console.log('🔄 Floor change/Restart detected. Teleporting to spawn via update loop.');
     teleportTargetRef.current = [...SPAWN_POSITION];
     $isTeleporting.set(true);
-    teleportFrameLockRef.current = 5; // Lock for 5 frames
+    // teleportFrameLockRef.current = 5; // Removed lock for smooth transition
 
-    // Reset linear and angular velocity immediately as well (backup)
+    // Reset angular velocity to stop spin, but keep linear momentum?
+    // For RESP_AWN (Restart), we SHOULD kill momentum.
+    // This block is for RESTART/FLOOR CHANGE.
     rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
 
@@ -121,7 +123,7 @@ export function Player() {
         console.log('📡 Teleport signal received:', target);
         teleportTargetRef.current = [...target] as [number, number, number];
         $isTeleporting.set(true);
-        teleportFrameLockRef.current = 5; // Lock for 5 frames
+        // teleportFrameLockRef.current = 5; // Removed lock
       }
     });
   }, []);
@@ -226,13 +228,16 @@ export function Player() {
       // 1. Snap position
       rb.setTranslation({ x: target[0], y: target[1], z: target[2] }, true);
 
-      // 2. Kill all momentum
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      // 2. Kill all momentum? NO.
+      // For Doors, we want momentum to carry through.
+      // For Restart, momentum is killed by the Effect hook.
+      // rb.setLinvel({ x: 0, y: 0, z: 0 }, true); 
+      // rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
 
       // 3. Clear signal and mark as done
       teleportTargetRef.current = null;
       $teleportTo.set(null);
+      $isTeleporting.set(false); // Release lock immediately
     }
 
     // Handle teleport lock countdown
@@ -244,7 +249,8 @@ export function Player() {
       }
 
       // Keep velocity at zero during lock to prevent "fighting"
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      // Removed to allow momentum preservation logic
+      // rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
 
     if (damageIntensity > 0) {

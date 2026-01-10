@@ -26,6 +26,7 @@ export interface Room {
   distanceFromStart: number; // For pathfinding
   enemySpawnPoints: [number, number][]; // Grid positions for enemy spawns (calculated at floor generation)
   enemyCount: number; // Number of enemies to spawn in this room
+  tintedRockCount?: number;
 }
 
 export interface FloorData {

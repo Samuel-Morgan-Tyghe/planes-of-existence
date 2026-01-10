@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
-import { $brokenWalls, $currentFloor, $currentRoomId, $floorData, $roomCleared, $runSeed, $visitedRooms } from '../../stores/game';
+import { $brokenWalls, $currentFloor, $currentRoomId, $floorData, $roomCleared, $runSeed, $unlockedSpecialRooms, $visitedRooms, consumeItem, unlockSpecialRoom } from '../../stores/game';
 import { $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
@@ -90,6 +90,7 @@ export function GridMap() {
   const playerPosition = useStore($position);
   const visitedRooms = useStore($visitedRooms);
   const brokenWalls = useStore($brokenWalls);
+  const unlockedSpecialRooms = useStore($unlockedSpecialRooms);
   const lastTransitionTime = useRef(0);
 
   // Generate floor layout when floor changes or restart
@@ -453,11 +454,17 @@ export function GridMap() {
         const isB = currentRoomId === roomB.id;
         const isVisited = visitedRooms.has(roomA.id) || visitedRooms.has(roomB.id);
 
-        // Door is locked if we are in one of the rooms and it's not cleared
-        const isLocked = (isA && !roomCleared) || (isB && !roomCleared);
-
         // Determine target room based on where the player is
-        const targetRoomId = isA ? roomB.id : roomA.id;
+        const targetRoom = isA ? roomB : roomA;
+        const targetRoomId = targetRoom.id;
+
+        // Check locks
+        const requiresKey = (targetRoom.type === 'shop' || targetRoom.type === 'treasure');
+        const isKeyLocked = requiresKey && !unlockedSpecialRooms.has(targetRoom.id);
+        const isCombatLocked = (isA && !roomCleared) || (isB && !roomCleared);
+
+        const isLocked = isCombatLocked || isKeyLocked;
+
         const transitionDirection = isA ? directionA : directionB;
 
         return (
@@ -466,6 +473,14 @@ export function GridMap() {
             position={position}
             direction={transitionDirection}
             locked={isLocked}
+            requiresKey={isKeyLocked} // Only require key if actually locked by key
+            onUnlock={() => {
+              if (consumeItem('key', 1)) {
+                unlockSpecialRoom(targetRoom.id);
+                return true;
+              }
+              return false;
+            }}
             playerPosition={playerPosition}
             onEnter={() => handleDoorEnter(targetRoomId, transitionDirection)}
             visible={isVisited}

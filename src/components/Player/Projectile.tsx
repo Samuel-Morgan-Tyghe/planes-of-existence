@@ -218,26 +218,43 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
           if (t) emitDrop([t.x, 0.1, t.z], $currentRoomId.get());
           addEffect({ type: 'impact', position: [t?.x || 0, t?.y || 0, t?.z || 0], color: '#8B4513' });
           onDestroy();
-        } else if (userData?.isWall || (!data.hasGravity && !userData)) {
+        } else if (userData?.isWall || userData?.isFloor || (!data.hasGravity && !userData)) {
           // Ignore floor if no gravity (prevent popping on ground spawn)
-          if (userData?.isFloor) return;
+          // Removed prevention: We DO want decals on floor.
+          // but valid check: don't spawn decal if just spawned (lifetime < 0.1?)
+          if (lifetime.current < 0.1) return;
 
           const isSensor = (other.collider as any)?.isSensor?.() || userData?.isSensor;
           if (!isSensor) {
             const t = rigidBodyRef.current?.translation();
             if (t) {
-              addEffect({ type: 'impact', position: [t.x, t.y, t.z], color: '#ffffff' });
+              const impactPos = [t.x, t.y, t.z] as [number, number, number];
+              addEffect({ type: 'impact', position: impactPos, color: '#ffffff' });
 
-              // Approximate normal is opposite of velocity
-              const n = directionRef.current.clone().negate().normalize();
-              const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+              // Determine normal
+              let normal = new THREE.Vector3(0, 1, 0);
+              if (userData?.isWall) {
+                // Standard approximation for walls if we don't have raycast normal
+                // But walls are usually vertical.
+                // Use direction opposite to velocity, projected onto XZ plane?
+                // Or just use approximation.
+                normal = directionRef.current.clone().negate().normalize();
+              } else if (userData?.isFloor) {
+                normal = new THREE.Vector3(0, 1, 0);
+                // Adjust impact pos to be slightly above floor?
+                impactPos[1] = 0.02;
+              } else {
+                normal = directionRef.current.clone().negate().normalize();
+              }
+
+              const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
               const e = new THREE.Euler().setFromQuaternion(q);
 
               addEffect({
                 type: 'decal',
-                position: [t.x - directionRef.current.x * 0.2, t.y - directionRef.current.y * 0.2, t.z - directionRef.current.z * 0.2],
+                position: impactPos,
                 rotation: [e.x, e.y, e.z],
-                color: '#000000',
+                color: '#000000', // Scorch mark
                 size: scale * 1.5
               });
             }

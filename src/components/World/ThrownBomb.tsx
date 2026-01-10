@@ -262,12 +262,13 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
       position={position}
       linearVelocity={initialVelocity}
       type="dynamic"
-      mass={3}
-      restitution={0.1}
-      friction={1.2}
-      linearDamping={1.0}
-      gravityScale={3.0}
-      canSleep={false}
+      mass={5} // Heavier feel
+      restitution={0.05} // Almost no bounce
+      friction={2.5} // High friction (Isaac style)
+      linearDamping={4.0} // Stops sliding quickly
+      angularDamping={4.0} // Stops rolling quickly
+      gravityScale={4.0} // Falls fast
+      canSleep={true}
       ccd={true}
       userData={{ isBomb: true }}
     >

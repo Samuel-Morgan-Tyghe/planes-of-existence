@@ -23,3 +23,18 @@ projectile size should often be linked to projectile damage
 
 We can encorporate AI as part of the initial run generation, Image generation of assets based on some factor from the user. I like the idea of the user being able to input into a form and then we use those keywords to generate assets for the run.  
 I think we have to glitch all the assets aswell to make this work. I like the idea of names also could be affected. 
+
+
+bosses should spawn an item.
+
+player shouldnt get same item twice
+
+player shouldnt be able to double jump
+
+on entering a door left or right and holding the same button it goes for a little bit then maximum reverse. jumping helps keep the correct direction.
+
+shops should have symbol on minimap
+
+decals arent showing up correctly. 
+
+bombs and projectiles should leave thier mark

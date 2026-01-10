@@ -94,6 +94,10 @@ function MiniMapComponent() {
             symbol = '💀';
             borderColor = '#ff0000';
           }
+          if (room.type === 'shop') {
+            symbol = '💲';
+            borderColor = '#ffd700';
+          }
 
           if (isCurrent) {
             color = '#004400';

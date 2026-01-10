@@ -581,6 +581,8 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     if (enemy.isDead || !active) return;
   };
 
+  const isBoss = ['weaver', 'corrupter', 'echo_queen', 'chess_queen', 'bomber_king', 'mega_snake', 'summoner'].includes(enemy.definition.id);
+
   return (
     <>
       {/* Hit Effects */}
@@ -604,7 +606,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
         colliders={false}
         mass={1}
         position={enemy.position}
-        userData={{ isEnemy: true, enemyId: enemy.id, health: enemy.health, damage: enemy.definition.damage, size: enemy.definition.size }}
+        userData={{ isEnemy: true, isBoss, enemyId: enemy.id, health: enemy.health, damage: enemy.definition.damage, size: enemy.definition.size }}
         enabledTranslations={[true, true, true]}
         lockRotations={true}
         ccd={true}

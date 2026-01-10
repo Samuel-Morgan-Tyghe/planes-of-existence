@@ -99,6 +99,17 @@ export const $brokenWalls = map<Record<number, Set<string>>>({});
 // Purchased Shop Items: Set of unique item IDs (roomId-x-y)
 export const $purchasedShopItems = atom<Set<string>>(new Set());
 
+// Unlocked Special Rooms: Set of Room IDs that have been unlocked
+export const $unlockedSpecialRooms = atom<Set<number>>(new Set());
+
+export const unlockSpecialRoom = (roomId: number) => {
+  const current = $unlockedSpecialRooms.get();
+  const next = new Set(current);
+  next.add(roomId);
+  $unlockedSpecialRooms.set(next);
+  console.log(`🔓 Room ${roomId} unlocked!`);
+};
+
 export const recordPurchase = (id: string) => {
   const current = $purchasedShopItems.get();
   const next = new Set(current);
@@ -144,10 +155,21 @@ export const addItem = (itemId: string) => {
   }
   
   // Special handling for double_jump item
-  if (itemId === 'double_jump') {
+  // DISABLED per user request: "player shouldnt be able to double jump"
+  /* if (itemId === 'double_jump') {
     $stats.setKey('maxJumps', 2);
     console.log('🦘 Double jump unlocked!');
+  } */
+};
+
+export const consumeItem = (itemId: string, count: number = 1): boolean => {
+  const current = $inventory.get()[itemId] || 0;
+  if (current >= count) {
+    $inventory.setKey(itemId, current - count);
+    console.log(`➖ Consumed ${count} of ${itemId}. Remaining: ${current - count}`);
+    return true;
   }
+  return false;
 };
 
 export const togglePause = () => {
@@ -189,10 +211,12 @@ export const useBomb = (position: [number, number, number], direction: [number, 
       // Drop bomb with no force, just gravity
       initialVelocity = [0, 0, 0];
     } else {
-      const throwForce = 10;
+      // Isaac-style: Short toss / place at feet
+      // Much lower force than before (was 10)
+      const throwForce = 4.0;
       initialVelocity = [
         direction[0] * throwForce + (playerVelocity?.[0] || 0),
-        3 + (playerVelocity?.[1] || 0),
+        2.0 + (playerVelocity?.[1] || 0), // Lower arc (was 3)
         direction[2] * throwForce + (playerVelocity?.[2] || 0)
       ];
     }

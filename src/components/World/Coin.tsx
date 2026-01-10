@@ -7,6 +7,7 @@ import { $position } from '../../stores/player';
 
 interface CoinProps {
   position: [number, number, number];
+  value?: number;
   onCollect: () => void;
 }
 
@@ -14,12 +15,16 @@ const COLLECT_DISTANCE = 1.8;
 const MAGNET_DISTANCE = 6;
 const MAGNET_SPEED = 6;
 
-export function Coin({ position, onCollect }: CoinProps) {
+export function Coin({ position, value = 1, onCollect }: CoinProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const rigidBodyRef = useRef<RapierRigidBody | null>(null);
   const [collected, setCollected] = useState(false);
   const collectedRef = useRef(false);
   const isCollectableRef = useRef(false);
+
+  // Determine appearance based on value
+  const color = value >= 50 ? '#ff00ff' : value >= 10 ? '#ffd700' : value >= 5 ? '#c0c0c0' : '#b87333';
+  const scale = value >= 50 ? 1.5 : value >= 10 ? 1.2 : 1.0;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -34,12 +39,12 @@ export function Coin({ position, onCollect }: CoinProps) {
       const angle = Math.random() * Math.PI * 2;
       const force = 3 + Math.random() * 2;
       try {
-        body.applyImpulse({ 
-          x: Math.cos(angle) * force, 
-          y: 5 + Math.random() * 3, 
-          z: Math.sin(angle) * force 
+        body.applyImpulse({
+          x: Math.cos(angle) * force,
+          y: 5 + Math.random() * 3,
+          z: Math.sin(angle) * force
         }, true);
-      } catch(e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
     }
   };
 
@@ -52,7 +57,7 @@ export function Coin({ position, onCollect }: CoinProps) {
 
     const playerPos = $position.get();
     const rbPosition = rigidBodyRef.current.translation();
-    
+
     const dx = playerPos[0] - rbPosition.x;
     const dy = playerPos[1] - rbPosition.y;
     const dz = playerPos[2] - rbPosition.z;
@@ -61,7 +66,7 @@ export function Coin({ position, onCollect }: CoinProps) {
     if (distance < MAGNET_DISTANCE && isCollectableRef.current) {
       const strength = 1 - (distance / MAGNET_DISTANCE);
       const force = MAGNET_SPEED * strength * 25.0;
-      
+
       rigidBodyRef.current.applyImpulse({
         x: (dx / distance) * force * delta,
         y: dy * force * delta + 5.0 * delta,
@@ -82,7 +87,7 @@ export function Coin({ position, onCollect }: CoinProps) {
   if (collected) return null;
 
   return (
-    <RigidBody 
+    <RigidBody
       ref={setBodyRef}
       position={position}
       type="dynamic"
@@ -92,9 +97,9 @@ export function Coin({ position, onCollect }: CoinProps) {
       userData={{ type: 'pickup_coin' }}
     >
       <BallCollider args={[0.3]} />
-      <BallCollider 
-        args={[1.5]} 
-        sensor 
+      <BallCollider
+        args={[1.5]}
+        sensor
         onIntersectionEnter={({ other }) => {
           if (other.rigidBodyObject?.userData?.isPlayer && isCollectableRef.current && !collectedRef.current) {
             collectedRef.current = true;
@@ -103,12 +108,12 @@ export function Coin({ position, onCollect }: CoinProps) {
           }
         }}
       />
-      <mesh ref={meshRef} castShadow rotation={[Math.PI / 2, 0, 0]}>
+      <mesh ref={meshRef} castShadow rotation={[Math.PI / 2, 0, 0]} scale={[scale, scale, scale]}>
         <cylinderGeometry args={[0.3, 0.3, 0.1, 16]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.2} emissive="#ffd700" emissiveIntensity={0.5} />
+        <meshStandardMaterial color={color} metalness={0.8} roughness={0.2} emissive={color} emissiveIntensity={0.5} />
       </mesh>
       <Html position={[0, 0.8, 0]} center>
-          <div style={{ color: '#ffd700', fontWeight: 'bold', fontSize: '12px', textShadow: '0 0 4px black' }}>$</div>
+        <div style={{ color: color, fontWeight: 'bold', fontSize: '12px', textShadow: '0 0 4px black' }}>${value}</div>
       </Html>
     </RigidBody>
   );

@@ -1,9 +1,9 @@
 import { useStore } from '@nanostores/react';
 import { useCallback } from 'react';
+import { rollBossLoot } from '../../logic/loot';
 import { $bossAlive, $bossEnemy, $currentFloor, $currentRoomId, $enemiesAlive, $enemyPositions, $roomCleared } from '../../stores/game';
 import { $position } from '../../stores/player';
 import { emitDrop } from '../../systems/events';
-import { rollBossLoot } from '../../types/drops';
 import Enemy from './Enemy';
 
 /**

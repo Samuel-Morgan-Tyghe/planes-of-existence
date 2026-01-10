@@ -4,7 +4,8 @@ import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { $coins, $hoveredItem, $purchasedShopItems, addItem, recordPurchase } from '../../stores/game';
+import { getAvailableUniqueItems } from '../../logic/loot';
+import { $coins, $hoveredItem, $inventory, $purchasedShopItems, addItem, recordPurchase } from '../../stores/game';
 import { $position } from '../../stores/player';
 import { ITEM_DEFINITIONS } from '../../types/items';
 
@@ -36,7 +37,14 @@ export function ShopItem({ id, position, itemId }: ShopItemProps) {
     const seed = Math.floor(position[0] * 1000 + position[2] * 1000);
     const rng = seededRandom(seed);
 
-    const itemKeys = Object.keys(ITEM_DEFINITIONS);
+    useStore($inventory); // Subscribe to changes
+    const itemKeys = getAvailableUniqueItems();
+
+    // Fallback if collected all items: allow duplicates or show 'sold out'? 
+    // User said "shouldnt get same item twice". 
+    // If empty, maybe show nothing?
+    if (itemKeys.length === 0) return null;
+
     const selectedKey = itemId || itemKeys[Math.floor(rng() * itemKeys.length)];
     const itemDef = ITEM_DEFINITIONS[selectedKey];
 

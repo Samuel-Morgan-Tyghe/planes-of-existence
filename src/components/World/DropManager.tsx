@@ -1,9 +1,10 @@
 import { useStore } from '@nanostores/react';
 import { useEffect } from 'react';
+import { rollDrop, rollRoomClearLoot } from '../../logic/loot';
 import { $coins, $currentFloor, $currentRoomId, $drops, addItem } from '../../stores/game';
 import { $restartTrigger } from '../../stores/restart';
 import { $dropEvents, $roomClearEvents } from '../../systems/events';
-import { Drop, DropType, rollDrop, rollRoomClearLoot } from '../../types/drops';
+import { Drop } from '../../types/drops';
 import { Bomb } from './Bomb';
 import { Chest } from './Chest';
 import { Coin } from './Coin';
@@ -33,7 +34,7 @@ export function DropManager({ }: DropManagerProps) {
   // Handle individual enemy drops
   useEffect(() => {
     if (!dropEvents) return;
-    
+
     const { position, roomId, forcedType, forcedItem } = dropEvents;
 
     if (forcedItem) {
@@ -51,16 +52,16 @@ export function DropManager({ }: DropManagerProps) {
     }
 
     if (forcedType) {
-       // Force drop specific type (health, shield, coin, etc.)
-       const newDrop: Drop = {
-           id: Date.now() + Math.random(),
-           type: forcedType,
-           position,
-           roomId,
-       };
-       $drops.set([...$drops.get(), newDrop]);
-       console.log(`🎁 Forced type drop: ${forcedType} in room ${roomId}`);
-       return;
+      // Force drop specific type (health, shield, coin, etc.)
+      const newDrop: Drop = {
+        id: Date.now() + Math.random(),
+        type: forcedType,
+        position,
+        roomId,
+      };
+      $drops.set([...$drops.get(), newDrop]);
+      console.log(`🎁 Forced type drop: ${forcedType} in room ${roomId}`);
+      return;
     }
 
     const dropResult = rollDrop();
@@ -78,7 +79,11 @@ export function DropManager({ }: DropManagerProps) {
         position,
         roomId,
       };
-      if (dropResult.type === 'chest') (newDrop as any).variety = dropResult.chestVariety || 1;
+      if (dropResult.type === 'chest') {
+        (newDrop as any).variety = dropResult.chestVariety || 1;
+        (newDrop as any).chestType = dropResult.chestType || 'gray';
+      }
+      if (dropResult.type === 'coin') (newDrop as any).value = dropResult.value || 1;
       $drops.set([...$drops.get(), newDrop]);
       console.log(`🎁 Enemy drop spawned: ${newDrop.type} in room ${roomId}`);
     }
@@ -100,9 +105,13 @@ export function DropManager({ }: DropManagerProps) {
       position,
       roomId,
     };
-    if (dropResult.type === 'chest') (newDrop as any).variety = dropResult.chestVariety || 1;
+    if (dropResult.type === 'chest') {
+      (newDrop as any).variety = dropResult.chestVariety || 1;
+      (newDrop as any).chestType = dropResult.chestType || 'gray';
+    }
+    if (dropResult.type === 'coin') (newDrop as any).value = dropResult.value || 1;
     if (dropResult.type === 'item') (newDrop as any).itemId = dropResult.itemId;
-    
+
     console.log(`🎁 Room clear loot spawned: ${newDrop.type} in room ${roomId}`, newDrop);
     $drops.set([...$drops.get(), newDrop]);
   }, [roomClearEvents]);
@@ -119,39 +128,50 @@ export function DropManager({ }: DropManagerProps) {
     console.log('💣 Bomb collected!');
   };
 
-  const handleCollectChest = (id: number, variety: number, position: [number, number, number]) => {
+  const handleCollectChest = (id: number, variety: number, chestType: string, position: [number, number, number]) => {
     $drops.set($drops.get().filter((d) => d.id !== id));
-    console.log(`💎 Chest opened with ${variety} items!`);
-    $coins.set($coins.get() + variety * 5);
+    console.log(`💎 ${chestType.toUpperCase()} Chest opened with ${variety} items!`);
+    $coins.set($coins.get() + variety * 5); // Bonus coins for opening
 
-    // Spawn randomized consumables (Health, Shield, Key, Bomb)
-    const possibleDrops = ['health', 'shield', 'key', 'bomb'];
+    const lootResults = chestType === 'gold'
+      ? rollGoldChestLoot(variety)
+      : rollGrayChestLoot(variety);
+
+    console.log(`🎲 Loot Rolled (${chestType}, var=${variety}):`, lootResults);
+
     const newDrops: Drop[] = [];
 
-    for (let i = 0; i < variety; i++) {
-        const randomType = possibleDrops[Math.floor(Math.random() * possibleDrops.length)] as DropType;
-        const offsetX = (Math.random() - 0.5) * 5.0; // Widen spread to 5 units
-        const offsetZ = (Math.random() - 0.5) * 5.0;
-        
-        const newDrop: Drop = {
-            id: Date.now() + Math.random() + i,
-            type: randomType,
-            position: [position[0] + offsetX, position[1] + 0.5, position[2] + offsetZ],
-            roomId: currentRoomId
-        };
-        newDrops.push(newDrop);
-    }
-    
+    lootResults.forEach((result, i) => {
+      const offsetX = (Math.random() - 0.5) * 5.0;
+      const offsetZ = (Math.random() - 0.5) * 5.0;
+
+      const newDrop: Drop = {
+        id: Date.now() + Math.random() + i,
+        type: result.type,
+        position: [position[0] + offsetX, position[1] + 0.5, position[2] + offsetZ],
+        roomId: currentRoomId
+      };
+
+      if (result.type === 'item') (newDrop as any).itemId = result.itemId;
+      if (result.type === 'coin') (newDrop as any).value = result.value;
+      if (result.type === 'chest') { // Rare recursion?
+        (newDrop as any).variety = result.chestVariety;
+        (newDrop as any).chestType = result.chestType;
+      }
+
+      newDrops.push(newDrop);
+    });
+
     if (newDrops.length > 0) {
-        $drops.set([...$drops.get(), ...newDrops]);
-        console.log(`🎁 Chest spawned ${newDrops.length} consumables`);
+      $drops.set([...$drops.get(), ...newDrops]);
+      console.log(`🎁 Chest spawned ${newDrops.length} drops`);
     }
   };
 
-  const handleCollectCoin = (id: number) => {
+  const handleCollectCoin = (id: number, value: number = 1) => {
     $drops.set($drops.get().filter((d) => d.id !== id));
-    $coins.set($coins.get() + 1);
-    console.log(`🪙 Collected coin! Total: ${$coins.get()}`);
+    $coins.set($coins.get() + value);
+    console.log(`🪙 Collected coin ($${value})! Total: ${$coins.get()}`);
   };
 
   const handleCollectItem = (id: number, itemId: string) => {
@@ -188,7 +208,8 @@ export function DropManager({ }: DropManagerProps) {
               key={drop.id}
               position={drop.position}
               variety={(drop as any).variety || 1}
-              onCollect={() => handleCollectChest(drop.id, (drop as any).variety || 1, drop.position)}
+              type={(drop as any).chestType || 'gray'}
+              onCollect={() => handleCollectChest(drop.id, (drop as any).variety || 1, (drop as any).chestType || 'gray', drop.position)}
             />
           );
         } else if (drop.type === 'coin') {
@@ -196,7 +217,8 @@ export function DropManager({ }: DropManagerProps) {
             <Coin
               key={drop.id}
               position={drop.position}
-              onCollect={() => handleCollectCoin(drop.id)}
+              value={drop.value}
+              onCollect={() => handleCollectCoin(drop.id, drop.value)}
             />
           );
         } else if (drop.type === 'item') {
@@ -220,17 +242,17 @@ export function DropManager({ }: DropManagerProps) {
             />
           );
         } else if (drop.type === 'shield') {
-            return (
-              <ShieldPickup
-                key={drop.id}
-                position={drop.position}
-                onCollect={() => {
-                  $drops.set($drops.get().filter((d) => d.id !== drop.id));
-                  console.log('🛡️ Shield collected!');
-                }}
-              />
-            );
-          }
+          return (
+            <ShieldPickup
+              key={drop.id}
+              position={drop.position}
+              onCollect={() => {
+                $drops.set($drops.get().filter((d) => d.id !== drop.id));
+                console.log('🛡️ Shield collected!');
+              }}
+            />
+          );
+        }
         return null;
       })}
     </>
