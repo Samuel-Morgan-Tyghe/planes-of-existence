@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
+import { isBoss as isBossCheck, updateBoss } from '../../logic/enemies/bossDispatcher';
 import { calculateEnemyVelocity } from '../../logic/enemies/movement';
 import { calculateEnemyAttackPattern } from '../../logic/enemyPatterns';
 import { spawnThrownBomb } from '../../stores/game';
@@ -73,6 +74,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   });
   const lastTrailPositionRef = useRef<Vector3 | null>(null);
   const lastPoisonTimeRef = useRef(0);
+  const bossStateRef = useRef<any>({}); // Persist boss phase state
 
   if (!enemy) return null;
 
@@ -282,7 +284,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     }
   };
 
-  useFrame((_state, _delta) => {
+  useFrame((_state, delta) => {
     if (!rigidBodyRef.current || enemy.isDead || !active) return;
     const rb = rigidBodyRef.current as any;
     // Silence unused warning for rb if it's not used in simplified logic
@@ -301,6 +303,35 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     let distanceToTarget = distanceToPlayer;
 
 
+
+    // Check for Boss Logic
+    if (isBossCheck(enemy.definition.id)) {
+      const result = updateBoss(
+        enemy,
+        [playerPos.x, playerPos.y, playerPos.z],
+        delta,
+        bossStateRef.current,
+        timeSinceSpawn / 1000,
+        enemyVec
+      );
+
+      if (result.velocity) {
+        rb.setLinvel({ x: result.velocity[0], y: result.velocity[1], z: result.velocity[2] }, true);
+      }
+
+      if (result.projectiles) {
+        result.projectiles.forEach(p => addEnemyProjectile(p));
+      }
+
+      // Weaver specific state update
+      if (result.newBossState) {
+        bossStateRef.current = result.newBossState;
+      }
+
+      // TODO: Handle colorOverride/sizeOverride if Visuals support it
+      // For now, physics/projectiles are key.
+      return;
+    }
 
     setDistanceToPlayer(distanceToPlayer);
     updateMovement(rb, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.speed);

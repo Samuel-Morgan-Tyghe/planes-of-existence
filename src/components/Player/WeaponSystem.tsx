@@ -137,13 +137,13 @@ export function WeaponSystem() {
       const offset = new Vector3(...direction!).multiplyScalar(0.8);
       const spawnPos: [number, number, number] = [
         currentPos[0] + offset.x,
-        0.7, // Standardized combat plane height
+        currentPos[1], // Dynamically match player's height (includes jump)
         currentPos[2] + offset.z,
       ];
 
-      // FPS mode override if needed, but keeping it standard is safer for now
+      // FPS mode eye-level adjustment relative to current height
       if (plane === 'FPS') {
-        spawnPos[1] = 1.35; // Eye level (approx) to match crosshair/view
+        spawnPos[1] = currentPos[1] + 0.75;
       }
 
       return {

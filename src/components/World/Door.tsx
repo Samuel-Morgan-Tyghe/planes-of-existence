@@ -71,9 +71,9 @@ export function Door({ position, direction, locked, requiresKey, onUnlock, playe
         type="fixed"
         sensor
         userData={{ isSensor: true }}
-        onIntersectionEnter={() => {
-          if (!locked) {
-            console.log(`🚪 Door ${direction} triggered!`);
+        onIntersectionEnter={({ other }) => {
+          if (!locked && other.rigidBodyObject?.userData?.isPlayer) {
+            console.log(`🚪 Door ${direction} triggered by Player!`);
             onEnter();
           }
         }}

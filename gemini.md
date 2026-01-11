@@ -66,3 +66,8 @@
 -   Accessible via `/?mode=sandbox`.
 -   Strip away game loop, physics, and HUD.
 -   Use `window.sandbox` API to spawn entities and control camera for perfect screenshots.
+
+## 6. AI Development Rules
+
+- **TypeScript Validation**: Always run `npm run t` (tsc --noEmit) after making changes to ensure code integrity and prevent regressions.
+- **Proactive Fixes**: If a type error is discovered, prioritize its resolution before adding new features.

@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "lint": "oxlint",
     "test": "vitest",
-    "test:e2e": "npx playwright test"
+    "test:e2e": "npx playwright test",
+    "t": "tsc --noEmit"
   },
   "dependencies": {
     "@nanostores/react": "^1.0.0",
