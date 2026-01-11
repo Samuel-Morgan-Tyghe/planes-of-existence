@@ -7,7 +7,7 @@ export function ArenaRoom() {
     return (
         <group>
             {/* Floor */}
-            <RigidBody type="fixed" colliders="cuboid" friction={1} position={[0, -0.5, 0]}>
+            <RigidBody type="fixed" colliders="cuboid" friction={0} position={[0, -0.5, 0]}>
                 <CuboidCollider args={[h, 0.5, h]} />
                 <mesh receiveShadow>
                     <boxGeometry args={[size, 1, size]} />

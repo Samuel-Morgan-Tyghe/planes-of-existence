@@ -1,4 +1,5 @@
 import { useFrame } from '@react-three/fiber';
+import { Select } from '@react-three/postprocessing';
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Vector3 } from 'three';
 import { isBoss as isBossCheck, updateBoss } from '../../logic/enemies/bossDispatcher';
@@ -373,7 +374,9 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
           })()}
 
           <group ref={meshRef} position={[0, enemy.definition.size / 2, 0]}>
-            <EnemyVisuals definition={enemy.definition} healthPercent={healthPercent} />
+            <Select enabled>
+              <EnemyVisuals definition={enemy.definition} healthPercent={healthPercent} />
+            </Select>
           </group>
 
           {/* Simple Health Bar */}

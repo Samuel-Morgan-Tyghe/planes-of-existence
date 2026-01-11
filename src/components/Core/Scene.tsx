@@ -40,8 +40,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
+import { Select } from '@react-three/postprocessing';
 import { Physics } from '@react-three/rapier';
 import { ArenaRoom } from '../World/ArenaRoom';
+import { PostProcessing } from './PostProcessing';
 
 export function Scene({ isTestMode = false, mode = 'adventure' }: { isTestMode?: boolean; mode?: 'adventure' | 'arena' }) {
   const restartTrigger = useStore($restartTrigger);
@@ -55,47 +57,53 @@ export function Scene({ isTestMode = false, mode = 'adventure' }: { isTestMode?:
   }, []);
 
   return (
-    <Physics gravity={[0, -9.81, 0]} debug={false}>
-      <CameraShake />
-      <ambientLight intensity={0.5} />
-      <directionalLight
-        position={[10, 10, 5]}
-        intensity={1}
-        castShadow={!isTestMode}
-        shadow-mapSize={[2048, 2048]}
-      />
-      <CameraManager />
-      <PlaneSwitcher />
+    <PostProcessing>
+      <Physics gravity={[0, -9.81, 0]} debug={false}>
+        <CameraShake />
+        <ambientLight intensity={0.5} />
+        <directionalLight
+          position={[10, 10, 5]}
+          intensity={1}
+          castShadow={!isTestMode}
+          shadow-mapSize={[2048, 2048]}
+        />
+        <CameraManager />
+        <PlaneSwitcher />
 
-      {mode === 'adventure' ? (
-        <>
-          <GridMap key={`grid-${restartTrigger}`} />
-          <BossManager key={`boss-${restartTrigger}`} />
-          <DropManager key={`drops-${restartTrigger}`} />
-        </>
-      ) : (
-        <ArenaRoom />
-      )}
+        {mode === 'adventure' ? (
+          <>
+            <GridMap key={`grid-${restartTrigger}`} />
+            <BossManager key={`boss-${restartTrigger}`} />
+            <DropManager key={`drops-${restartTrigger}`} />
+          </>
+        ) : (
+          <ArenaRoom />
+        )}
 
-      {/* Shared Spawner - Essential for both modes */}
-      <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
+        {/* Shared Spawner - Essential for both modes */}
+        <Select enabled>
+          <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
+        </Select>
 
-      {/* Shared Systems */}
-      <Player key={`player-${restartTrigger}`} />
-      <PlayerShadow />
+        {/* Shared Systems */}
+        <Select enabled>
+          <Player key={`player-${restartTrigger}`} />
+        </Select>
+        <PlayerShadow />
 
-      <ErrorBoundary>
-        <WeaponSystem key={`weapon-${restartTrigger}`} />
-      </ErrorBoundary>
+        <ErrorBoundary>
+          <WeaponSystem key={`weapon-${restartTrigger}`} />
+        </ErrorBoundary>
 
-      <ProjectileManager />
+        <ProjectileManager />
 
-      {!isTestMode && <EffectsManager />}
+        {!isTestMode && <EffectsManager />}
 
-      <ThrownBombGroup />
-      <InstancedTrails />
-      <QABot />
+        <ThrownBombGroup />
+        <InstancedTrails />
+        <QABot />
 
-    </Physics>
+      </Physics>
+    </PostProcessing>
   );
 }

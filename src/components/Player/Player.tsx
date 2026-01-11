@@ -1,7 +1,8 @@
 import { useStore } from '@nanostores/react';
 import { PerspectiveCamera } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { CylinderCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
+import { Select } from '@react-three/postprocessing';
+import { CapsuleCollider, RapierRigidBody, RigidBody } from '@react-three/rapier';
 import { MovingGhost } from './MovingGhost';
 
 
@@ -356,11 +357,13 @@ export function Player() {
       userData={{ isPlayer: true }}
       onCollisionEnter={(e) => handleCollision(e.other)}
     >
-      <CylinderCollider args={[0.6, 0.4]} />
+      <CapsuleCollider args={[0.5, 0.4]} />
       {/* Ghost Character Mesh */}
-      <group ref={meshRef} position={[0, -0.5, 0]} visible={useStore($isPlayerVisible)}>
-        <MovingGhost position={[0, 0, 0]} isDead={isDead} damageFlash={damageFlash} isInvulnerable={isInvulnerable} />
-      </group>
+      <Select enabled>
+        <group ref={meshRef} position={[0, -0.5, 0]} visible={useStore($isPlayerVisible)}>
+          <MovingGhost position={[0, 0, 0]} isDead={isDead} damageFlash={damageFlash} isInvulnerable={isInvulnerable} />
+        </group>
+      </Select>
 
       {/* Damage indicator - BIG pulsing red sphere around player */}
       {damageIntensity > 0 && (

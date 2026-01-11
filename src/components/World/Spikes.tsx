@@ -1,3 +1,4 @@
+import { Select } from '@react-three/postprocessing';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useMemo, useRef, useState } from 'react';
 import { takeDamage } from '../../stores/player';
@@ -70,20 +71,22 @@ export function Spikes({ position }: SpikesProps) {
       </RigidBody>
 
       {/* Spikes Visuals - Randomized */}
-      <group rotation={[0, visualConfig.rotation, 0]} scale={[visualConfig.scale, 1, visualConfig.scale]}>
-        {/* Central Spike */}
-        <mesh position={[0, 0.3, 0]} rotation={[0, Math.PI / 4, 0]}>
-          <coneGeometry args={[0.2, 0.6, 4]} />
-          <meshStandardMaterial color={active ? '#ffffff' : '#ff0000'} />
-        </mesh>
-        {/* Smaller surrounding spikes */}
-        {visualConfig.subSpikes.map((cfg, i) => (
-          <mesh key={i} position={cfg.pos as [number, number, number]} rotation={cfg.rot}>
-            <coneGeometry args={[0.1, 0.4, 4]} />
-            <meshStandardMaterial color={i < 2 ? "#cc0000" : "#666666"} />
+      <Select enabled>
+        <group rotation={[0, visualConfig.rotation, 0]} scale={[visualConfig.scale, 1, visualConfig.scale]}>
+          {/* Central Spike */}
+          <mesh position={[0, 0.3, 0]} rotation={[0, Math.PI / 4, 0]}>
+            <coneGeometry args={[0.2, 0.6, 4]} />
+            <meshStandardMaterial color={active ? '#ffffff' : '#ff0000'} />
           </mesh>
-        ))}
-      </group>
+          {/* Smaller surrounding spikes */}
+          {visualConfig.subSpikes.map((cfg, i) => (
+            <mesh key={i} position={cfg.pos as [number, number, number]} rotation={cfg.rot}>
+              <coneGeometry args={[0.1, 0.4, 4]} />
+              <meshStandardMaterial color={i < 2 ? "#cc0000" : "#666666"} />
+            </mesh>
+          ))}
+        </group>
+      </Select>
 
       {/* Base */}
       <mesh position={[0, 0.01, 0]} receiveShadow>

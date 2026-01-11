@@ -64,6 +64,7 @@ function MergedFloor({ grid, worldOffset, roomWorldSize, isVisited, isCurrentRoo
           key={`floor-rect-${i}`}
           type="fixed"
           userData={{ isFloor: true }}
+          friction={0}
           position={[
             -halfRoomSize + rect.x * tileSize + (rect.w * tileSize) / 2,
             -0.5,

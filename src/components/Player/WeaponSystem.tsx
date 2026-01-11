@@ -142,7 +142,7 @@ export function WeaponSystem() {
           const offset = new Vector3(...fireDir!).multiplyScalar(0.8);
           const spawnPos: [number, number, number] = [
             currentPos[0] + offset.x,
-            plane === 'FPS' ? currentPos[1] + 0.75 : currentPos[1],
+            plane === 'FPS' ? currentPos[1] + 0.75 : currentPos[1] + 0.8,
             currentPos[2] + offset.z,
           ];
 
