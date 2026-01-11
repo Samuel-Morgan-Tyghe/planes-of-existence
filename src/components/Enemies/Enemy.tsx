@@ -300,14 +300,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     let targetPos = playerPos;
     let distanceToTarget = distanceToPlayer;
 
-    // Boss update logic (Simplified generic version for now)
-    const isBoss = ['weaver', 'corrupter', 'echo_queen', 'chess_queen', 'bomber_king', 'mega_snake', 'summoner'].includes(enemy.definition.id);
-    if (isBoss) {
-      // ... (Basic fallback for boss movement to prevent E2E crash)
-      // We can add full boss logic if needed, but for now simple movement is safer
-      updateMovement(rb, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.speed);
-      return;
-    }
+
 
     setDistanceToPlayer(distanceToPlayer);
     updateMovement(rb, distanceToTarget, targetPos, enemyVec, dynamicStatsRef.current.speed);
@@ -343,18 +336,7 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
                 {/* Huge 'Ceiling' Hitbox for 2.5D Gameplay feel */}
                 {/* 1.5x Width for generous XZ aiming, 10 height to hit anything in the column */}
                 <LazyCuboidCollider args={[colliderSize * 1.5, 5.0, colliderSize * 1.5]} position={[0, 5.0, 0]} sensor />
-                {/* Visual Debug Helper for Hitbox (Sensor) - Red */}
-                <mesh position={[0, 5.0, 0]}>
-                  <boxGeometry args={[colliderSize * 3.0, 10.0, colliderSize * 3.0]} />
-                  <meshBasicMaterial color="red" wireframe transparent opacity={0.3} />
-                </mesh>
-
                 <LazyCuboidCollider args={[colliderSize, 2.0, colliderSize]} position={[0, 2.0, 0]} />
-                {/* Visual Debug Helper for Physics Box - Blue */}
-                <mesh position={[0, 2.0, 0]}>
-                  <boxGeometry args={[colliderSize * 2.0, 4.0, colliderSize * 2.0]} />
-                  <meshBasicMaterial color="blue" wireframe transparent opacity={0.5} />
-                </mesh>
               </Suspense>
             );
           })()}

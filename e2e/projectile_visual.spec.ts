@@ -2,10 +2,10 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Projectile Visuals', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('http://localhost:3005/?test=true');
+        await page.goto('http://localhost:3005/?mode=arena&test=true');
         await page.waitForSelector('canvas');
-        // Wait for game state
-        await page.waitForFunction(() => (window as any).gameState?.ready);
+        // Wait for game state (Arena mode exposes 'sandbox')
+        await page.waitForFunction(() => (window as any).sandbox !== undefined);
     });
 
     test('should fire projectile with ribbon trail', async ({ page }) => {

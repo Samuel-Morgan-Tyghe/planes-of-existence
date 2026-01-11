@@ -48,10 +48,27 @@ export function ArenaMode() {
         };
     }, [spawnEnemy, clearEnemies]);
 
-    // Initial Cleanup
+    // Initial Cleanup and Spawn
     useEffect(() => {
         $enemies.set([]);
         $currentRoomId.set(0); // Ensure we are in Room 0 for arena
+
+        // Parse URL param for specific enemy spawn
+        const params = new URLSearchParams(window.location.search);
+        const forcedEnemy = params.get('spawn');
+
+        if (forcedEnemy) {
+            const def = ENEMY_DEFINITIONS[forcedEnemy] || ENEMY_DEFINITIONS['turret'];
+            $enemies.set([{
+                id: Date.now(),
+                roomId: 0,
+                definition: def,
+                position: [0, 0, -5], // Fixed position for testing
+                health: def.health,
+                isDead: false,
+                spawnTime: Date.now()
+            }]);
+        }
     }, []);
 
     return (
