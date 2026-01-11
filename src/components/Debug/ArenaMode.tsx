@@ -8,19 +8,25 @@ import { HUD } from '../UI/HUD';
 import { SandboxControls } from './SandboxControls';
 
 export function ArenaMode() {
-    const spawnEnemy = useCallback((id: string, isBoss: boolean = false) => {
+    const spawnEnemy = useCallback((id: string, isBoss: boolean = false, posOverride?: [number, number, number]) => {
         const def = isBoss ? BOSS_DEFINITIONS[id] : ENEMY_DEFINITIONS[id];
         if (!def) return;
 
-        // Spawn 10 units away from player in random dir
-        const angle = Math.random() * Math.PI * 2;
-        const dist = isBoss ? 15 : 8;
-        const playerPos = $position.get();
-        const spawnPos: [number, number, number] = [
-            playerPos[0] + Math.cos(angle) * dist,
-            0.5,
-            playerPos[2] + Math.sin(angle) * dist
-        ];
+        // Spawn 10 units away from player in random dir (unless overridden)
+        let spawnPos: [number, number, number];
+
+        if (posOverride) {
+            spawnPos = posOverride;
+        } else {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = isBoss ? 15 : 8;
+            const playerPos = $position.get();
+            spawnPos = [
+                playerPos[0] + Math.cos(angle) * dist,
+                0.5,
+                playerPos[2] + Math.sin(angle) * dist
+            ];
+        }
 
         const newEnemy = {
             id: Date.now() + Math.random(), // Unique ID
@@ -43,7 +49,7 @@ export function ArenaMode() {
     // Setup global bridge for manual testing if needed
     useEffect(() => {
         (window as any).sandbox = {
-            spawn: (_type: string, id: string) => spawnEnemy(id, false),
+            spawn: (_type: string, id: string, pos?: [number, number, number]) => spawnEnemy(id, false, pos),
             clear: clearEnemies
         };
     }, [spawnEnemy, clearEnemies]);

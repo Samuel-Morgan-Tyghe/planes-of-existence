@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Visual Regression', () => {
     test.beforeEach(async ({ page }) => {
-        // Navigate to sandbox in test mode (hides UI)
-        await page.goto('http://localhost:3005/?test=true');
+        // Navigate to Arena mode in test mode (hides UI)
+        await page.goto('http://localhost:3005/?mode=arena&test=true');
         
         // Wait for canvas
         await page.waitForSelector('canvas');
