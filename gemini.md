@@ -28,3 +28,41 @@
      - **Enemy Visual State**: Move `isAttacking` and `damageFlash` to a reactive map if other systems need to sync with them.
    - **Data Structures**:
      - **Object Maps vs Arrays**: When managing collections of entities (projectiles, enemies, drops), prefer using `Record<number, T>` or `Map<number, T>` over arrays. This allows for O(1) lookups and removals by ID, which is critical for performance in high-frequency updates.
+
+## 5. Project Context & Runtime
+
+### Architecture
+-   **Core**: React, Three.js (R3F), Rapier Physics.
+-   **State**: Nanostores (decoupled from React).
+-   **Entry**: `src/App.tsx` handles routing (Game vs Sandbox). `src/components/Core/Scene.tsx` is the main game loop.
+
+### Testing Strategy
+-   **Unit Tests (`npm run test`)**: Use Vitest for pure logic (damage, inventory, generation).
+-   **E2E Tests (`npx playwright test`)**: Use Playwright for critical flows.
+-   **Visual Regression**:
+    -   **Sandbox Mode**: Use `/?mode=sandbox` for isolated visual tests (e.g., enemy rendering).
+    -   **Avoid Flakiness**: Do not test visuals in the main game loop where random physics/animations occur.
+
+### Sandbox Mode
+-   Accessible via `/?mode=sandbox`.
+-   Strip away game loop, physics, and HUD.
+-   Use `window.sandbox` API to spawn entities and control camera for perfect screenshots.
+
+## 5. Project Context & Runtime
+
+### Architecture
+-   **Core**: React, Three.js (R3F), Rapier Physics.
+-   **State**: Nanostores (decoupled from React).
+-   **Entry**: `src/App.tsx` handles routing (Game vs Sandbox). `src/components/Core/Scene.tsx` is the main game loop.
+
+### Testing Strategy
+-   **Unit Tests (`npm run test`)**: Use Vitest for pure logic (damage, inventory, generation).
+-   **E2E Tests (`npx playwright test`)**: Use Playwright for critical flows.
+-   **Visual Regression**:
+    -   **Sandbox Mode**: Use `/?mode=sandbox` for isolated visual tests (e.g., enemy rendering).
+    -   **Avoid Flakiness**: Do not test visuals in the main game loop where random physics/animations occur.
+
+### Sandbox Mode
+-   Accessible via `/?mode=sandbox`.
+-   Strip away game loop, physics, and HUD.
+-   Use `window.sandbox` API to spawn entities and control camera for perfect screenshots.

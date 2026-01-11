@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
-import { $brokenWalls, $currentFloor, $currentRoomId, $floorData, $roomCleared, $runSeed, $unlockedSpecialRooms, $visitedRooms, consumeItem, unlockSpecialRoom } from '../../stores/game';
+import { $brokenWalls, $currentFloor, $currentRoomId, $floorData, $roomCleared, $runSeed, $scenario, $unlockedSpecialRooms, $visitedRooms, consumeItem, unlockSpecialRoom } from '../../stores/game';
 import { $position, $teleportTo } from '../../stores/player';
 import { $restartTrigger } from '../../stores/restart';
 import { generateFloor, generateRoomLayout, getRoomWorldSize, gridToWorld } from '../../utils/floorGen';
@@ -91,13 +91,15 @@ export function GridMap() {
   const visitedRooms = useStore($visitedRooms);
   const brokenWalls = useStore($brokenWalls);
   const unlockedSpecialRooms = useStore($unlockedSpecialRooms);
+  const scenario = useStore($scenario);
   const lastTransitionTime = useRef(0);
 
   // Generate floor layout when floor changes or restart
   useEffect(() => {
     // Get current seed directly from store
     const seed = $runSeed.get();
-    const newFloorData = generateFloor(currentFloor, seed);
+    const newFloorData = generateFloor(currentFloor, seed, scenario || undefined);
+    // console.log(`GridMap: Generated Floor ${currentFloor}...`);
     $floorData.set(newFloorData);
     $currentRoomId.set(newFloorData.startRoomId);
     $visitedRooms.set(new Set([newFloorData.startRoomId])); // Start room is always visible

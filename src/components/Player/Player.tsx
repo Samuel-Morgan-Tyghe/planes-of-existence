@@ -8,7 +8,7 @@ import { MovingGhost } from './MovingGhost';
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { $currentFloor, $currentRoomId, $plane, $stats } from '../../stores/game';
-import { $health, $isInvulnerable, $isTeleporting, $position, $teleportTo, $velocity, takeDamage } from '../../stores/player';
+import { $health, $isInvulnerable, $isPlayerVisible, $isTeleporting, $position, $teleportTo, $velocity, takeDamage } from '../../stores/player';
 import { $restartTrigger, restartRun } from '../../stores/restart';
 import { $trails } from '../../stores/trails';
 import { $knockbackEvents } from '../../systems/events';
@@ -358,7 +358,7 @@ export function Player() {
     >
       <CylinderCollider args={[0.6, 0.4]} />
       {/* Ghost Character Mesh */}
-      <group ref={meshRef} position={[0, -0.5, 0]}>
+      <group ref={meshRef} position={[0, -0.5, 0]} visible={useStore($isPlayerVisible)}>
         <MovingGhost position={[0, 0, 0]} isDead={isDead} damageFlash={damageFlash} isInvulnerable={isInvulnerable} />
       </group>
 

@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+
+# Playwright
+test-results/
+playwright-report/
+
+# Agent
+test-results/.last-run.json

@@ -7,5 +7,8 @@ export default defineConfig({
   server: {
     port: 3005,
     open: true
+  },
+  test: {
+    exclude: ['**/e2e/**', '**/node_modules/**']
   }
 })

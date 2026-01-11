@@ -26,6 +26,8 @@ export function EnemySpawner({
   const currentRoomId = useStore($currentRoomId);
   const floorData = useStore($floorData);
   const bossAlive = useStore($bossAlive); // Subscribe to bossAlive changes
+
+  // console.log(`EnemySpawner Render. FloorData: ${!!floorData}, RoomId: ${currentRoomId}`);
   const enemyIdCounterRef = useRef(0);
   // Track which rooms have been cleared (enemies defeated)
   const clearedRoomsRef = useRef<Set<string>>(new Set());
@@ -238,22 +240,28 @@ export function EnemySpawner({
 
 
     const currentRoom = floorData.rooms.find(r => r.id === currentRoomId);
+    console.log(`Checking spawn for room ${currentRoomId}. Type: ${currentRoom?.type}`);
     if (!currentRoom || currentRoom.type !== 'boss') return;
 
     // Check if boss already exists
     const bossExists = $bossEnemy.get() !== null && $bossEnemy.get()?.roomId === currentRoomId;
-    if (bossExists) return;
-
+    if (bossExists) {
+      console.log('Boss already exists, skipping spawn.');
+      return;
+    }
 
     // Check if room was already cleared
     const roomKey = `${currentFloor}-${currentRoomId}`;
-    if (clearedRoomsRef.current.has(roomKey)) return;
-
+    if (clearedRoomsRef.current.has(roomKey)) {
+      console.log('Room already cleared, skipping boss spawn.');
+      return;
+    }
 
     const roomLayout = generateRoomLayout(currentRoom, currentFloor, false, floorData.seed);
 
     // Select random boss
     const bossKeys = Object.keys(BOSS_DEFINITIONS);
+    console.log('Available Bosses:', bossKeys);
     const randomBossKey = bossKeys[Math.floor(Math.random() * bossKeys.length)];
     const bossDef = BOSS_DEFINITIONS[randomBossKey as keyof typeof BOSS_DEFINITIONS];
 

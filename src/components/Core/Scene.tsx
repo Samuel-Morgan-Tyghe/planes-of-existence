@@ -4,6 +4,7 @@ import { clearEnemyProjectiles } from '../../stores/projectiles';
 import { $restartTrigger } from '../../stores/restart';
 import { CameraManager } from '../Cameras/CameraManager';
 import { PlaneSwitcher } from '../Cameras/PlaneSwitcher';
+import { QABot } from '../Debug/QABot';
 import { CameraShake } from '../Effects/CameraShake';
 import { EffectsManager } from '../Effects/EffectsManager';
 import { BossManager } from '../Enemies/BossManager';
@@ -41,7 +42,13 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 import { Physics } from '@react-three/rapier';
 
-export function Scene() {
+
+// Expose internal state for E2E testing
+
+// (Removed GameStateExposer)
+
+
+export function Scene({ isTestMode = false }: { isTestMode?: boolean }) {
   const restartTrigger = useStore($restartTrigger);
 
   const handleSpawnRequest = useCallback(() => { }, []);
@@ -59,7 +66,7 @@ export function Scene() {
       <directionalLight
         position={[10, 10, 5]}
         intensity={1}
-        castShadow
+        castShadow={!isTestMode}
         shadow-mapSize={[2048, 2048]}
       />
       <CameraManager />
@@ -75,11 +82,13 @@ export function Scene() {
       <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
       <BossManager key={`boss-${restartTrigger}`} />
       <ProjectileManager />
+
       <DropManager key={`drops-${restartTrigger}`} />
-      <EffectsManager />
+      {!isTestMode && <EffectsManager />}
 
       <ThrownBombGroup />
       <TrailManager />
+      <QABot />
     </Physics>
   );
 }

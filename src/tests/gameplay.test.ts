@@ -28,13 +28,13 @@ describe('Gameplay Integrity', () => {
     const worldOffset: [number, number, number] = [10, 0, 20];
     const worldPos = gridToWorld(5, 5, worldOffset);
     
-    // ROOM_WORLD_SIZE = 40, ROOM_SIZE = 20, tileSize = 2
-    // offset = -40/2 + 2/2 = -19
-    // X = 10 - 19 + 5 * 2 = 1
-    // Z = 20 - 19 + 5 * 2 = 11
-    expect(worldPos[0]).toBe(1);
+    // ROOM_WORLD_SIZE = 60, ROOM_SIZE = 30, tileSize = 2
+    // offset = -60/2 + 2/2 = -29
+    // X = 10 - 29 + 5 * 2 = -9
+    // Z = 20 - 29 + 5 * 2 = 1
+    expect(worldPos[0]).toBe(-9);
     expect(worldPos[1]).toBe(0);
-    expect(worldPos[2]).toBe(11);
+    expect(worldPos[2]).toBe(1);
   });
 
   it('should have doors that lead to valid adjacent rooms', () => {

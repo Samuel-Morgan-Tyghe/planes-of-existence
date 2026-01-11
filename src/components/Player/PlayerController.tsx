@@ -29,13 +29,13 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // console.log('⌨️ Key Down:', e.key);
+      console.log('⌨️ Key Down:', e.key);
       const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
       keysRef.current.add(key);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      // console.log('⌨️ Key Up:', e.key);
+      console.log('⌨️ Key Up:', e.key);
       const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
       keysRef.current.delete(key);
     };

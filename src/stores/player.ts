@@ -22,6 +22,7 @@ export const $velocity = atom<[number, number, number]>([0, 0, 0]);
 
 // Player invulnerability flag (for spawn protection)
 export const $isInvulnerable = atom<boolean>(false);
+export const $isPlayerVisible = atom<boolean>(true); // For visual testing
 
 // Teleport signal (position to teleport to)
 export const $teleportTo = atom<[number, number, number] | null>(null);

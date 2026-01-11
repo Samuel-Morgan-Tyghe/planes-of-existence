@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { useEffect } from 'react';
-import { rollDrop, rollRoomClearLoot } from '../../logic/loot';
+import { rollDrop, rollGoldChestLoot, rollGrayChestLoot, rollRoomClearLoot } from '../../logic/loot';
 import { $coins, $currentFloor, $currentRoomId, $drops, addItem } from '../../stores/game';
 import { $restartTrigger } from '../../stores/restart';
 import { $dropEvents, $roomClearEvents } from '../../systems/events';

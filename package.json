@@ -6,7 +6,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "oxlint"
+    "lint": "oxlint",
+    "test": "vitest",
+    "test:e2e": "npx playwright test"
   },
   "dependencies": {
     "@nanostores/react": "^1.0.0",
@@ -20,6 +22,7 @@
     "three": "^0.158.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/three": "^0.158.0",

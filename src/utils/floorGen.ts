@@ -23,7 +23,12 @@ export { SeededRandom }; // Re-export for compatibility
  * Generate a floor with multiple connected rooms.
  * Strictly deterministic based on the provided seed.
  */
-export function generateFloor(floorNumber: number, seed: number = 12345): FloorData {
+export function generateFloor(floorNumber: number, seed: number = 12345, scenario?: string): FloorData {
+  if (scenario === 'test_chamber') {
+    return generateTestFloor(seed, 'normal');
+  } else if (scenario === 'boss_fight') {
+    return generateTestFloor(seed, 'boss');
+  }
   // Combine floor number and master seed for unique floor seeds
   const floorSeed = seed + (floorNumber * 99999);
   const rng = new SeededRandom(floorSeed);
@@ -723,4 +728,48 @@ export function gridToWorld(
  */
 export function getRoomWorldSize(): number {
   return ROOM_WORLD_SIZE;
+}
+
+/**
+ * Generate a single fixed room for testing/scenarios.
+ */
+function generateTestFloor(seed: number, type: 'normal' | 'boss'): FloorData {
+  const rooms: Room[] = [];
+  const room: Room = {
+    id: 0,
+    gridX: 0,
+    gridY: 0,
+    type: type,
+    doors: [],
+    distanceFromStart: 0,
+    enemySpawnPoints: [],
+    enemyCount: 0,
+    tintedRockCount: 0
+  };
+  
+  // Predictable spawn points for test
+  if (type === 'boss') {
+    room.enemyCount = 1; // Just the boss
+    // Boss spawns in center usually? Or specific point? 
+    // Handled by generateBossRoom logic or simple override.
+    // generateBossRoom spawns boss at center (likely).
+  } else {
+    room.enemyCount = 1; // One dummy enemy
+  }
+  
+  // We need to run layout generation to populate grid/spawn points
+  generateRoomLayout(room, 1, false, seed);
+  
+  // Force override spawn points for deterministic E2E check if desired
+  // But seeding should handle it.
+  
+  rooms.push(room);
+
+  return {
+    rooms,
+    startRoomId: 0,
+    exitRoomId: 0,
+    roomCount: 1,
+    seed: seed,
+  };
 }

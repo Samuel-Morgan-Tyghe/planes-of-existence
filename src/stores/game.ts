@@ -59,6 +59,10 @@ export const $clearedRooms = atom<Set<number>>(new Set()); // Track which rooms 
 // Enemies alive in current room
 export const $enemiesAlive = atom<number>(0);
 
+// Current scenario (for testing/debugging)
+const urlScenario = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('scenario') : null;
+export const $scenario = atom<string | null>(urlScenario);
+
 // Enemy state for current room
 export const $enemies = atom<EnemyState[]>([]); // Store enemy state globally
 export const $enemyPositions = map<Record<number, [number, number, number]>>({}); // Real-time positions for projectiles
@@ -82,7 +86,8 @@ export const addShake = (amount: number) => {
 export const $isPaused = atom<boolean>(false);
 
 // Random Seed for Procedural Generation
-export const $runSeed = atom<number>(Math.floor(Math.random() * 1000000));
+const urlSeed = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('seed') : null;
+export const $runSeed = atom<number>(urlSeed ? parseInt(urlSeed) : Math.floor(Math.random() * 1000000));
 
 // HUD Visibility
 export const $showCombatStats = atom<boolean>(false);

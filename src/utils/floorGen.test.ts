@@ -61,13 +61,13 @@ describe('Map Generation', () => {
     const layout = generateRoomLayout(room, 1, false, seed + room.id * 67890);
     
     // Check grid dimensions
-    expect(layout.grid.length).toBe(20);
-    expect(layout.grid[0].length).toBe(20);
+    expect(layout.grid.length).toBe(30);
+    expect(layout.grid[0].length).toBe(30);
 
     // Check for walls (1)
     let hasWalls = false;
-    for(let y=0; y<20; y++) {
-        for(let x=0; x<20; x++) {
+    for(let y=0; y<30; y++) {
+        for(let x=0; x<30; x++) {
             if(layout.grid[y][x] === 1) hasWalls = true;
         }
     }
@@ -79,8 +79,8 @@ describe('Map Generation', () => {
         // We can't easily check exact coordinates without duplicating logic, 
         // but we can check if there are ANY door tiles
         let hasDoorTiles = false;
-        for(let y=0; y<20; y++) {
-            for(let x=0; x<20; x++) {
+        for(let y=0; y<30; y++) {
+            for(let x=0; x<30; x++) {
                 if(layout.grid[y][x] === 5 || layout.grid[y][x] === 6) hasDoorTiles = true;
             }
         }
