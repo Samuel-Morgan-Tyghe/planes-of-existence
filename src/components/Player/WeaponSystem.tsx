@@ -98,8 +98,8 @@ export function WeaponSystem() {
         // Raycast from mouse to floor to get direction
         state.raycaster.setFromCamera(state.pointer, camera);
         const target = new Vector3();
-        // Intersect with floor plane at y=0.5 (approx player height)
-        const plane = new THREE.Plane(new Vector3(0, 1, 0), -0.5);
+        // Intersect with floor plane at y=0.7 (standard projectile height)
+        const plane = new THREE.Plane(new Vector3(0, 1, 0), -0.7);
         state.raycaster.ray.intersectPlane(plane, target);
 
         if (target) {
@@ -137,12 +137,13 @@ export function WeaponSystem() {
       const offset = new Vector3(...direction!).multiplyScalar(0.8);
       const spawnPos: [number, number, number] = [
         currentPos[0] + offset.x,
-        currentPos[1] + 0.0, // Center of player (was -0.2)
+        0.7, // Standardized combat plane height
         currentPos[2] + offset.z,
       ];
 
+      // FPS mode override if needed, but keeping it standard is safer for now
       if (plane === 'FPS') {
-        spawnPos[1] += 0.7;
+        spawnPos[1] = 1.35; // Eye level (approx) to match crosshair/view
       }
 
       return {

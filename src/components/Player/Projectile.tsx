@@ -1,14 +1,14 @@
-import { Trail } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RigidBody, useRapier } from '@react-three/rapier';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Vector3 } from 'three';
-import { $currentRoomId, $enemyPositions } from '../../stores/game';
+import { $currentRoomId, $enemies, $enemyPositions } from '../../stores/game';
 import { breakCrate } from '../../stores/loot';
 import { emitDrop } from '../../systems/events';
 import type { ProjectileData } from '../../types/game';
 import { addEffect } from '../Effects/EffectsManager';
+import { RibbonTrail } from '../Effects/RibbonTrail';
 
 interface ProjectileProps {
   data: ProjectileData;
@@ -120,19 +120,36 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
     // ... (Keep existing fallback hit detection) ...
     // Fallback hit detection (proximity)
     const enemyPositionsMap = $enemyPositions.get();
-    const realTimeEnemies = Object.entries(enemyPositionsMap).map(([id, pos]) => ({
-      id: parseInt(id),
-      position: pos as [number, number, number]
-    }));
+    const allEnemies = $enemies.get();
+
+    // Construct active enemy list with sizes
+    const realTimeEnemies: { id: number; position: [number, number, number]; size: number }[] = [];
+    for (const enemy of allEnemies) {
+      const pos = enemyPositionsMap[enemy.id];
+      if (pos) {
+        realTimeEnemies.push({
+          id: enemy.id,
+          position: pos,
+          size: enemy.definition.size
+        });
+      }
+    }
 
     for (const enemy of realTimeEnemies) {
       const dx = positionRef.current.x - enemy.position[0];
       const dy = positionRef.current.y - enemy.position[1];
       const dz = positionRef.current.z - enemy.position[2];
-      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      const baseHitDist = 1.2;
+
+      // 2.5D Hit Detection:
+      const distXZ = Math.sqrt(dx * dx + dz * dz);
+      const distY = Math.abs(dy);
+
+      // Dynamic Hit Radius matches Red Box (Size * 0.75) + Margin (0.4)
+      const baseHitDist = (enemy.size * 0.75) + 0.4;
       const hasPierce = (data.pierce || 0) > 0;
-      if (distance < baseHitDist * scale) {
+
+      // Allow generous Y-axis (Ceiling reach)
+      if (distXZ < baseHitDist * scale && distY < 10.0) {
         if (hitEnemies.current.has(enemy.id)) continue;
         hitEnemies.current.add(enemy.id);
         onHit?.(data.damage, enemy.id);
@@ -153,6 +170,36 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       directionRef.current.lerp(desiredDirection, 0.1);
       directionRef.current.normalize();
       rigidBodyRef.current.setLinvel(directionRef.current.clone().multiplyScalar(data.speed), true);
+    } else if (realTimeEnemies.length > 0) {
+      // Passive Vertical Magnetism (Auto-Aim Helper)
+      // Even for non-homing projectiles, gently steer vertical aim if close in XZ
+      let closestYDist = Infinity;
+      let targetY = positionRef.current.y;
+
+      for (const enemy of realTimeEnemies) {
+        const dx = positionRef.current.x - enemy.position[0];
+        const dz = positionRef.current.z - enemy.position[2];
+        const distXZ = Math.sqrt(dx * dx + dz * dz);
+
+        if (distXZ < 3.0) { // If "aligned" horizontally
+          // Aim for enemy center (approx Y+1.0)
+          const enemyCenterY = enemy.position[1] + 1.0;
+          if (Math.abs(positionRef.current.y - enemyCenterY) < Math.abs(closestYDist)) {
+            closestYDist = positionRef.current.y - enemyCenterY;
+            targetY = enemyCenterY;
+          }
+        }
+      }
+
+      if (Math.abs(targetY - positionRef.current.y) > 0.1 && Math.abs(targetY - positionRef.current.y) < 5.0) {
+        // GENTLY steer Y velocity
+        const currentVel = rigidBodyRef.current.linvel();
+        const desiredY = (targetY - positionRef.current.y) * 5.0; // Proportional steer
+        // Lerp current Y vel to desired Y vel
+        const newY = THREE.MathUtils.lerp(currentVel.y, desiredY, 0.1 * delta * 60);
+
+        rigidBodyRef.current.setLinvel({ x: currentVel.x, y: newY, z: currentVel.z }, true);
+      }
     }
   });
 
@@ -263,23 +310,25 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
         }
       }}
     >
-      <Trail
+      <mesh ref={meshRef} castShadow scale={[scale, scale, scale]} rotation={shape === 'cone' ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
+        {shape === 'cone' && <coneGeometry args={[0.2, 0.8, 16]} />}
+        {shape === 'cube' && <boxGeometry args={[0.4, 0.4, 0.4]} />}
+        {shape === 'sphere' && <sphereGeometry args={[0.2, 16, 16]} />}
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={2}
+        />
+      </mesh>
+
+      {/* Custom Ribbon Trail */}
+      <RibbonTrail
+        target={meshRef}
         width={0.4 * scale}
-        length={4}
+        length={12}
         color={color}
-        attenuation={(t) => t * t}
-      >
-        <mesh ref={meshRef} castShadow scale={[scale, scale, scale]} rotation={shape === 'cone' ? [Math.PI / 2, 0, 0] : [0, 0, 0]}>
-          {shape === 'cone' && <coneGeometry args={[0.2, 0.8, 16]} />}
-          {shape === 'cube' && <boxGeometry args={[0.4, 0.4, 0.4]} />}
-          {shape === 'sphere' && <sphereGeometry args={[0.2, 16, 16]} />}
-          <meshStandardMaterial
-            color={color}
-            emissive={color}
-            emissiveIntensity={2}
-          />
-        </mesh>
-      </Trail>
+      />
+
       <CuboidCollider args={[0.2 * scale, 0.2 * scale, (shape === 'cone' ? 0.4 : 0.2) * scale]} />
     </RigidBody>
   );

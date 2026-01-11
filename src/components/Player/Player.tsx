@@ -248,7 +248,7 @@ export function Player() {
         console.log('🔓 Teleport lock released');
       }
 
-      // Keep velocity at zero during lock to prevent "fighting"
+      // Keep velocity at zero during lock to <pr>event "fighting"
       // Removed to allow momentum preservation logic
       // rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }

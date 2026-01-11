@@ -1,5 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import { useRef, useState } from 'react';
+import * as THREE from 'three';
 
 interface HitEffectProps {
   position: [number, number, number];
@@ -8,22 +9,24 @@ interface HitEffectProps {
 }
 
 export function HitEffect({ position, color = '#ff0000', onComplete }: HitEffectProps) {
+  // Static particle data
   const [particles] = useState(() => {
-    // Generate random particle directions
     const count = 12;
     return Array.from({ length: count }, (_, i) => {
       const angle = (i / count) * Math.PI * 2;
       return {
-        direction: [Math.cos(angle), Math.random() * 0.5, Math.sin(angle)] as [number, number, number],
+        initialDir: new THREE.Vector3(Math.cos(angle), Math.random() * 0.5, Math.sin(angle)),
         speed: 3 + Math.random() * 2,
-        life: 0,
+        offset: new THREE.Vector3(0, 0, 0)
       };
     });
   });
 
   const groupRef = useRef<THREE.Group>(null);
+  // Refs for individual particle meshes to update them directly
+  const particleRefs = useRef<(THREE.Mesh | null)[]>([]);
   const lifetimeRef = useRef(0);
-  const maxLifetime = 0.5; // 0.5 seconds
+  const maxLifetime = 0.5;
 
   useFrame((_, delta) => {
     lifetimeRef.current += delta;
@@ -33,49 +36,40 @@ export function HitEffect({ position, color = '#ff0000', onComplete }: HitEffect
       return;
     }
 
-    // Update particles
-    particles.forEach((particle) => {
-      particle.life = lifetimeRef.current;
+    const progress = lifetimeRef.current / maxLifetime;
+
+    // Update Particles directly
+    particleRefs.current.forEach((mesh, i) => {
+      if (mesh) {
+        const p = particles[i];
+        // const moveDist = p.speed * delta; // Frame-dependent movement would be better accumulated
+        // Simple accumulation:
+        p.offset.addScaledVector(p.initialDir, p.speed * delta);
+
+        mesh.position.copy(p.offset);
+
+        const scale = 0.2 * (1 - progress);
+        mesh.scale.setScalar(scale);
+
+        // Material opacity update is tricky without accessing material ref, 
+        // but setting scale to 0 effectively hides it.
+      }
     });
   });
 
   return (
     <group ref={groupRef} position={position}>
-      {particles.map((particle, i) => {
-        const progress = particle.life / maxLifetime;
-        const offset = [
-          particle.direction[0] * particle.speed * progress,
-          particle.direction[1] * particle.speed * progress,
-          particle.direction[2] * particle.speed * progress,
-        ] as [number, number, number];
-        const opacity = 1 - progress;
-        const size = 0.2 * (1 - progress * 0.5);
-
-        return (
-          <mesh key={i} position={offset}>
-            <sphereGeometry args={[size, 6, 6]} />
-            <meshStandardMaterial
-              color={color}
-              emissive={color}
-              emissiveIntensity={3.0 * opacity}
-              transparent
-              opacity={opacity}
-            />
-          </mesh>
-        );
-      })}
-
-      {/* Flash */}
-      <mesh>
-        <sphereGeometry args={[0.8 * (1 - lifetimeRef.current / maxLifetime), 12, 12]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={5.0 * (1 - lifetimeRef.current / maxLifetime)}
-          transparent
-          opacity={1 - lifetimeRef.current / maxLifetime}
-        />
-      </mesh>
+      {particles.map((_, i) => (
+        <mesh key={i} ref={el => particleRefs.current[i] = el}>
+          <sphereGeometry args={[1, 6, 6]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={2.0}
+            transparent
+          />
+        </mesh>
+      ))}
     </group>
   );
 }

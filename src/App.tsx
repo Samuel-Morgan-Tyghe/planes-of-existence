@@ -1,10 +1,15 @@
 import { KeyboardControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Scene } from './components/Core/Scene';
+import { ArenaMode } from './components/Debug/ArenaMode';
 import { SandboxMode } from './components/Debug/SandboxMode';
 import { HUD } from './components/UI/HUD';
 import './styles/global.css';
+
+import { useStore } from '@nanostores/react';
+import { $bossEnemy, $coins, $currentRoomId, $enemies, $inventory, $stats, addItem, spawnEnemy, useBomb } from './stores/game';
+import { $health, $isPlayerVisible, $position } from './stores/player';
 
 function App() {
   const keyboardMap = useMemo(() => [
@@ -20,10 +25,18 @@ function App() {
   ], []);
 
   const isTestMode = new URLSearchParams(window.location.search).get('test') === 'true';
-  const isSandboxMode = new URLSearchParams(window.location.search).get('mode') === 'sandbox';
+  const mode = new URLSearchParams(window.location.search).get('mode');
 
-  if (isSandboxMode) {
+  if (mode === 'sandbox') {
     return <SandboxMode />;
+  }
+
+  if (mode === 'arena') {
+    return (
+      <KeyboardControls map={keyboardMap}>
+        <ArenaMode />
+      </KeyboardControls>
+    );
   }
 
   return (
@@ -38,12 +51,6 @@ function App() {
     </KeyboardControls>
   );
 }
-
-import { useStore } from '@nanostores/react';
-import { useEffect } from 'react';
-import { $bossEnemy, $coins, $currentRoomId, $enemies, $inventory, $stats, addItem, spawnEnemy, useBomb } from './stores/game';
-import { $health, $isPlayerVisible, $position } from './stores/player';
-
 
 function GameStateExposer() {
   const position = useStore($position);

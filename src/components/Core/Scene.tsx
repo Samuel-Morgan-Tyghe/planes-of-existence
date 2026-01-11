@@ -15,8 +15,8 @@ import { PlayerShadow } from '../Player/PlayerShadow';
 import { WeaponSystem } from '../Player/WeaponSystem';
 import { DropManager } from '../World/DropManager';
 import { GridMap } from '../World/GridMap';
+import { InstancedTrails } from '../World/InstancedTrails';
 import { ThrownBombGroup } from '../World/ThrownBombGroup';
-import { TrailManager } from '../World/TrailManager';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
@@ -41,14 +41,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 import { Physics } from '@react-three/rapier';
+import { ArenaRoom } from '../World/ArenaRoom';
 
-
-// Expose internal state for E2E testing
-
-// (Removed GameStateExposer)
-
-
-export function Scene({ isTestMode = false }: { isTestMode?: boolean }) {
+export function Scene({ isTestMode = false, mode = 'adventure' }: { isTestMode?: boolean; mode?: 'adventure' | 'arena' }) {
   const restartTrigger = useStore($restartTrigger);
 
   const handleSpawnRequest = useCallback(() => { }, []);
@@ -71,7 +66,21 @@ export function Scene({ isTestMode = false }: { isTestMode?: boolean }) {
       />
       <CameraManager />
       <PlaneSwitcher />
-      <GridMap key={`grid-${restartTrigger}`} />
+
+      {mode === 'adventure' ? (
+        <>
+          <GridMap key={`grid-${restartTrigger}`} />
+          <BossManager key={`boss-${restartTrigger}`} />
+          <DropManager key={`drops-${restartTrigger}`} />
+        </>
+      ) : (
+        <ArenaRoom />
+      )}
+
+      {/* Shared Spawner - Essential for both modes */}
+      <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
+
+      {/* Shared Systems */}
       <Player key={`player-${restartTrigger}`} />
       <PlayerShadow />
 
@@ -79,16 +88,14 @@ export function Scene({ isTestMode = false }: { isTestMode?: boolean }) {
         <WeaponSystem key={`weapon-${restartTrigger}`} />
       </ErrorBoundary>
 
-      <EnemySpawner key={`enemies-${restartTrigger}`} onSpawnRequest={handleSpawnRequest} />
-      <BossManager key={`boss-${restartTrigger}`} />
       <ProjectileManager />
 
-      <DropManager key={`drops-${restartTrigger}`} />
       {!isTestMode && <EffectsManager />}
 
       <ThrownBombGroup />
-      <TrailManager />
+      <InstancedTrails />
       <QABot />
+
     </Physics>
   );
 }

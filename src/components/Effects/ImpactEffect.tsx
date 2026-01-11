@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Mesh, MeshBasicMaterial } from 'three';
 
 interface ImpactEffectProps {
@@ -12,13 +12,13 @@ interface ImpactEffectProps {
 export function ImpactEffect({ position, color = '#ffffff', size = 1, onComplete }: ImpactEffectProps) {
   const meshRef = useRef<Mesh>(null);
   const materialRef = useRef<MeshBasicMaterial>(null);
-  const [frame, setFrame] = useState(0);
+  const frameRef = useRef(0);
 
   useFrame(() => {
     if (meshRef.current && materialRef.current) {
-      setFrame(f => f + 1);
+      frameRef.current += 1;
 
-      const progress = frame / 15; // 15 frames duration
+      const progress = frameRef.current / 15; // 15 frames duration
       if (progress >= 1) {
         onComplete();
         return;

@@ -46,7 +46,7 @@ const ENEMY_SPAWN_DELAY = 1000; // 1 second for faster testing
 export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate }: EnemyProps) {
   // Hooks
   const rigidBodyRef = useRef(null);
-  const meshRef = useRef<THREE.Mesh>(null);
+  const meshRef = useRef<THREE.Group>(null);
   const [_isAttacking, setIsAttacking] = useState(false);
   const [_distanceToPlayer, setDistanceToPlayer] = useState(999);
   const currentPositionRef = useRef<[number, number, number]>(enemy?.position || [0, 0, 0]);
@@ -56,6 +56,12 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
   const spawnTime = useRef(Date.now());
   const isDeadRef = useRef(false);
   const SPAWN_INVULNERABILITY_TIME = ENEMY_SPAWN_DELAY;
+
+  // Store player position in ref for access in useFrame
+  const playerPositionRef = useRef(playerPosition);
+  useEffect(() => {
+    playerPositionRef.current = playerPosition;
+  }, [playerPosition]);
 
   const [_hitEffects, setHitEffects] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
   const hitEffectIdCounter = useRef(0);
@@ -147,6 +153,8 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
     // Silence unused warning for rb if it's not used in simplified logic
     // if (!rb) return;
     const now = Date.now();
+    // Prevent 0,0,0 artifacts by waiting a bit for physics to sync
+    if (now - spawnTime.current < 200) return;
 
     if (meshRef.current) {
       // Get world position from mesh which is updated by Rapier
@@ -196,18 +204,33 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
       // Slime Trail Logic
       if (enemy.definition.id.startsWith('slime_')) {
         const currentPosVec = worldPos.clone();
-        if (!lastTrailPositionRef.current || currentPosVec.distanceTo(lastTrailPositionRef.current) > 1.5) {
+        if (currentPosVec.lengthSq() < 0.1) return;
+
+        // Skip the very first frame to prevent artifacts
+        if (!lastTrailPositionRef.current) {
+          lastTrailPositionRef.current = currentPosVec;
+          return;
+        }
+
+        if (currentPosVec.distanceTo(lastTrailPositionRef.current) > 1.5) {
           const type: TrailType = enemy.definition.id === 'slime_slow' ? 'slow' : 'toxic';
           addTrail(
             [worldPos.x, worldPos.y, worldPos.z],
             type,
-            enemy.definition.size * 1.5,
+            enemy.definition.size * 0.5,
             6000, // 6 seconds
             enemy.roomId
           );
           lastTrailPositionRef.current = currentPosVec;
         }
       }
+      // Visual Rotation (Look at Player)
+      const currentParamsPlayerPos = playerPositionRef.current;
+      const targetLookAt = new Vector3(currentParamsPlayerPos[0], worldPos.y, currentParamsPlayerPos[2]);
+      meshRef.current.lookAt(targetLookAt);
+
+      // Optional: Smooth rotation could be added here via Quaternion slerp if lookAt is too jittery
+      // but direct lookAt is usually fine for this view perspective.
     }
 
   });
@@ -317,13 +340,26 @@ export function Enemy({ enemy, active, playerPosition, onDeath, onPositionUpdate
             const colliderSize = (enemy.definition.size * sizeMultiplier) / 2;
             return (
               <Suspense fallback={null}>
-                <LazyCuboidCollider args={[colliderSize, colliderSize, colliderSize]} position={[0, colliderSize, 0]} sensor />
-                <LazyCuboidCollider args={[colliderSize, colliderSize, colliderSize]} position={[0, colliderSize, 0]} />
+                {/* Huge 'Ceiling' Hitbox for 2.5D Gameplay feel */}
+                {/* 1.5x Width for generous XZ aiming, 10 height to hit anything in the column */}
+                <LazyCuboidCollider args={[colliderSize * 1.5, 5.0, colliderSize * 1.5]} position={[0, 5.0, 0]} sensor />
+                {/* Visual Debug Helper for Hitbox (Sensor) - Red */}
+                <mesh position={[0, 5.0, 0]}>
+                  <boxGeometry args={[colliderSize * 3.0, 10.0, colliderSize * 3.0]} />
+                  <meshBasicMaterial color="red" wireframe transparent opacity={0.3} />
+                </mesh>
+
+                <LazyCuboidCollider args={[colliderSize, 2.0, colliderSize]} position={[0, 2.0, 0]} />
+                {/* Visual Debug Helper for Physics Box - Blue */}
+                <mesh position={[0, 2.0, 0]}>
+                  <boxGeometry args={[colliderSize * 2.0, 4.0, colliderSize * 2.0]} />
+                  <meshBasicMaterial color="blue" wireframe transparent opacity={0.5} />
+                </mesh>
               </Suspense>
             );
           })()}
 
-          <group position={[0, enemy.definition.size / 2, 0]}>
+          <group ref={meshRef} position={[0, enemy.definition.size / 2, 0]}>
             <EnemyVisuals definition={enemy.definition} healthPercent={healthPercent} />
           </group>
 
