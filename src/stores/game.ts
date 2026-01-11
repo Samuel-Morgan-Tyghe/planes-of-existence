@@ -217,11 +217,11 @@ export const useBomb = (position: [number, number, number], direction: [number, 
       initialVelocity = [0, 0, 0];
     } else {
       // Isaac-style: Short toss / place at feet
-      // Much lower force than before (was 10)
-      const throwForce = 4.0;
+      // Increased force to meet user's "some force" request
+      const throwForce = 7.0; 
       initialVelocity = [
         direction[0] * throwForce + (playerVelocity?.[0] || 0),
-        2.0 + (playerVelocity?.[1] || 0), // Lower arc (was 3)
+        3.5 + (playerVelocity?.[1] || 0), // Higher arc for a "throw" feel
         direction[2] * throwForce + (playerVelocity?.[2] || 0)
       ];
     }

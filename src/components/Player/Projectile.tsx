@@ -325,7 +325,7 @@ export function Projectile({ data, origin, onDestroy, onHit }: ProjectileProps) 
       <RibbonTrail
         target={meshRef}
         width={0.4 * scale}
-        length={12}
+        length={5}
         color={color}
       />
 

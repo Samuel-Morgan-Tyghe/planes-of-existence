@@ -1,4 +1,5 @@
 import { useStore } from '@nanostores/react';
+import { useKeyboardControls } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { RapierRigidBody } from '@react-three/rapier';
 import React, { useEffect, useRef } from 'react';
@@ -21,33 +22,11 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
   const plane = useStore($plane);
   const isTeleporting = useStore($isTeleporting);
   const stats = useStore($stats);
-  const keysRef = useRef<Set<string>>(new Set());
+  const [, getKeys] = useKeyboardControls();
   const jumpCountRef = useRef(0); // Track number of jumps performed
 
   // Use refs to track local usage, but sync with global
   const isLocked = useRef(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      console.log('⌨️ Key Down:', e.key);
-      const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
-      keysRef.current.add(key);
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      console.log('⌨️ Key Up:', e.key);
-      const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
-      keysRef.current.delete(key);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []); // Run once on mount
 
   useEffect(() => {
     if (plane !== 'FPS') return;
@@ -103,7 +82,7 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     if (!rigidBodyRef.current || isTeleporting) return;
 
     const rb = rigidBodyRef.current;
-    const keys = keysRef.current;
+    const keys = getKeys();
     const currentRoomId = $currentRoomId.get();
 
     // Check for "Slow" Trail
@@ -162,10 +141,10 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       right.applyQuaternion(bodyRot);
 
       const moveVec = new THREE.Vector3(0, 0, 0);
-      if (keys.has('w')) moveVec.add(forward);
-      if (keys.has('s')) moveVec.sub(forward);
-      if (keys.has('d')) moveVec.add(right);
-      if (keys.has('a')) moveVec.sub(right);
+      if (keys.forward) moveVec.add(forward);
+      if (keys.backward) moveVec.sub(forward);
+      if (keys.right) moveVec.add(right);
+      if (keys.left) moveVec.sub(right);
 
       if (moveVec.length() > 0) {
         moveVec.normalize().multiplyScalar(MAX_SPEED);
@@ -176,55 +155,65 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
       // Standard Global Controls for ISO/2D
       let nx = 0;
       let nz = 0;
-      switch (plane) {
-        case '2D':
-          if (keys.has('a')) nx = -1;
-          if (keys.has('d')) nx = 1;
-          break;
-        case 'ISO':
-          if (keys.has('w')) nz = -1;
-          if (keys.has('s')) nz = 1;
-          if (keys.has('a')) nx = -1;
-          if (keys.has('d')) nx = 1;
-          break;
-      }
+
+      if (keys.forward) nz = -1;
+      if (keys.backward) nz = 1;
+      if (keys.left) nx = -1;
+      if (keys.right) nx = 1;
 
       if (nx !== 0 || nz !== 0) {
         const len = Math.sqrt(nx * nx + nz * nz);
         targetVX = (nx / len) * MAX_SPEED;
         targetVZ = (nz / len) * MAX_SPEED;
 
-        // Rotate player to face movement direction in ISO mode
         if (plane === 'ISO') {
           // Priority 1: Firing Direction (Arrow Keys)
           let fireNx = 0;
           let fireNz = 0;
-          if (keys.has('arrowup')) fireNz = -1;
-          if (keys.has('arrowdown')) fireNz = 1;
-          if (keys.has('arrowleft')) fireNx = -1;
-          if (keys.has('arrowright')) fireNx = 1;
+          if (keys.fireUp) fireNz = -1;
+          if (keys.fireDown) fireNz = 1;
+          if (keys.fireLeft) fireNx = -1;
+          if (keys.fireRight) fireNx = 1;
 
           let angle = $playerYaw.get();
 
-          // Only rotate to firing direction if keys are pressed
           if (fireNx !== 0 || fireNz !== 0) {
+            // Priority 1: Firing Direction
             if (Math.abs(fireNx) > Math.abs(fireNz)) {
               angle = fireNx > 0 ? -Math.PI / 2 : Math.PI / 2;
             } else {
               angle = fireNz > 0 ? Math.PI : 0;
             }
-          } else {
+          } else if (nx !== 0 || nz !== 0) {
             // Priority 2: Movement Direction (WASD)
-            // Snap to cardinal directions only (N, S, E, W)
             if (Math.abs(nx) > Math.abs(nz)) {
-              // East or West
-              angle = nx > 0 ? -Math.PI / 2 : Math.PI / 2; // East : West
+              angle = nx > 0 ? -Math.PI / 2 : Math.PI / 2;
             } else {
-              // North or South
-              angle = nz > 0 ? Math.PI : 0; // South : North
+              angle = nz > 0 ? Math.PI : 0;
             }
           }
 
+          const q = new THREE.Quaternion();
+          q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+          rb.setRotation(q, true);
+          $playerYaw.set(angle);
+        }
+      } else if (plane === 'ISO') {
+        // Fallback: If not moving but firing, still rotate to face fire direction
+        let fireNx = 0;
+        let fireNz = 0;
+        if (keys.fireUp) fireNz = -1;
+        if (keys.fireDown) fireNz = 1;
+        if (keys.fireLeft) fireNx = -1;
+        if (keys.fireRight) fireNx = 1;
+
+        if (fireNx !== 0 || fireNz !== 0) {
+          let angle = $playerYaw.get();
+          if (Math.abs(fireNx) > Math.abs(fireNz)) {
+            angle = fireNx > 0 ? -Math.PI / 2 : Math.PI / 2;
+          } else {
+            angle = fireNz > 0 ? Math.PI : 0;
+          }
           const q = new THREE.Quaternion();
           q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
           rb.setRotation(q, true);
@@ -244,7 +233,7 @@ export function PlayerController({ rigidBodyRef }: PlayerControllerProps) {
     }
 
     // Apply jump impulse if space is pressed and jumps remaining
-    if (keys.has(' ') && jumpCountRef.current < stats.maxJumps) {
+    if (keys.jump && jumpCountRef.current < stats.maxJumps) {
       rb.applyImpulse({ x: 0, y: JUMP_FORCE, z: 0 }, true);
       jumpCountRef.current++;
       console.log(`🦘 Jump ${jumpCountRef.current}/${stats.maxJumps}!`);

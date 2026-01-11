@@ -17,10 +17,13 @@ function App() {
     { name: 'backward', keys: ['ArrowDown', 's', 'S'] },
     { name: 'left', keys: ['ArrowLeft', 'a', 'A'] },
     { name: 'right', keys: ['ArrowRight', 'd', 'D'] },
+    { name: 'fireUp', keys: ['ArrowUp'] },
+    { name: 'fireDown', keys: ['ArrowDown'] },
+    { name: 'fireLeft', keys: ['ArrowLeft'] },
+    { name: 'fireRight', keys: ['ArrowRight'] },
     { name: 'jump', keys: ['Space'] },
-    { name: 'attack', keys: ['Enter', 'Delete', 'Click'] }, // Click handled separately but good to have mapping
-    { name: 'interact', keys: ['e', 'E'] }, // Throw bomb / Interact
-    { name: 'shift', keys: ['Shift'] },
+    { name: 'bomb', keys: ['e', 'E'] },
+    { name: 'reroll', keys: ['l', 'L'] },
     { name: 'escape', keys: ['Escape'] },
   ], []);
 

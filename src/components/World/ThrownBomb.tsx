@@ -97,6 +97,14 @@ export function ThrownBomb({ id, position, initialVelocity, exploded, explosionP
       if (distance < blastRadius) {
         const damage = 15 * (1 - distance / blastRadius); // Increased base damage slightly
         emitDamage(parseInt(enemyId), damage);
+
+        // Visual hit number
+        addEffect({
+          type: 'text',
+          text: Math.round(damage).toString(),
+          position: [enemyPos[0], enemyPos[1] + 1.0, enemyPos[2]],
+          color: '#ffaa00'
+        });
       }
     });
 
